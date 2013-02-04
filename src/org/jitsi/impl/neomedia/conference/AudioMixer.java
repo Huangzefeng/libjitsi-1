@@ -259,6 +259,10 @@ public class AudioMixer
                     }
                 }
             }
+            else
+            {
+
+            }
         }
     }
 
@@ -1071,6 +1075,10 @@ public class AudioMixer
                                         + setFormat);
                     }
                 }
+            }
+            else
+            {
+
             }
         }
     }

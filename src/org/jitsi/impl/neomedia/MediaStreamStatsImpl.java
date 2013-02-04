@@ -10,8 +10,8 @@ import java.awt.*;
 import java.net.*;
 import java.util.*;
 
-import javax.media.format.*;
 import javax.media.control.*;
+import javax.media.format.*;
 import javax.media.protocol.*;
 import javax.media.rtp.*;
 
@@ -1052,5 +1052,51 @@ public class MediaStreamStatsImpl
             }
         }
         return set;
+    }
+
+    @Override
+    public String toString()
+    {
+      Dimension up = getUploadVideoSize() == null ? new Dimension(0,0) :
+        getUploadVideoSize();
+      Dimension down = getDownloadVideoSize() == null ? new Dimension(0,0) :
+        getDownloadVideoSize();
+
+    return String
+        .format("\nMedia Stats %s:%s->%s:%s %s@%sHz (RTT=%sms.)\n"
+                    + "Up:    % 4.2f%%, % 4.0fkbps, % 4.2fms.\n"
+                    + "Down:  % 4.2f%%, % 4.0fkbps, % 4.2fms.\n"
+                    + "Video:  Up=%sx%s Down=%sx%s\n"
+                    + "Discarded: Total=%s Current=%4.2f%% FEC=%s\n"
+                    + "Jitter Buffer (Adaptive=%b) %s/%s\n"
+                    + "  Delay %s packets (%sms.)\n"
+                    + "  Discarded Reset=%s Late=%s Shrink=%s Full=%s",
+                getLocalIPAddress(),
+                getLocalPort(),
+                getRemoteIPAddress(),
+                getRemotePort(),
+                getEncoding(),
+                getEncodingClockRate(),
+                getRttMs(),
+                getUploadPercentLoss(),
+                getUploadRateKiloBitPerSec(),
+                getUploadJitterMs(),
+                getDownloadPercentLoss(),
+                getDownloadRateKiloBitPerSec(),
+                getDownloadJitterMs(),
+                up.width, up.height,
+                down.width, down.height,
+                getNbDiscarded(),
+                getPercentDiscarded(),
+                getNbFec(),
+                isAdaptiveBufferEnabled(),
+                getPacketQueueCountPackets(),
+                getPacketQueueSize(),
+                getJitterBufferDelayPackets(),
+                getJitterBufferDelayMs(),
+                getNbDiscardedReset(),
+                getNbDiscardedLate(),
+                getNbDiscardedShrink(),
+                getNbDiscardedFull());
     }
 }
