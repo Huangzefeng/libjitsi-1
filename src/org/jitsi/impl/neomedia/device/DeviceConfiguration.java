@@ -105,17 +105,17 @@ public class DeviceConfiguration
     /**
      * The default video height.
      */
-    public static final int DEFAULT_VIDEO_HEIGHT = 480;
+    public static final int DEFAULT_VIDEO_HEIGHT = 240; // 480;
 
     /**
      * The default value for video maximum bandwidth.
      */
-    public static final int DEFAULT_VIDEO_MAX_BANDWIDTH = 256;
+    public static final int DEFAULT_VIDEO_MAX_BANDWIDTH = 192; // 256;
 
     /**
      * The default video width.
      */
-    public static final int DEFAULT_VIDEO_WIDTH = 640;
+    public static final int DEFAULT_VIDEO_WIDTH = 320; // 640;
 
     /**
      * The name of the <tt>boolean</tt> property which determines whether noise
@@ -197,10 +197,12 @@ public class DeviceConfiguration
                 new Dimension(320, 240),
                 //CIF
                 new Dimension(352, 288),
-                // VGA
-                new Dimension(640, 480),
-                // HD 720
-                new Dimension(1280, 720)
+             // Higher resolutions not supported on Accession Mobile and Desktop does not
+             // renegotiate as it should.
+//                             // VGA
+//                             new Dimension(640, 480),
+//                             // HD 720
+//                             new Dimension(1280, 720)
             };
 
     /**
@@ -479,7 +481,7 @@ public class DeviceConfiguration
                                 List<ExtendedCaptureDeviceInfo> playbackDevices
                                     = audioSystem.getDevices(
                                         AudioSystem.PLAYBACK_INDEX);
-    
+
                                 if ((playbackDevices == null)
                                         || (playbackDevices.size() <= 0))
                                 {

@@ -26,5 +26,8 @@ public enum DTMFMethod
     SIP_INFO_DTMF,
 
     /** INBAND DTMF as defined in ITU-T recommendation Q.23. */
-    INBAND_DTMF
+    INBAND_DTMF,
+
+    /** ALL DTMF means send all of the above simultaneously. */
+    ALL_DTMF
 }

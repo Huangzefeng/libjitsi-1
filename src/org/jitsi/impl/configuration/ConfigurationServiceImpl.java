@@ -39,6 +39,13 @@ public class ConfigurationServiceImpl
         = Logger.getLogger(ConfigurationServiceImpl.class);
 
     /**
+     * The <tt>Logger</tt> used by this <tt>ConfigurationServiceImpl</tt>
+     * instance for logging config changes.
+     */
+    private final Logger configLogger
+        = Logger.getLogger("libjitsi.ConfigLogger");
+
+    /**
      * The name of the <tt>ConfigurationStore</tt> class to be used as the
      * default when no specific <tt>ConfigurationStore</tt> class is determined
      * as necessary.
@@ -92,6 +99,8 @@ public class ConfigurationServiceImpl
         {
             logger.error("Failed to load the configuration file", ex);
         }
+
+        recordAllConfig();
     }
 
     /**
@@ -138,10 +147,12 @@ public class ConfigurationServiceImpl
 
         //no exception was thrown - lets change the property and fire a
         //change event
-
-        if (logger.isTraceEnabled())
-            logger.trace(propertyName + "( oldValue=" + oldValue
-                     + ", newValue=" + property + ".");
+        StringBuilder sb = new StringBuilder(propertyName);
+        sb = sb.append(": oldValue=").append(oldValue).append(
+            ", newValue=").append(property);
+        String configLogMsg = sb.toString();
+        logger.info(configLogMsg);
+        configLogger.info(configLogMsg);
 
         doSetProperty(propertyName, property, isSystem);
 
@@ -294,9 +305,11 @@ public class ConfigurationServiceImpl
 
         //no exception was thrown - lets change the property and fire a
         //change event
-
-        if (logger.isTraceEnabled())
-            logger.trace("Will remove prop: " + propertyName + ".");
+        StringBuilder sb = new StringBuilder("Will remove prop: ");
+        sb = sb.append(propertyName);
+        String configLogMsg = sb.toString();
+        logger.info(configLogMsg);
+        configLogger.info(configLogMsg);
 
         store.removeProperty(propertyName);
 
@@ -1399,5 +1412,20 @@ public class ConfigurationServiceImpl
             if (exception != null)
                 throw new RuntimeException(exception);
         }
+    }
+
+    /**
+     * Write all of the config to the config logger.
+     */
+    private void recordAllConfig()
+    {
+      List<String> propertyNames = getAllPropertyNames();
+      int size = propertyNames.size();
+
+      for (String propertyName : propertyNames)
+      {
+          configLogger.info(
+              propertyName + ": initialValue=" + getProperty(propertyName));
+      }
     }
 }
