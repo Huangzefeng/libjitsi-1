@@ -80,9 +80,9 @@ public class RTPConnectorTCPOutputStream
                     target.getPort(),
                     PacketLoggingService.TransportName.TCP,
                     true,
-                    packet.getBuffer(),
+                    packet.readRegion(packet.getOffset(), packet.getHeaderLength()),
                     packet.getOffset(),
-                    packet.getLength());
+                    packet.getHeaderLength());
     }
 
     /**

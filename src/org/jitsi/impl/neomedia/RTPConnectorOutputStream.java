@@ -180,12 +180,8 @@ public abstract class RTPConnectorOutputStream
      */
     static boolean logPacket(long numOfPacket)
     {
-        return
-            (numOfPacket == 1)
-                || (numOfPacket == 300)
-                || (numOfPacket == 500)
-                || (numOfPacket == 1000)
-                || ((numOfPacket % 5000) == 0);
+        // We log all packets (without voice data)
+        return true;
     }
 
     /**
@@ -321,7 +317,7 @@ public abstract class RTPConnectorOutputStream
          * sent after hanging up a call.
          */
         if (logger.isDebugEnabled() && targets.isEmpty())
-            logger.debug("Write called without targets!", new Throwable());
+            logger.debug("Write called without targets!");
 
         RawPacket packet = createRawPacket(buffer, offset, length);
 

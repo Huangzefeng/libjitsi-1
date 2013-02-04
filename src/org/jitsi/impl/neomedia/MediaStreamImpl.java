@@ -28,6 +28,7 @@ import org.jitsi.impl.neomedia.transform.dtmf.*;
 import org.jitsi.impl.neomedia.transform.pt.*;
 import org.jitsi.impl.neomedia.transform.rtcp.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.control.*;
 import org.jitsi.service.neomedia.device.*;
@@ -61,6 +62,13 @@ public class MediaStreamImpl
      */
     protected static final String PROPERTY_NAME_RECEIVE_BUFFER_LENGTH
         = "net.java.sip.communicator.impl.neomedia.RECEIVE_BUFFER_LENGTH";
+
+    /**
+     * The name of the property indicating the interval in ms. between
+     * printing stats to logs.
+     */
+    protected static final String PROPERTY_NAME_STATS_INTERVAL
+        = "net.java.sip.communicator.impl.neomedia.STATS_INTERVAL";
 
     /**
      * The session with the <tt>MediaDevice</tt> this instance uses for both
@@ -307,6 +315,16 @@ public class MediaStreamImpl
                         + " with hashCode "
                         + hashCode());
         }
+    }
+
+    /**
+     * Dump call statistics to logs.
+     */
+    private void dumpStatsToLog()
+    {
+      mediaStreamStatsImpl.updateStats();
+      logger.info(mediaStreamStatsImpl.toString());
+//    printFlowStatistics(rtpManager); // Uncomment if we want these extra stats
     }
 
     /**
@@ -1254,7 +1272,7 @@ public class MediaStreamImpl
         /*
          * TODO Returning an unmodifiable view of remoteSourceIDs prevents
          * modifications of private state from the outside but it does not
-         * prevent ConcurrentModificationException. 
+         * prevent ConcurrentModificationException.
          */
         return Collections.unmodifiableList(remoteSourceIDs);
     }
@@ -1890,6 +1908,11 @@ public class MediaStreamImpl
         if (direction == null)
             throw new NullPointerException("direction");
 
+        // Record whether this stream was already started (possibly only in
+        // one direction), so that we know whether to start printing stats at
+        // the end of this method.
+        boolean alreadyStarted = started;
+
         /*
          * If the local peer is the focus of a conference for which it is to
          * perform RTP translation even without generating media to be sent, it
@@ -1965,6 +1988,30 @@ public class MediaStreamImpl
          */
         if (getRTPManagerForRTPTranslator && (rtpTranslator != null))
             getRTPManager();
+
+        // Create a timer thread to periodically dump stats. This timer thread
+        // is only started the first time the stream is started and is
+        // cancelled when the stream is stopped.
+        if (!alreadyStarted)
+        {
+            final int interval = LibJitsi.getConfigurationService().getInt(
+                                            PROPERTY_NAME_STATS_INTERVAL, 2500);
+            new Timer().scheduleAtFixedRate(new TimerTask()
+            {
+                @Override
+                public void run()
+                {
+                    if (started)
+                    {
+                        dumpStatsToLog();
+                    }
+                    else
+                    {
+                        this.cancel();
+                    }
+                }
+            }, interval, interval);
+        }
     }
 
     /**
@@ -2561,14 +2608,8 @@ public class MediaStreamImpl
 
             if(logger.isInfoEnabled())
             {
-                // As reports are received on every 5 seconds
-                // print every 4th packet, on every 20 seconds
-                if((numberOfReceivedSenderReports
-                        + numberOfReceivedReceiverReports)%4 != 1)
-                    return;
-
-                StringBuilder buff
-                    = new StringBuilder(StatisticsEngine.RTP_STAT_PREFIX);
+                StringBuilder buff = new StringBuilder("\n");
+                buff.append(StatisticsEngine.RTP_STAT_PREFIX);
                 MediaType mediaType = getMediaType();
                 String mediaTypeStr
                     = (mediaType == null) ? "" : mediaType.toString();
@@ -2713,8 +2754,8 @@ public class MediaStreamImpl
             //print flow statistics.
             GlobalTransmissionStats s = rtpManager.getGlobalTransmissionStats();
 
-            StringBuilder buff
-                = new StringBuilder(StatisticsEngine.RTP_STAT_PREFIX);
+            StringBuilder buff = new StringBuilder("\n");
+            buff.append(StatisticsEngine.RTP_STAT_PREFIX);
             MediaType mediaType = getMediaType();
             String mediaTypeStr
                 = (mediaType == null) ? "" : mediaType.toString();

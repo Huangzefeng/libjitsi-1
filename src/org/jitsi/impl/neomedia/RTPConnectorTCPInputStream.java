@@ -95,6 +95,11 @@ public class RTPConnectorTCPInputStream
 
         PacketLoggingService packetLogging = LibJitsi.getPacketLoggingService();
 
+        //Create a RawPacket to make it easier to extract just the header
+        RawPacket convertedPacket = new RawPacket(p.getData(),
+                                                  p.getOffset(),
+                                                  p.getLength());
+
         if (packetLogging != null)
             packetLogging.logPacket(
                     PacketLoggingService.ProtocolName.RTP,
@@ -106,9 +111,10 @@ public class RTPConnectorTCPInputStream
                     socket.getLocalPort(),
                     PacketLoggingService.TransportName.TCP,
                     false,
-                    p.getData(),
-                    p.getOffset(),
-                    p.getLength());
+                    convertedPacket.readRegion(convertedPacket.getOffset(),
+                                             convertedPacket.getHeaderLength()),
+                    convertedPacket.getOffset(),
+                    convertedPacket.getHeaderLength());
     }
 
     /**
