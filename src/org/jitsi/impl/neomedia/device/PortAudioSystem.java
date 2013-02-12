@@ -454,6 +454,7 @@ public class PortAudioSystem
                     {
                         try
                         {
+                            logger.debug("devices changed callback runing");
                             reinitialize();
                         }
                         catch (Throwable t)
@@ -723,6 +724,7 @@ public class PortAudioSystem
     private void reinitialize()
         throws Exception
     {
+        logger.debug("Reinitialize called");
         synchronized (paUpdateAvailableDeviceListSyncRoot)
         {
             willPaUpdateAvailableDeviceList();

@@ -401,6 +401,7 @@ public final class Pa
      */
     public static void devicesChangedCallback()
     {
+        logger.debug("Port audio reports devices have changed");
         Runnable devicesChangedCallback = Pa.devicesChangedCallback;
 
         if (devicesChangedCallback != null)

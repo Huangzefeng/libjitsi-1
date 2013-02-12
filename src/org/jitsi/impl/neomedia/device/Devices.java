@@ -10,6 +10,7 @@ import java.util.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
+import org.jitsi.util.Logger;
 
 /**
  * Manages the list of active (currently plugged-in) capture/notify/playback
@@ -20,6 +21,11 @@ import org.jitsi.service.libjitsi.*;
  */
 public abstract class Devices
 {
+    /**
+     * The <tt>Logger</tt> used by this instance for logging output.
+     */
+    private static Logger logger = Logger.getLogger(Devices.class);
+  
     /**
      * The name of the <tt>ConfigurationService</tt> <tt>boolean</tt> property
      * which indicates whether the automatic selection of USB devices must be
@@ -68,6 +74,7 @@ public abstract class Devices
     {
         if (activeDevices != null)
         {
+            logger.debug("Got some active devices");
             String property = getPropDevice();
             loadDevicePreferences(locator, property);
             renameOldFashionedIdentifier(activeDevices);
@@ -79,10 +86,13 @@ public abstract class Devices
             for(int i = activeDevices.size() - 1; i >= 0; i--)
             {
                 ExtendedCaptureDeviceInfo activeDevice = activeDevices.get(i);
+                logger.debug("Examining " + activeDevice.getModelIdentifier());
 
                 if(!devicePreferences.contains(
                             activeDevice.getModelIdentifier()))
                 {
+                    logger.debug("Device preferences does not contain model");
+
                     // By default, select automatically the USB devices.
                     boolean isSelected
                         = activeDevice.isSameTransportType("USB");
@@ -97,6 +107,8 @@ public abstract class Devices
                     {
                         isSelected = false;
                     }
+                    
+                    logger.debug("Is selected " + isSelected);
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected.
@@ -121,6 +133,7 @@ public abstract class Devices
                         if(devicePreference.equals(
                                 activeDevice.getModelIdentifier()))
                         {
+                            logger.debug("Found a preferred active device");
                             return activeDevice;
                         }
                         // If the "none" device is the "preferred" device among
@@ -128,6 +141,7 @@ public abstract class Devices
                         else if(devicePreference.equals(
                                     NoneAudioSystem.LOCATOR_PROTOCOL))
                         {
+                            logger.debug("Found a none device");
                             return null;
                         }
                     }
@@ -252,7 +266,7 @@ public abstract class Devices
             String locator,
             ExtendedCaptureDeviceInfo device,
             boolean save)
-    {
+    {      
         // Checks if there is a change.
         if ((device == null) || !device.equals(this.device))
         {

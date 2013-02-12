@@ -294,6 +294,20 @@ public abstract class AudioSystem
         String locatorProtocol = getLocatorProtocol();
         ExtendedCaptureDeviceInfo selectedActiveDevice
             = devices.getDevice(locatorProtocol, activeDevices);
+        
+        if (logger.isDebugEnabled())
+        {
+            StringBuilder activeDevicesString = new StringBuilder();
+            
+            for (ExtendedCaptureDeviceInfo activeDevice : activeDevices)
+            {
+                activeDevicesString.append(activeDevice.getIdentifier());
+            }
+            
+            logger.debug("Active devices " + activeDevicesString);
+            logger.debug("About to set device to " + selectedActiveDevice, 
+                         new Exception());
+        }
 
         // Sets the default device as selected. The function will fire a
         // property change only if the device has changed from a previous
