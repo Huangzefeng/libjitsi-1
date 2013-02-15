@@ -29,6 +29,19 @@ public class DtmfRawPacket
         = Logger.getLogger(DtmfRawPacket.class);
 
     /**
+     * The length of the payload used in DTMF packets - see full definition
+     * in <tt>setDtmfPayload</tt>.
+     */
+    public static final int DTMF_PAYLOAD_LENGTH = 4;
+    
+    /**
+     * The length of the DTMF packet.  This is fixed at the length of the
+     * RTP header + the payload length of DTMF digits.
+     */
+    public static final int DTMF_PACKET_LENGTH = FIXED_HEADER_SIZE +
+                                                 DTMF_PAYLOAD_LENGTH;
+    
+    /**
      * The event code to send.
      */
     private int code;
@@ -53,9 +66,9 @@ public class DtmfRawPacket
      * @param payload the payload that has been negotiated for telephone events
      * by our signaling modules.
      */
-    public DtmfRawPacket(byte[] buffer, int offset, int length, byte payload)
+    public DtmfRawPacket(byte[] buffer, int offset, byte payload)
     {
-        super (buffer, offset, length);
+        super (buffer, offset, DTMF_PACKET_LENGTH);
 
         setPayload(payload);
     }
