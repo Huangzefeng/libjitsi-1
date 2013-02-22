@@ -1231,6 +1231,8 @@ class AudioMixerPushBufferStream
         }
         catch (IOException ex)
         {
+            logger.error("AudioMixerPushBufferStream " + this.hashCode() +
+                         " hit error reading from buffer");
             throw new UndeclaredThrowableException(ex);
         }
 
