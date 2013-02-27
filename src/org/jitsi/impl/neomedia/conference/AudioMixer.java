@@ -934,9 +934,14 @@ public class AudioMixer
             }
 
             if (outputStream == null)
+            {
                 outputStream
                     = new AudioMixerPushBufferStream(this, outputFormat);
+                logger.debug("Created new AudioMixerPushBufferStream " + outputStream.hashCode());
+            }
+
             outputStream.setInputStreams(inputStreams);
+
             return outputStream;
         }
     }
