@@ -13,6 +13,7 @@ import javax.media.*;
 import javax.media.format.*;
 
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.util.Logger;
 
 /**
  * Manages the list of active (currently plugged-in) capture devices and manages
@@ -24,6 +25,11 @@ import org.jitsi.impl.neomedia.*;
 public class CaptureDevices
     extends Devices
 {
+    /**
+     * The <tt>Logger</tt> used by this instance for logging output.
+     */
+    private static Logger logger = Logger.getLogger(CaptureDevices.class);
+    
     /**
      * The property of the capture devices.
      */
@@ -96,6 +102,8 @@ public class CaptureDevices
      */
     public void setActiveDevices(List<ExtendedCaptureDeviceInfo> activeDevices)
     {
+        logger.debug("setActiveDevices called");
+
         if(activeDevices == null)
             activeCaptureDevices = null;
         else

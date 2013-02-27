@@ -250,6 +250,8 @@ public class PortAudioSystem
     protected void doInitialize()
         throws Exception
     {
+        logger.debug("doInitialise called");
+      
         /*
          * If PortAudio fails to initialize because of, for example, a missing
          * native counterpart, it will throw an exception here and the PortAudio
