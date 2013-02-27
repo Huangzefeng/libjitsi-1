@@ -126,6 +126,9 @@ public abstract class Devices
             {
                 for(String devicePreference : devicePreferences)
                 {
+                    logger.debug("Searching preferred devices, looking at " + 
+                                                              devicePreference);
+                    
                     for(ExtendedCaptureDeviceInfo activeDevice : activeDevices)
                     {
                         // If we have found the "preferred" device among active
@@ -183,6 +186,9 @@ public abstract class Devices
                     + "_list";
 
             String deviceIdentifiersString = cfg.getString(new_property);
+            
+            logger.debug("Loading device preferences to be " +
+                                                       deviceIdentifiersString);
 
             synchronized(devicePreferences)
             {
@@ -314,6 +320,8 @@ public abstract class Devices
             String newDeviceIdentifier,
             boolean isSelected)
     {
+        logger.debug("Adding new device " + newDeviceIdentifier);
+      
         synchronized(devicePreferences)
         {
             devicePreferences.remove(newDeviceIdentifier);
@@ -321,12 +329,14 @@ public abstract class Devices
             // preferred device.
             if(isSelected)
             {
+                logger.debug("Device is selected");
                 devicePreferences.add(0, newDeviceIdentifier);
             }
             // If there is no active device or the device is not selected, then
             // set the new device to the end of the device preference list.
             else
             {
+                logger.debug("Device is not selected");
                 devicePreferences.add(newDeviceIdentifier);
             }
         }
