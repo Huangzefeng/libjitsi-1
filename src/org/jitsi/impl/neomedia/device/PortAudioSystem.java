@@ -251,7 +251,7 @@ public class PortAudioSystem
         throws Exception
     {
         logger.debug("doInitialise called");
-      
+
         /*
          * If PortAudio fails to initialize because of, for example, a missing
          * native counterpart, it will throw an exception here and the PortAudio
@@ -990,7 +990,7 @@ public class PortAudioSystem
                             && (diagnosticsControls.get(key) == null))
                     {
                         String deviceID = key.toString();
-                        int deviceIndex = Pa.getDeviceIndex(deviceID);
+                        int deviceIndex = Pa.getDeviceIndex(deviceID, 0, 0);
 
                         if (deviceIndex == Pa.paNoDevice)
                             continue;
@@ -1102,7 +1102,7 @@ public class PortAudioSystem
                     keys[i] = null;
 
                     String deviceID = key.toString();
-                    int deviceIndex = Pa.getDeviceIndex(deviceID);
+                    int deviceIndex = Pa.getDeviceIndex(deviceID, 0, 0);
 
                     if (deviceIndex == Pa.paNoDevice)
                     {
