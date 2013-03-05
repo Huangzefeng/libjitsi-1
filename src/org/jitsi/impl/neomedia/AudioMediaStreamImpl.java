@@ -560,25 +560,30 @@ public class AudioMediaStreamImpl
      * calls will simply replace the <tt>DTMFTone</tt> from the first call with
      * that from the second.
      *
+     * If the method {@link DTMFMethod#ALL_DTMF} is provided, both inband and
+     * out of band DTMF are started.
+     *
      * @param tone the <tt>DTMFTone</tt> to start sending.
      * @param dtmfMethod The kind of DTMF used (RTP, SIP-INOF or INBAND).
      * @throws IllegalArgumentException if <tt>dtmfMethod</tt> is not one of
-     * {@link DTMFMethod#INBAND_DTMF}, {@link DTMFMethod#RTP_DTMF}, and
-     * {@link DTMFMethod#SIP_INFO_DTMF}
-     * @see AudioMediaStream#startSendingDTMF(DTMFTone, DTMFMethod)
+     * {@link DTMFMethod#INBAND_DTMF}, {@link DTMFMethod#RTP_DTMF},
+     * {@link DTMFMethod#SIP_INFO_DTMF} and {@link DTMFMethod#ALL_DTMF}
+     * @see AudioMediaStream#stopSendingDTMF(DTMFTone, DTMFMethod)
      */
     public void startSendingDTMF(DTMFTone tone, DTMFMethod dtmfMethod)
     {
-        switch (dtmfMethod)
+        if ((dtmfMethod == DTMFMethod.INBAND_DTMF) ||
+            (dtmfMethod == DTMFMethod.ALL_DTMF))
         {
-        case INBAND_DTMF:
             MediaDeviceSession deviceSession = getDeviceSession();
 
             if (deviceSession != null)
                 deviceSession.addDTMF(DTMFInbandTone.mapTone(tone));
-            break;
+        }
 
-        case RTP_DTMF:
+        if ((dtmfMethod == DTMFMethod.RTP_DTMF) ||
+            (dtmfMethod == DTMFMethod.ALL_DTMF))
+        {
             if (dtmfTransfrmEngine != null)
             {
                 DTMFRtpTone t = DTMFRtpTone.mapTone(tone);
@@ -586,15 +591,6 @@ public class AudioMediaStreamImpl
                 if (t != null)
                     dtmfTransfrmEngine.startSending(t);
             }
-            break;
-
-        case SIP_INFO_DTMF:
-            // This kind of DTMF is not managed directly by the
-            // OperationSetDTMFSipImpl.
-            break;
-
-        default:
-            throw new IllegalArgumentException("dtmfMethod");
         }
     }
 
@@ -605,31 +601,18 @@ public class AudioMediaStreamImpl
      *
      * @param dtmfMethod The kind of DTMF used (RTP, SIP-INOF or INBAND).
      * @throws IllegalArgumentException if <tt>dtmfMethod</tt> is not one of
-     * {@link DTMFMethod#INBAND_DTMF}, {@link DTMFMethod#RTP_DTMF}, and
-     * {@link DTMFMethod#SIP_INFO_DTMF}
-     * @see AudioMediaStream#stopSendingDTMF(DTMFMethod)
+     * {@link DTMFMethod#INBAND_DTMF}, {@link DTMFMethod#RTP_DTMF},
+     * {@link DTMFMethod#SIP_INFO_DTMF} and {@link DTMFMethod#ALL_DTMF}
+     * @see AudioMediaStream#startSendingDTMF(DTMFMethod)
      */
     public void stopSendingDTMF(DTMFMethod dtmfMethod)
     {
-        switch (dtmfMethod)
+        // Only need to do anything if we're sending out of band (RTP) DTMF.
+        if ((dtmfMethod == DTMFMethod.RTP_DTMF) ||
+            (dtmfMethod == DTMFMethod.ALL_DTMF))
         {
-        case INBAND_DTMF:
-            // The INBAND DTMF is sent by impluse of constant duration and does
-            // not need to be stopped explicitly.
-            break;
-
-        case RTP_DTMF:
             if(dtmfTransfrmEngine != null)
                 dtmfTransfrmEngine.stopSendingDTMF();
-            break;
-
-        case SIP_INFO_DTMF:
-            // The SIP-INFO DTMF is managed directly by the
-            // OperationSetDTMFSipImpl.
-            break;
-
-        default:
-            throw new IllegalArgumentException("dtmfMethod");
         }
     }
 }

@@ -10,6 +10,7 @@ import java.util.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
+import org.jitsi.util.Logger;
 
 /**
  * Manages the list of active (currently plugged-in) capture/notify/playback
@@ -20,6 +21,11 @@ import org.jitsi.service.libjitsi.*;
  */
 public abstract class Devices
 {
+    /**
+     * The <tt>Logger</tt> used by this instance for logging output.
+     */
+    private static Logger logger = Logger.getLogger(Devices.class);
+
     /**
      * The name of the <tt>ConfigurationService</tt> <tt>boolean</tt> property
      * which indicates whether the automatic selection of USB devices must be
@@ -68,6 +74,7 @@ public abstract class Devices
     {
         if (activeDevices != null)
         {
+            logger.debug("Got some active devices");
             String property = getPropDevice();
             loadDevicePreferences(locator, property);
             renameOldFashionedIdentifier(activeDevices);
@@ -79,10 +86,13 @@ public abstract class Devices
             for(int i = activeDevices.size() - 1; i >= 0; i--)
             {
                 ExtendedCaptureDeviceInfo activeDevice = activeDevices.get(i);
+                logger.debug("Examining " + activeDevice.getModelIdentifier());
 
                 if(!devicePreferences.contains(
                             activeDevice.getModelIdentifier()))
                 {
+                    logger.debug("Device preferences does not contain model");
+
                     // By default, select automatically the USB devices.
                     boolean isSelected
                         = activeDevice.isSameTransportType("USB");
@@ -97,6 +107,8 @@ public abstract class Devices
                     {
                         isSelected = false;
                     }
+
+                    logger.debug("Is selected " + isSelected);
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected.
@@ -114,6 +126,9 @@ public abstract class Devices
             {
                 for(String devicePreference : devicePreferences)
                 {
+                    logger.debug("Searching preferred devices, looking at " +
+                                                              devicePreference);
+
                     for(ExtendedCaptureDeviceInfo activeDevice : activeDevices)
                     {
                         // If we have found the "preferred" device among active
@@ -121,6 +136,7 @@ public abstract class Devices
                         if(devicePreference.equals(
                                 activeDevice.getModelIdentifier()))
                         {
+                            logger.debug("Found a preferred active device");
                             return activeDevice;
                         }
                         // If the "none" device is the "preferred" device among
@@ -128,6 +144,7 @@ public abstract class Devices
                         else if(devicePreference.equals(
                                     NoneAudioSystem.LOCATOR_PROTOCOL))
                         {
+                            logger.debug("Found a none device");
                             return null;
                         }
                     }
@@ -169,6 +186,9 @@ public abstract class Devices
                     + "_list";
 
             String deviceIdentifiersString = cfg.getString(new_property);
+
+            logger.debug("Loading device preferences to be " +
+                                                       deviceIdentifiersString);
 
             synchronized(devicePreferences)
             {
@@ -300,6 +320,8 @@ public abstract class Devices
             String newDeviceIdentifier,
             boolean isSelected)
     {
+        logger.debug("Adding new device " + newDeviceIdentifier);
+
         synchronized(devicePreferences)
         {
             devicePreferences.remove(newDeviceIdentifier);
@@ -307,12 +329,14 @@ public abstract class Devices
             // preferred device.
             if(isSelected)
             {
+                logger.debug("Device is selected");
                 devicePreferences.add(0, newDeviceIdentifier);
             }
             // If there is no active device or the device is not selected, then
             // set the new device to the end of the device preference list.
             else
             {
+                logger.debug("Device is not selected");
                 devicePreferences.add(newDeviceIdentifier);
             }
         }

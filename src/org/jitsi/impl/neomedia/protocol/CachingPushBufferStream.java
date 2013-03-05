@@ -14,6 +14,8 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
+import org.jitsi.util.*;
+
 /**
  * Enables reading from a <tt>PushBufferStream</tt> a certain maximum number
  * of data units (e.g. bytes, shorts, ints) even if the
@@ -32,6 +34,13 @@ import javax.media.protocol.*;
 public class CachingPushBufferStream
     implements PushBufferStream
 {
+
+    /**
+     * The <tt>Logger</tt> used by the <tt>AudioMixerPushBufferStream</tt> class
+     * and its instances for logging output.
+     */
+    private static final Logger logger
+        = Logger.getLogger(CachingPushBufferStream.class);
 
     /**
      * The default length in milliseconds of the buffering to be performed by
@@ -382,6 +391,8 @@ public class CachingPushBufferStream
         {
             if (readException != null)
             {
+              logger.error("CachingPushBufferStream " + this.hashCode() +
+                  " hit error reading from buffer");
                 IOException ioe = new IOException();
 
                 ioe.initCause(readException);

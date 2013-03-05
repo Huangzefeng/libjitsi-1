@@ -11,6 +11,8 @@ import java.lang.ref.*;
 import javax.media.*;
 import javax.media.protocol.*;
 
+import org.jitsi.util.*;
+
 /**
  * Describes additional information about a specific input audio
  * <tt>SourceStream</tt> of an <tt>AudioMixer</tt> so that the
@@ -26,6 +28,8 @@ import javax.media.protocol.*;
  */
 class InputStreamDesc
 {
+    private static final Logger logger = Logger.getLogger(InputStreamDesc.class);
+
     /**
      * The <tt>Buffer</tt> into which media data is to be read from
      * {@link #inputStream}.
@@ -139,6 +143,11 @@ class InputStreamDesc
     {
         if (this.inputStream != inputStream)
         {
+            if (this.inputStream != null)
+            {
+              logger.debug("Changing inputStream from " + this.inputStream.hashCode() + " to " + inputStream.hashCode());
+            }
+
             this.inputStream = inputStream;
 
             /*

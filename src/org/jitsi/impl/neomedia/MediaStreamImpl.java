@@ -2563,14 +2563,8 @@ public class MediaStreamImpl
 
             if(logger.isInfoEnabled())
             {
-                // As reports are received on every 5 seconds
-                // print every 4th packet, on every 20 seconds
-                if((numberOfReceivedSenderReports
-                        + numberOfReceivedReceiverReports)%4 != 1)
-                    return;
-
-                StringBuilder buff
-                    = new StringBuilder(StatisticsEngine.RTP_STAT_PREFIX);
+                StringBuilder buff = new StringBuilder("\n");
+                buff.append(StatisticsEngine.RTP_STAT_PREFIX);
                 MediaType mediaType = getMediaType();
                 String mediaTypeStr
                     = (mediaType == null) ? "" : mediaType.toString();
@@ -2715,8 +2709,8 @@ public class MediaStreamImpl
             //print flow statistics.
             GlobalTransmissionStats s = rtpManager.getGlobalTransmissionStats();
 
-            StringBuilder buff
-                = new StringBuilder(StatisticsEngine.RTP_STAT_PREFIX);
+            StringBuilder buff = new StringBuilder("\n");
+            buff.append(StatisticsEngine.RTP_STAT_PREFIX);
             MediaType mediaType = getMediaType();
             String mediaTypeStr
                 = (mediaType == null) ? "" : mediaType.toString();

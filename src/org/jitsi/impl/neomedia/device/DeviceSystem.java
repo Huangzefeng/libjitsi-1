@@ -303,6 +303,7 @@ public abstract class DeviceSystem
                 {
                     try
                     {
+                        logger.debug("initialising device systems");
                         deviceSystem.initialize();
                     }
                     catch (Throwable t)

@@ -205,6 +205,32 @@ public class EncodingConfigurationImpl extends EncodingConfiguration
                          */
                         Map<String, String> fmtps1 = enc1.getFormatParameters();
                         Map<String, String> fmtps2 = enc2.getFormatParameters();
+
+                        /*
+                        * Remove the format parameter for packetization-mode 0
+                        * (which is equivalent to having packetization-mode
+                        * explicitly defined as 0 anyway, according to
+                        * the respective RFC).  This is done so that, if the
+                        * number of format parameters is otherwise equal, the
+                        * format with packetization-mode 1 will be considered
+                        * to have higher priority.  This should not be
+                        * necessary once the TODO below is implemented.
+                        */
+                        String packetizationMode = "packetization-mode";
+                        String defaultPacketizationMode = "0";
+
+                        if (defaultPacketizationMode
+                            .equals(fmtps1.get(packetizationMode)))
+                        {
+                          fmtps1.remove(packetizationMode);
+                        }
+
+                        if (defaultPacketizationMode
+                            .equals(fmtps2.get(packetizationMode)))
+                        {
+                          fmtps2.remove(packetizationMode);
+                        }
+
                         int fmtpCount1 = (fmtps1 == null) ? 0 : fmtps1.size();
                         int fmtpCount2 = (fmtps2 == null) ? 0 : fmtps2.size();
 

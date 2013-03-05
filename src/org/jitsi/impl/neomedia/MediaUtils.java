@@ -271,18 +271,7 @@ public class MediaUtils
         if (!OSUtils.IS_ANDROID)
         {
             // packetization-mode=0
-            /*
-             * XXX At the time of this writing,
-             * EncodingConfiguration#compareEncodingPreferences(MediaFormat,
-             * MediaFormat) is incomplete and considers two MediaFormats to be
-             * equal if they have an equal number of format parameters (given
-             * that the encodings and clock rates are equal, of course). Either
-             * fix the method in question or don't add a format parameter for
-             * packetization-mode 0 (which is equivalent to having
-             * packetization-mode explicitly defined as 0 anyway, according to
-             * the respective RFC).
-             */
-            h264FormatParams.remove(packetizationMode);
+            h264FormatParams.put(packetizationMode, "0");
             addMediaFormats(
                     MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                     "H264",

@@ -923,7 +923,7 @@ public class MediaDeviceSession
                         "Processor with hashCode "
                             + processor.hashCode()
                             + " provided "
-                            + MediaStreamImpl.toString(outputDataSource));
+                            + MediaStreamImpl.toString(outputDataSource), new Exception());
             }
 
             /*
@@ -1035,10 +1035,15 @@ public class MediaDeviceSession
      * <tt>MediaDeviceSession</tt> class. 
      * </p>
      *
+     * <p>createProcessor can take some time to return, so if two threads are
+     * trying to create two processors are around the sime time (which can
+     * happen with early media that is immediately renegotiated) then it can
+     * return two different processors. The synchronized keyword solves this.
+     *
      * @return the JMF <tt>Processor</tt> which transcodes the
      * <tt>MediaDevice</tt> of this instance into the format of this instance
      */
-    private Processor getProcessor()
+    private synchronized Processor getProcessor()
     {
         if (processor == null)
             processor = createProcessor();
@@ -1597,15 +1602,23 @@ public class MediaDeviceSession
         if (processor != null)
         {
             int processorState = processor.getState();
+            logger.trace("Changing the format while processor exists in state "
+                                                              + processorState);
 
             if (processorState == Processor.Configured)
+            {
                 setProcessorFormat(processor, this.format);
+                logger.trace("Changed the format of the processor, state is "
+                                                              + processorState);
+            }
             else if (processorIsPrematurelyClosed
                         || ((processorState > Processor.Configured)
                                 && !this.format.getFormat().equals(
                                         getProcessorFormat()))
                         || outputSizeChanged)
             {
+                logger.trace("Can't change the format of the processor, " +
+                                  "throwing away. State was " + processorState);
                 outputSizeChanged = false;
                 setProcessor(null);
             }
@@ -2077,7 +2090,7 @@ public class MediaDeviceSession
             {
                 logger.trace(
                         "Started Processor with hashCode "
-                            + processor.hashCode());
+                            + processor.hashCode(), new Exception());
             }
         }
     }

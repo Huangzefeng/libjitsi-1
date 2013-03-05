@@ -249,7 +249,6 @@ public class DtmfTransformEngine
         DtmfRawPacket dtmfPkt = new DtmfRawPacket(
                 pkt.getBuffer(),
                 pkt.getOffset(),
-                pkt.getLength(),
                 currentDtmfPayload);
 
         long audioPacketTimestamp = dtmfPkt.getTimestamp();

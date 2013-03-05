@@ -1068,6 +1068,10 @@ class AudioMixerPushBufferStream
 
         boolean valueIsChanged = !Arrays.equals(oldValue, newValue);
 
+        logger.debug("setInputStreams called and valueIsChange=" + valueIsChanged);
+        logger.debug("setInputStreams oldValue=" + oldValue);
+        logger.debug("setInputStreams newValue=" + newValue);
+
         if (valueIsChanged)
         {
             if (oldValue != null)
@@ -1081,21 +1085,28 @@ class AudioMixerPushBufferStream
             for (InputStreamDesc inputStreamDesc : newValue)
             {
                 SourceStream inputStream = inputStreamDesc.getInputStream();
+                logger.debug("Handling inputStream " + inputStream.hashCode());
 
                 if (!(inputStream instanceof PushBufferStream))
+                {
+                    logger.debug("inputStream " + inputStream.hashCode() + " is not a PushBufferStream");
                     continue;
+                }
                 if (!skippedForTransferHandler)
                 {
+                    logger.debug("inputStream " + inputStream.hashCode() + " setting skippedForTransferHandler");
                     skippedForTransferHandler = true;
                     continue;
                 }
                 if (!(inputStream instanceof CachingPushBufferStream))
                 {
+                    logger.debug("inputStream " + inputStream.hashCode() + " isn't a CachingPushBufferStream so wrapping");
+
                     PushBufferStream cachingInputStream
                         = new CachingPushBufferStream(
                                 (PushBufferStream) inputStream);
 
-                    inputStreamDesc.setInputStream(cachingInputStream);
+                    inputStreamDesc.setInputStream(cachingInputStream); //TODO is this safe?
                     if (logger.isTraceEnabled())
                         logger.trace(
                                 "Created CachingPushBufferStream"
@@ -1231,6 +1242,8 @@ class AudioMixerPushBufferStream
         }
         catch (IOException ex)
         {
+            logger.error("AudioMixerPushBufferStream " + this.hashCode() +
+                         " hit error reading from buffer");
             throw new UndeclaredThrowableException(ex);
         }
 
