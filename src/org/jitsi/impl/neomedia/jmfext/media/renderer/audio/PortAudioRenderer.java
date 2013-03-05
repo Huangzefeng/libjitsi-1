@@ -6,6 +6,11 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.renderer.audio;
 
+import info.monitorenter.gui.chart.Chart2D;
+import info.monitorenter.gui.chart.ITrace2D;
+import info.monitorenter.gui.chart.traces.Trace2DLtd;
+
+import java.awt.Color;
 import java.beans.*;
 import java.lang.reflect.*;
 import java.util.*;
@@ -653,6 +658,34 @@ public class PortAudioRenderer
         }
     }
 
+    public static Chart2D chart = null;
+    public static int datapointsToKeep = 400;
+    private ITrace2D trace = null;
+    private ITrace2D trace2 = null;
+    private long lastArrivalTimeNanos = System.nanoTime();
+    
+    private boolean shouldChart()
+    {
+    	if (trace != null)
+    	{
+    		return true;
+    	}
+    	
+    	if (chart != null)
+    	{
+    		trace = new Trace2DLtd(datapointsToKeep, getName());
+    		chart.addTrace(trace);
+    		trace.setColor(Color.blue);
+    		
+    		trace2 = new Trace2DLtd(datapointsToKeep, "Total latency");
+    		chart.addTrace(trace2);
+    		trace2.setColor(Color.cyan);
+    		return true;
+    	}
+    	
+    	return false;
+    }
+    
     /**
      * Renders the audio data contained in a specific <tt>Buffer</tt> onto the
      * PortAudio device represented by this <tt>Renderer</tt>.
@@ -664,12 +697,33 @@ public class PortAudioRenderer
      */
     public int process(Buffer buffer)
     {
+    	
+    	
         synchronized (this)
         {
             if (!started || (stream == 0))
                 return BUFFER_PROCESSED_OK;
             else
                 streamIsBusy = true;
+        }
+
+        if (shouldChart())
+        {
+        	long timeNow = System.nanoTime();
+        	trace.addPoint(timeNow, (timeNow - lastArrivalTimeNanos)/1000000); 
+        	lastArrivalTimeNanos = timeNow;
+        	
+        	if ((buffer.getFlags() & Buffer.FLAG_SID) > 0)
+        	{
+        		if (buffer.setTEDTime == 0)
+        		{
+        		System.out.println("Got a zero TED buff");	
+        		}
+        		else
+        		{
+//        		trace2.addPoint(timeNow, (timeNow - buffer.setTEDTime)/1000000);
+        		}
+        	}
         }
 
         long paErrorCode = Pa.paNoError;

@@ -2,7 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib/fmj.jar"/>
+	<classpathentry kind="lib" path="lib/fmj.jar" sourcepath="/fmj.git"/>
 	<classpathentry kind="lib" path="lib/ice4j.jar"/>
 	<classpathentry kind="lib" path="lib/jain-sdp.jar"/>
 	<classpathentry kind="lib" path="lib/json-simple-1.1.1.jar"/>
@@ -11,5 +11,7 @@
 	<classpathentry kind="lib" path="lib/osgi.core.jar"/>
 	<classpathentry kind="lib" path="lib/sdes4j.jar"/>
 	<classpathentry kind="lib" path="lib/zrtp4j-light.jar"/>
-	<classpathentry kind="output" path="classes"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/fmj.git"/>
+	<classpathentry kind="lib" path="lib/jchart2d-3.2.2.jar"/>
+	<classpathentry kind="output" path="classes_eclipse"/>
 </classpath>
