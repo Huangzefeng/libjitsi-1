@@ -7,6 +7,7 @@
 package org.jitsi.impl.neomedia.codec.audio.silk;
 
 import java.awt.*;
+
 import javax.media.*;
 import javax.media.format.*;
 
@@ -136,7 +137,7 @@ public class JavaDecoder
     public JavaDecoder()
     {
         super("SILK Decoder", AudioFormat.class, SUPPORTED_OUTPUT_FORMATS);
-        
+
         inputFormats = SUPPORTED_INPUT_FORMATS;
 
         addControl(new Stats());
@@ -193,7 +194,12 @@ public class JavaDecoder
          * new call to <tt>process</tt>, so having the same sequence number as
          * on the previous pass is fine. */
         long sequenceNumber = inputBuffer.getSequenceNumber();
-        if(firstPacketProcessed &&
+
+        if ((inputBuffer.getFlags() & Buffer.FLAG_NO_FEC) != 0)
+        {
+            logger.info("SILK has been told not to FEC for seqno: " + sequenceNumber);
+        }
+        else if(firstPacketProcessed &&
                 sequenceNumber != lastPacketSeq &&
                 sequenceNumber != lastPacketSeq+1 &&
                 /* RTP sequence number is a 16bit field */
@@ -208,8 +214,32 @@ public class JavaDecoder
 
         int processed;
 
+        //
+        if ((inputBuffer.getFlags() & Buffer.FLAG_SILENCE) != 0)
+        {
+            logger.info("SILK performing CNG");
+            outputLength[0] = frameLength;
+            processed = BUFFER_PROCESSED_OK;
+
+            if (Silk_dec_API.SKP_Silk_SDK_Decode(
+                                                 decState, decControl,
+                                                 1, //Insert silence
+                                                 inputData, inputOffset, inputLength,
+                                                 outputData, outputOffset, outputLength)
+                                             == 0)
+            {
+                outputBuffer.setDuration(FRAME_DURATION * 1000000);
+                outputBuffer.setLength(outputLength[0]);
+                outputBuffer.setOffset(outputOffset);
+            }
+            else
+            {
+                logger.warn("SILK failed to CNG");
+            }
+        }
+
         /* Decode packet normally */
-        if(!decodeFEC)
+        else if(!decodeFEC)
         {
             outputLength[0] = frameLength;
             if (Silk_dec_API.SKP_Silk_SDK_Decode(
@@ -293,8 +323,12 @@ public class JavaDecoder
                 processed = BUFFER_PROCESSED_FAILED;
         }
 
-        lastPacketSeq = sequenceNumber;
-        firstPacketProcessed = true;
+        if (sequenceNumber != Buffer.SEQUENCE_UNKNOWN)
+        {
+            lastPacketSeq = sequenceNumber;
+            firstPacketProcessed = true;
+        }
+
         return processed;
     }
 
