@@ -93,13 +93,16 @@ public class AudioSystemClipImpl
     @Override
     protected void exitRunOnceInPlayThread()
     {
-        try
+        if (renderer != null)
         {
-            renderer.stop();
-        }
-        finally
-        {
-            renderer.close();
+            try
+            {
+                renderer.stop();
+            }
+            finally
+            {
+                renderer.close();
+            }
         }
     }
 
