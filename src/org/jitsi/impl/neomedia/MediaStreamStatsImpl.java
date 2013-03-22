@@ -41,7 +41,7 @@ public class MediaStreamStatsImpl
 
     /**
      * Enumeration of the direction (DOWNLOAD or UPLOAD) used for the stats.
-     */ 
+     */
     private enum StreamDirection
     {
         DOWNLOAD,
@@ -720,6 +720,14 @@ public class MediaStreamStatsImpl
         return nbDiscardedShrink;
     }
 
+    public int getNbSilenceInserted()
+    {
+        int nbSilenceInserted = 0;
+        for(PacketQueueControl pqc : getPacketQueueControls())
+            nbSilenceInserted =+ pqc.getSilenceInserted();
+        return nbSilenceInserted;
+    }
+
     /**
      * Returns the number of Protocol Data Units (PDU) discarded by the
      * FMJ packet queue since the beginning of the session because it was full.
@@ -1070,7 +1078,8 @@ public class MediaStreamStatsImpl
                     + "Discarded: Total=%s Current=%4.2f%% FEC=%s\n"
                     + "Jitter Buffer (Adaptive=%b) %s/%s\n"
                     + "  Delay %s packets (%sms.)\n"
-                    + "  Discarded Reset=%s Late=%s Shrink=%s Full=%s",
+                    + "  Discarded Reset=%s Late=%s Shrink=%s Full=%s"
+                    + "    Silence Inserted=%s",
                 getLocalIPAddress(),
                 getLocalPort(),
                 getRemoteIPAddress(),
@@ -1097,6 +1106,7 @@ public class MediaStreamStatsImpl
                 getNbDiscardedReset(),
                 getNbDiscardedLate(),
                 getNbDiscardedShrink(),
-                getNbDiscardedFull());
+                getNbDiscardedFull(),
+                getNbSilenceInserted());
     }
 }
