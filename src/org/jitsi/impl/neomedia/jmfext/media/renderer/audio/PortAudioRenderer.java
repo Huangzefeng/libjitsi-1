@@ -6,9 +6,14 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.renderer.audio;
 
+import info.monitorenter.gui.chart.*;
+import info.monitorenter.gui.chart.traces.*;
+
+import java.awt.*;
 import java.beans.*;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.List;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -755,6 +760,29 @@ public class PortAudioRenderer
         }
     }
 
+    public static Chart2D chart = null;
+    public static int datapointsToKeep = 400;
+    private ITrace2D trace = null;
+    private long lastArrivalTimeNanos = System.nanoTime();
+
+    private boolean shouldChart()
+    {
+    	if (trace != null)
+    	{
+    		return true;
+    	}
+
+    	if (chart != null)
+    	{
+    		trace = new Trace2DLtd(datapointsToKeep, getName());
+    		chart.addTrace(trace);
+    		trace.setColor(Color.blue);
+    		return true;
+    	}
+
+    	return false;
+    }
+
     /**
      * Renders the audio data contained in a specific <tt>Buffer</tt> onto the
      * PortAudio device represented by this <tt>Renderer</tt>.
@@ -785,6 +813,13 @@ public class PortAudioRenderer
 
         long errorCode = Pa.paNoError;
         Pa.HostApiTypeId hostApiType = null;
+
+        if (shouldChart())
+        {
+        	long timeNow = System.nanoTime();
+        	trace.addPoint(timeNow, (timeNow - lastArrivalTimeNanos)/1000000);
+        	lastArrivalTimeNanos = timeNow;
+        }
 
         try
         {

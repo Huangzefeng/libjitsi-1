@@ -11,5 +11,6 @@
 	<classpathentry kind="lib" path="lib/osgi.core.jar"/>
 	<classpathentry kind="lib" path="lib/sdes4j.jar"/>
 	<classpathentry kind="lib" path="lib/zrtp4j-light.jar"/>
-	<classpathentry kind="output" path="classes"/>
+	<classpathentry kind="lib" path="lib/jchart2d-3.2.2.jar"/>
+	<classpathentry kind="output" path="classes_eclipse"/>
 </classpath>
