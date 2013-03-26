@@ -90,7 +90,7 @@ public class MediaServiceImpl
 
     /**
      * The name of the <tt>System</tt> boolean property which specifies whether
-     * the loading of the JMF/FMJ <tt>Registry</tt> is to be disabled. 
+     * the loading of the JMF/FMJ <tt>Registry</tt> is to be disabled.
      */
     private static final String JMF_REGISTRY_DISABLE_LOAD
         = "net.sf.fmj.utility.JmfRegistry.disableLoad";
@@ -1603,6 +1603,13 @@ public class MediaServiceImpl
             String suffix
                     = prop.substring(prop.lastIndexOf(".") + 1 ,prop.length());
             Registry.set("adaptive_jitter_buffer_" + suffix, cfg.getString(prop));
+        }
+
+        String jitterBufferPrefix = "net.java.sip.communicator.impl.neomedia.jitterbuffer";
+        for(String prop : cfg.getPropertyNamesByPrefix(jitterBufferPrefix, false))
+        {
+            String suffix = prop.substring(jitterBufferPrefix.length() +1, prop.length());
+            Registry.set("jitterbuffer_" + suffix, cfg.getString(prop));
         }
 
         FMJPlugInConfiguration.registerCustomPackages();
