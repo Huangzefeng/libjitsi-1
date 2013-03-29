@@ -763,7 +763,7 @@ public class PortAudioRenderer
     public static Chart2D chart = null;
     public static int datapointsToKeep = 400;
     private ITrace2D trace = null;
-    private long lastArrivalTimeNanos = System.nanoTime();
+    private long lastArrivalTimeNanos;
 
     private boolean shouldChart()
     {
@@ -774,9 +774,11 @@ public class PortAudioRenderer
 
     	if (chart != null)
     	{
+    	    // Perform init
     		trace = new Trace2DLtd(datapointsToKeep, getName());
     		chart.addTrace(trace);
     		trace.setColor(Color.blue);
+    		lastArrivalTimeNanos = System.nanoTime();
     		return true;
     	}
 
