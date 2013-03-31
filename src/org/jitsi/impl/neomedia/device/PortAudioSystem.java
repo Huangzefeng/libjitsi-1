@@ -552,6 +552,416 @@ public class PortAudioSystem
                 = getDevices(DataFlow.CAPTURE);
             CaptureDeviceInfo2 cdi = null;
 
+            for (WeakReference<PaUpdateAvailableDeviceListListener> wr : ls)
+            {
+<<<<<<< HEAD
+                for (CaptureDeviceInfo2 existingCdi : existingCdis)
+                {
+                    /*
+                     * The deviceUID is optional so a device may be identified
+                     * by deviceUID if it is available or by name if the
+                     * deviceUID is not available.
+                     */
+                    String id = existingCdi.getIdentifier();
+=======
+                PaUpdateAvailableDeviceListListener l = wr.get();
+>>>>>>> 9179986... Implements an alternative to PortAudio on Windows which uses Windows Audio Session API (WASAPI) and related Core Audio APIs such as Multimedia Device (MMDevice) API.
+
+                if (l != null)
+                {
+                    try
+                    {
+                        if (will)
+                            l.willPaUpdateAvailableDeviceList();
+                        else
+                            l.didPaUpdateAvailableDeviceList();
+                    }
+                    catch (Throwable t)
+                    {
+                        if (t instanceof ThreadDeath)
+                            throw (ThreadDeath) t;
+                        else
+                        {
+                            logger.error(
+                                    "PaUpdateAvailableDeviceListListener."
+                                        + (will ? "will" : "did")
+                                        + "PaUpdateAvailableDeviceList failed.",
+                                    t);
+                        }
+                    }
+                }
+            }
+<<<<<<< HEAD
+            if (cdi == null)
+            {
+                cdi
+                    = new CaptureDeviceInfo2(
+                            name,
+                            new MediaLocator(
+                                    LOCATOR_PROTOCOL + ":#" + deviceLocatorID),
+                            new Format[]
+                            {
+                                new AudioFormat(
+                                        AudioFormat.LINEAR,
+                                        (maxInputChannels > 0)
+                                            ? getSupportedSampleRate(
+                                                    true,
+                                                    deviceIndex,
+                                                    channels,
+                                                    sampleFormat)
+                                            : Pa.DEFAULT_SAMPLE_RATE,
+                                        sampleSizeInBits,
+                                        channels,
+                                        AudioFormat.LITTLE_ENDIAN,
+                                        AudioFormat.SIGNED,
+                                        Format.NOT_SPECIFIED /* frameSizeInBits */,
+                                        Format.NOT_SPECIFIED /* frameRate */,
+                                        Format.byteArray)
+                            },
+                            deviceUID,
+                            transportType,
+                            modelIdentifier);
+            }
+
+            /*
+             * When we perform automatic selection of capture and
+             * playback/notify devices, we would like to pick up devices from
+             * one and the same hardware because that sound like a natural
+             * expectation from the point of view of the user. In order to
+             * achieve that, we will bring the devices which support both
+             * capture and playback to the top.
+             */
+            if (maxInputChannels > 0)
+            {
+                List<CaptureDeviceInfo2> devices;
+
+                if (maxOutputChannels > 0)
+                    devices = captureAndPlaybackDevices;
+                else
+                    devices = captureDevices;
+=======
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+        }
+    }
+>>>>>>> 9179986... Implements an alternative to PortAudio on Windows which uses Windows Audio Session API (WASAPI) and related Core Audio APIs such as Multimedia Device (MMDevice) API.
+
+    /**
+     * Gets a sample rate supported by a PortAudio device with a specific device
+     * index with which it is to be registered with JMF.
+     *
+     * @param input <tt>true</tt> if the supported sample rate is to be retrieved for
+     * the PortAudio device with the specified device index as an input device
+     * or <tt>false</tt> for an output device
+     * @param deviceIndex the device index of the PortAudio device for which a
+     * supported sample rate is to be retrieved
+     * @param channelCount number of channel
+     * @param sampleFormat sample format
+     * @return a sample rate supported by the PortAudio device with the
+     * specified device index with which it is to be registered with JMF
+     */
+    private static double getSupportedSampleRate(
+            boolean input,
+            int deviceIndex,
+            int channelCount,
+            long sampleFormat)
+    {
+        long deviceInfo = Pa.GetDeviceInfo(deviceIndex);
+        double supportedSampleRate;
+
+        if (deviceInfo != 0)
+        {
+            double defaultSampleRate
+                = Pa.DeviceInfo_getDefaultSampleRate(deviceInfo);
+
+            if (defaultSampleRate >= MediaUtils.MAX_AUDIO_SAMPLE_RATE)
+                supportedSampleRate = defaultSampleRate;
+            else
+            {
+                long streamParameters
+                    = Pa.StreamParameters_new(
+                            deviceIndex,
+                            channelCount,
+                            sampleFormat,
+                            Pa.LATENCY_UNSPECIFIED);
+
+                if (streamParameters == 0)
+                    supportedSampleRate = defaultSampleRate;
+                else
+                {
+                    try
+                    {
+                        long inputParameters;
+                        long outputParameters;
+
+                        if (input)
+                        {
+                            inputParameters = streamParameters;
+                            outputParameters = 0;
+                        }
+                        else
+                        {
+                            inputParameters = 0;
+                            outputParameters = streamParameters;
+                        }
+
+                        boolean formatIsSupported
+                            = Pa.IsFormatSupported(
+                                    inputParameters,
+                                    outputParameters,
+                                    Pa.DEFAULT_SAMPLE_RATE);
+
+                        supportedSampleRate
+                            = formatIsSupported
+                                ? Pa.DEFAULT_SAMPLE_RATE
+                                : defaultSampleRate;
+                    }
+                    finally
+                    {
+                        Pa.StreamParameters_free(streamParameters);
+                    }
+                }
+            }
+        }
+        else
+            supportedSampleRate = Pa.DEFAULT_SAMPLE_RATE;
+        return supportedSampleRate;
+    }
+
+    /**
+     * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
+     * functional health because of a malfunction in its procedure/process. The
+     * monitoring will automatically cease after the procedure/process resumes
+     * executing normally or is garbage collected.
+     *
+     * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be placed
+     * under monitoring of its functional health because of a malfunction in its
+     * procedure/process
+     */
+    public static void monitorFunctionalHealth(
+            DiagnosticsControl diagnosticsControl)
+    {
+        DiagnosticsControlMonitor.monitorFunctionalHealth(diagnosticsControl);
+    }
+
+    public static void removePaUpdateAvailableDeviceListListener(
+            PaUpdateAvailableDeviceListListener listener)
+    {
+        if (listener == null)
+            return;
+
+        synchronized (paUpdateAvailableDeviceListListeners)
+        {
+            Iterator<WeakReference<PaUpdateAvailableDeviceListListener>> i
+                = paUpdateAvailableDeviceListListeners.iterator();
+
+            while (i.hasNext())
+            {
+                PaUpdateAvailableDeviceListListener l = i.next().get();
+
+                if ((l == null) || l.equals(listener))
+                    i.remove();
+            }
+        }
+    }
+
+    /**
+     * Waits for all PortAudio clients to finish executing
+     * <tt>Pa_OpenStream</tt>.
+     */
+    private static void waitForPaOpenStream()
+    {
+        boolean interrupted = false;
+
+        while (paOpenStream > 0)
+        {
+            try
+            {
+                paOpenStreamSyncRoot.wait();
+            }
+            catch (InterruptedException ie)
+            {
+                interrupted = true;
+            }
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
+    }
+
+    /**
+     * Waits for all PortAudio clients to finish executing
+     * <tt>Pa_UpdateAvailableDeviceList</tt>.
+     */
+    private static void waitForPaUpdateAvailableDeviceList()
+    {
+        boolean interrupted = false;
+
+        while (paUpdateAvailableDeviceList > 0)
+        {
+            try
+            {
+                paOpenStreamSyncRoot.wait();
+            }
+            catch (InterruptedException ie)
+            {
+                interrupted = true;
+            }
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
+    }
+
+    /**
+     * Notifies <tt>PortAudioSystem</tt> that a PortAudio client will start
+     * executing <tt>Pa_OpenStream</tt>.
+     */
+    public static void willPaOpenStream()
+    {
+        synchronized (paOpenStreamSyncRoot)
+        {
+            waitForPaUpdateAvailableDeviceList();
+
+            paOpenStream++;
+            paOpenStreamSyncRoot.notifyAll();
+        }
+    }
+
+    /**
+     * Notifies <tt>PortAudioSystem</tt> that a PortAudio client will start
+     * executing <tt>Pa_UpdateAvailableDeviceList</tt>.
+     */
+    private static void willPaUpdateAvailableDeviceList()
+    {
+        synchronized (paOpenStreamSyncRoot)
+        {
+            waitForPaOpenStream();
+
+            paUpdateAvailableDeviceList++;
+            paOpenStreamSyncRoot.notifyAll();
+        }
+
+        firePaUpdateAvailableDeviceListEvent(true);
+    }
+
+    private Runnable devicesChangedCallback;
+
+    /**
+     * Initializes a new <tt>PortAudioSystem</tt> instance which creates
+     * PortAudio capture and playback devices by enumerating all host devices
+     * with input channels.
+     *
+     * @throws Exception if anything wrong happens while creating the PortAudio
+     * capture and playback devices
+     */
+    PortAudioSystem()
+        throws Exception
+    {
+        super(
+                LOCATOR_PROTOCOL,
+                FEATURE_DENOISE
+                    | FEATURE_ECHO_CANCELLATION
+                    | FEATURE_NOTIFY_AND_PLAYBACK_DEVICES
+                    | FEATURE_REINITIALIZE);
+    }
+
+    /**
+     * Sorts a specific list of <tt>CaptureDeviceInfo2</tt>s so that the
+     * ones representing USB devices appear at the beginning/top of the
+     * specified list.
+     *
+     * @param devices the list of <tt>CaptureDeviceInfo2</tt>s to be
+     * sorted so that the ones representing USB devices appear at the
+     * beginning/top of the list
+     */
+    private void bubbleUpUsbDevices(List<CaptureDeviceInfo2> devices)
+    {
+        if (!devices.isEmpty())
+        {
+            List<CaptureDeviceInfo2> nonUsbDevices
+                = new ArrayList<CaptureDeviceInfo2>(devices.size());
+
+            for (Iterator<CaptureDeviceInfo2> i = devices.iterator();
+                    i.hasNext();)
+            {
+                CaptureDeviceInfo2 d = i.next();
+
+                if (!d.isSameTransportType("USB"))
+                {
+                    nonUsbDevices.add(d);
+                    i.remove();
+                }
+            }
+            if (!nonUsbDevices.isEmpty())
+            {
+                for (CaptureDeviceInfo2 d : nonUsbDevices)
+                    devices.add(d);
+            }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    protected void doInitialize()
+        throws Exception
+    {
+        /*
+         * If PortAudio fails to initialize because of, for example, a missing
+         * native counterpart, it will throw an exception here and the PortAudio
+         * Renderer will not be initialized.
+         */
+        int deviceCount = Pa.GetDeviceCount();
+        int channels = 1;
+        int sampleSizeInBits = 16;
+        long sampleFormat = Pa.getPaSampleFormat(sampleSizeInBits);
+        int defaultInputDeviceIndex = Pa.GetDefaultInputDevice();
+        int defaultOutputDeviceIndex = Pa.GetDefaultOutputDevice();
+        List<CaptureDeviceInfo2> captureAndPlaybackDevices
+            = new LinkedList<CaptureDeviceInfo2>();
+        List<CaptureDeviceInfo2> captureDevices
+            = new LinkedList<CaptureDeviceInfo2>();
+        List<CaptureDeviceInfo2> playbackDevices
+            = new LinkedList<CaptureDeviceInfo2>();
+        final boolean loggerIsDebugEnabled = logger.isDebugEnabled();
+
+        if(CoreAudioDevice.isLoaded)
+            CoreAudioDevice.initDevices();
+        for (int deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
+        {
+            long deviceInfo = Pa.GetDeviceInfo(deviceIndex);
+            String name = Pa.DeviceInfo_getName(deviceInfo);
+
+            if (name != null)
+                name = name.trim();
+
+            int maxInputChannels
+                = Pa.DeviceInfo_getMaxInputChannels(deviceInfo);
+            int maxOutputChannels
+                = Pa.DeviceInfo_getMaxOutputChannels(deviceInfo);
+            String transportType
+                = Pa.DeviceInfo_getTransportType(deviceInfo);
+            String deviceUID
+                = Pa.DeviceInfo_getDeviceUID(deviceInfo);
+            String modelIdentifier = null;
+            if(CoreAudioDevice.isLoaded)
+                modelIdentifier
+                    = CoreAudioDevice.getDeviceModelIdentifier(deviceUID);
+            String deviceLocatorID
+                = (deviceUID != null)? deviceUID: name;
+
+            /*
+             * TODO The intention of reinitialize() was to perform the
+             * initialization from scratch. However, AudioSystem was later
+             * changed to disobey. But we should at least search through both
+             * CAPTURE_INDEX and PLAYBACK_INDEX.
+             */
+            List<CaptureDeviceInfo2> existingCdis
+                = getDevices(DataFlow.CAPTURE);
+            CaptureDeviceInfo2 cdi = null;
+
             if (existingCdis != null)
             {
                 for (CaptureDeviceInfo2 existingCdi : existingCdis)
@@ -814,22 +1224,7 @@ public class PortAudioSystem
     }
 
     /**
-     * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
-     * functional health because of a malfunction in its procedure/process. The
-     * monitoring will automatically cease after the procedure/process resumes
-     * executing normally or is garbage collected.
-     *
-     * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be placed
-     * under monitoring of its functional health because of a malfunction in its
-     * procedure/process
-     */
-    public static void monitorFunctionalHealth(
-            DiagnosticsControl diagnosticsControl)
-    {
-        DiagnosticsControlMonitor.monitorFunctionalHealth(diagnosticsControl);
-    }
 
-    /**
      * Reinitializes this <tt>PortAudioSystem</tt> in order to bring it up to
      * date with possible changes in the PortAudio devices. Invokes
      * <tt>Pa_UpdateAvailableDeviceList()</tt> to update the devices on the
