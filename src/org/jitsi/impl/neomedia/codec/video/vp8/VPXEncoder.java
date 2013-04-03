@@ -11,6 +11,7 @@ import java.awt.*;
 import javax.media.*;
 import javax.media.format.*;
 
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.codec.video.*;
 import org.jitsi.service.neomedia.codec.*;
@@ -22,7 +23,7 @@ import org.jitsi.util.*;
  * @author Boris Grozev
  */
 public class VPXEncoder
-    extends AbstractCodecExt
+    extends AbstractCodec2
 {
     /**
      * VPX interface to use
@@ -181,8 +182,14 @@ public class VPXEncoder
         }
         VPX.codec_enc_config_default(INTERFACE, cfg, 0);
 
+        int bitRate
+            = NeomediaServiceUtils
+                .getMediaServiceImpl()
+                    .getDeviceConfiguration()
+                        .getVideoBitrate();
+
         //set some settings
-        VPX.codec_enc_cfg_set_rc_target_bitrate(cfg, 192);
+        VPX.codec_enc_cfg_set_rc_target_bitrate(cfg, bitRate);
         VPX.codec_enc_cfg_set_rc_resize_allowed(cfg, 1);
         VPX.codec_enc_cfg_set_rc_end_usage(cfg, VPX.RC_MODE_CBR);
         VPX.codec_enc_cfg_set_kf_mode(cfg, VPX.KF_MODE_AUTO);
@@ -263,7 +270,7 @@ public class VPXEncoder
             if(VPX.codec_cx_pkt_get_kind(pkt) == VPX.CODEC_CX_FRAME_PKT)
             {
                 int size = VPX.codec_cx_pkt_get_size(pkt);
-                output = validateByteArraySize(inputBuffer, size);
+                output = validateByteArraySize(inputBuffer, size, false);
                 VPX.memcpy(output,
                            VPX.codec_cx_pkt_get_data(pkt),
                            size);
@@ -338,7 +345,7 @@ public class VPXEncoder
             {
                 int size = VPX.codec_cx_pkt_get_size(pkt);
                 long data = VPX.codec_cx_pkt_get_data(pkt);
-                output = validateByteArraySize(outputBuffer, size);
+                output = validateByteArraySize(outputBuffer, size, false);
                 VPX.memcpy(output, data, size);
                 outputBuffer.setOffset(0);
                 outputBuffer.setLength(size);

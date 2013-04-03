@@ -17,7 +17,7 @@ import org.jitsi.service.neomedia.codec.*;
  * @author Lyubomir Marinov
  */
 public class JNIDecoder
-    extends AbstractCodecExt
+    extends AbstractCodec2
 {
     static final Format[] SUPPORTED_INPUT_FORMATS
         = new Format[]
@@ -110,12 +110,15 @@ public class JNIDecoder
     	}
     	else
     	{
-    		byte[] input = (byte[]) inputBuffer.getData();
+            byte[] input = (byte[]) inputBuffer.getData();
 
             int outputOffset = outputBuffer.getOffset();
             int outputLength = inputBuffer.getLength() * 4;
             byte[] output
-                = validateByteArraySize(outputBuffer, outputOffset + outputLength);
+                = validateByteArraySize(
+                        outputBuffer,
+                        outputOffset + outputLength,
+                        true);
 
             g722_decoder_process(
                     decoder,
@@ -126,7 +129,7 @@ public class JNIDecoder
                     (outputLength * 1000000L)
                         / (16L /* kHz */ * 2L /* sampleSizeInBits / 8 */));
             outputBuffer.setFormat(getOutputFormat());
-            outputBuffer.setLength(outputLength);	
+            outputBuffer.setLength(outputLength);
             return BUFFER_PROCESSED_OK;
     	}
     }

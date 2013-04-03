@@ -23,7 +23,7 @@ import org.jitsi.util.*;
  * @author Boris Grozev
  */
 public class JavaDecoder
-    extends AbstractCodecExt
+    extends AbstractCodec2
 {
     /**
      * The <tt>Logger</tt> used by this <tt>JavaDecoder</tt> instance
@@ -210,6 +210,14 @@ public class JavaDecoder
                 nbPacketsLost += (sequenceNumber-lastPacketSeq)-1;
             else
                 nbPacketsLost += 65535 - lastPacketSeq + sequenceNumber - 1;
+        }
+
+        if ((inputBuffer.getFlags() & Buffer.FLAG_SKIP_FEC) != 0)
+        {
+            decodeFEC = false;
+            if (logger.isTraceEnabled())
+                logger.trace("Not decoding FEC for " + sequenceNumber +
+                        " because SKIP_FEC is set");
         }
 
         int processed;
