@@ -101,23 +101,33 @@ public class JNIDecoder
      */
     protected int doProcess(Buffer inputBuffer, Buffer outputBuffer)
     {
-        byte[] input = (byte[]) inputBuffer.getData();
+    	if ((inputBuffer.getFlags() & Buffer.FLAG_SILENCE) != 0)
+    	{
+    		//We've been asked to insert a silence packet g722 doens't have support
+    		// for this. There's no point decoding the packet, so just return
+    		// straight away indicating that no data is being returned. 
+    		return OUTPUT_BUFFER_NOT_FILLED;
+    	}
+    	else
+    	{
+    		byte[] input = (byte[]) inputBuffer.getData();
 
-        int outputOffset = outputBuffer.getOffset();
-        int outputLength = inputBuffer.getLength() * 4;
-        byte[] output
-            = validateByteArraySize(outputBuffer, outputOffset + outputLength);
+            int outputOffset = outputBuffer.getOffset();
+            int outputLength = inputBuffer.getLength() * 4;
+            byte[] output
+                = validateByteArraySize(outputBuffer, outputOffset + outputLength);
 
-        g722_decoder_process(
-                decoder,
-                input, inputBuffer.getOffset(),
-                output, outputOffset, outputLength);
+            g722_decoder_process(
+                    decoder,
+                    input, inputBuffer.getOffset(),
+                    output, outputOffset, outputLength);
 
-        outputBuffer.setDuration(
-                (outputLength * 1000000L)
-                    / (16L /* kHz */ * 2L /* sampleSizeInBits / 8 */));
-        outputBuffer.setFormat(getOutputFormat());
-        outputBuffer.setLength(outputLength);
-        return BUFFER_PROCESSED_OK;
+            outputBuffer.setDuration(
+                    (outputLength * 1000000L)
+                        / (16L /* kHz */ * 2L /* sampleSizeInBits / 8 */));
+            outputBuffer.setFormat(getOutputFormat());
+            outputBuffer.setLength(outputLength);	
+            return BUFFER_PROCESSED_OK;
+    	}
     }
 }
