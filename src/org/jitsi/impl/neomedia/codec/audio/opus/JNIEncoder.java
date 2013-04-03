@@ -25,7 +25,7 @@ import java.util.*;
  * @author Boris Grozev
  */
 public class JNIEncoder
-    extends AbstractCodecExt
+    extends AbstractCodec2
     implements PacketLossAwareEncoder, FormatParametersAwareCodec
 {
     /**
@@ -140,8 +140,7 @@ public class JNIEncoder
      * The <tt>Logger</tt> used by this <tt>JNIEncoder</tt> instance
      * for logging output.
      */
-    private final Logger logger
-            = Logger.getLogger(JNIEncoder.class);
+    private static final Logger logger = Logger.getLogger(JNIEncoder.class);
 
     /**
      * The minimum expected packet loss percentage to set to the encoder.
@@ -379,7 +378,8 @@ public class JNIEncoder
 
         /* At long last, do the actual encoding. */
 
-        byte[] output = validateByteArraySize(outputBuffer, Opus.MAX_PACKET);
+        byte[] output
+            = validateByteArraySize(outputBuffer, Opus.MAX_PACKET, false);
 
         int outputLength = Opus.encode(encoder, input, inputOffset,
                 inputBytesNeeded / 2, output, Opus.MAX_PACKET);

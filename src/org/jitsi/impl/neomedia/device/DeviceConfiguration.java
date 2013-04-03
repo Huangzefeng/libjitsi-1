@@ -70,6 +70,7 @@ public class DeviceConfiguration
             OSUtils.IS_ANDROID ? ".audio.AudioTrackRenderer" : null,
             OSUtils.IS_ANDROID ? ".audio.OpenSLESRenderer" : null,
             OSUtils.IS_LINUX ? ".audio.PulseAudioRenderer" : null,
+            OSUtils.IS_WINDOWS ? ".audio.WASAPIRenderer" : null,
             OSUtils.IS_ANDROID ? null : ".audio.PortAudioRenderer",
             ".video.JAWTRenderer"
         };
@@ -110,7 +111,12 @@ public class DeviceConfiguration
     /**
      * The default value for video maximum bandwidth.
      */
-    public static final int DEFAULT_VIDEO_MAX_BANDWIDTH = 192; // 256;
+    public static final int DEFAULT_VIDEO_RTP_PACING_THRESHOLD = 192; // 256;
+
+    /**
+     * The default value for video codec bitrate.
+     */
+    public static final int DEFAULT_VIDEO_BITRATE = 128;
 
     /**
      * The default video width.
@@ -169,10 +175,16 @@ public class DeviceConfiguration
 
     /**
      * The property we use to store the settings for maximum allowed video
-     * bandwidth.
+     * bandwidth (used to normalize RTP traffic, and not in codec configuration)
      */
-    private static final String PROP_VIDEO_MAX_BANDWIDTH
+    private static final String PROP_VIDEO_RTP_PACING_THRESHOLD
         = "net.java.sip.communicator.impl.neomedia.video.maxbandwidth";
+
+    /**
+     * The property we use to store the settings for video codec bitrate.
+     */
+    private static final String PROP_VIDEO_BITRATE
+        = "net.java.sip.communicator.impl.neomedia.video.bitrate";
 
     /**
      * The name of the property which specifies the width of the video.
@@ -238,6 +250,11 @@ public class DeviceConfiguration
     private int videoMaxBandwidth = -1;
 
     /**
+     * Current setting for video codec bitrate.
+     */
+    private int videoBitrate = -1;
+
+    /**
      * The current resolution settings.
      */
     private Dimension videoSize;
@@ -261,7 +278,8 @@ public class DeviceConfiguration
                 cfg.addPropertyChangeListener(PROP_VIDEO_HEIGHT, this);
                 cfg.addPropertyChangeListener(PROP_VIDEO_WIDTH, this);
                 cfg.addPropertyChangeListener(PROP_VIDEO_FRAMERATE, this);
-                cfg.addPropertyChangeListener(PROP_VIDEO_MAX_BANDWIDTH, this);
+                cfg.addPropertyChangeListener(PROP_VIDEO_RTP_PACING_THRESHOLD,
+                                              this);
             }
         }
         catch (Exception ex)
@@ -404,14 +422,14 @@ public class DeviceConfiguration
      * @return the CaptureDeviceInfo of a device that we could use for audio
      *         capture.
      */
-    public ExtendedCaptureDeviceInfo getAudioCaptureDevice()
+    public CaptureDeviceInfo2 getAudioCaptureDevice()
     {
         AudioSystem audioSystem = getAudioSystem();
 
         return
             (audioSystem == null)
                 ? null
-                : audioSystem.getDevice(AudioSystem.CAPTURE_INDEX);
+                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.CAPTURE);
     }
 
     /**
@@ -424,9 +442,9 @@ public class DeviceConfiguration
      *         capture devices available through this
      *         <tt>DeviceConfiguration</tt>
      */
-    public List<ExtendedCaptureDeviceInfo> getAvailableAudioCaptureDevices()
+    public List<CaptureDeviceInfo2> getAvailableAudioCaptureDevices()
     {
-        return audioSystem.getDevices(AudioSystem.CAPTURE_INDEX);
+        return audioSystem.getDevices(AudioSystem.DataFlow.CAPTURE);
     }
 
     public AudioSystem getAudioSystem()
@@ -457,8 +475,8 @@ public class DeviceConfiguration
                 if (!NoneAudioSystem.LOCATOR_PROTOCOL.equalsIgnoreCase(
                         audioSystem.getLocatorProtocol()))
                 {
-                    List<ExtendedCaptureDeviceInfo> captureDevices
-                        = audioSystem.getDevices(AudioSystem.CAPTURE_INDEX);
+                    List<CaptureDeviceInfo2> captureDevices
+                        = audioSystem.getDevices(AudioSystem.DataFlow.CAPTURE);
 
                     if ((captureDevices == null)
                             || (captureDevices.size() <= 0))
@@ -471,16 +489,16 @@ public class DeviceConfiguration
                         }
                         else
                         {
-                            List<ExtendedCaptureDeviceInfo> notifyDevices
+                            List<CaptureDeviceInfo2> notifyDevices
                                 = audioSystem.getDevices(
-                                        AudioSystem.NOTIFY_INDEX);
+                                        AudioSystem.DataFlow.NOTIFY);
 
                             if ((notifyDevices == null)
                                     || (notifyDevices.size() <= 0))
                             {
-                                List<ExtendedCaptureDeviceInfo> playbackDevices
+                                List<CaptureDeviceInfo2> playbackDevices
                                     = audioSystem.getDevices(
-                                        AudioSystem.PLAYBACK_INDEX);
+                                        AudioSystem.DataFlow.PLAYBACK);
     
                                 if ((playbackDevices == null)
                                         || (playbackDevices.size() <= 0))
@@ -682,7 +700,7 @@ public class DeviceConfiguration
         return
             (audioSystem == null)
                 ? null
-                : audioSystem.getDevice(AudioSystem.NOTIFY_INDEX);
+                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY);
     }
 
     /**
@@ -871,22 +889,22 @@ public class DeviceConfiguration
      * Gets the maximum allowed video bandwidth.
      *
      * @return the maximum allowed video bandwidth. The default value is
-     * {@link #DEFAULT_VIDEO_MAX_BANDWIDTH}.
+     * {@link #DEFAULT_VIDEO_RTP_PACING_THRESHOLD}.
      */
-    public int getVideoMaxBandwidth()
+    public int getVideoRTPPacingThreshold()
     {
         if (videoMaxBandwidth == -1)
         {
             ConfigurationService cfg = LibJitsi.getConfigurationService();
-            int value = DEFAULT_VIDEO_MAX_BANDWIDTH;
+            int value = DEFAULT_VIDEO_RTP_PACING_THRESHOLD;
 
             if (cfg != null)
-                value = cfg.getInt(PROP_VIDEO_MAX_BANDWIDTH, value);
+                value = cfg.getInt(PROP_VIDEO_RTP_PACING_THRESHOLD, value);
 
             if(value > 0)
                 videoMaxBandwidth = value;
             else
-                videoMaxBandwidth = DEFAULT_VIDEO_MAX_BANDWIDTH;
+                videoMaxBandwidth = DEFAULT_VIDEO_RTP_PACING_THRESHOLD;
         }
         return videoMaxBandwidth;
     }
@@ -896,7 +914,7 @@ public class DeviceConfiguration
      *
      * @param videoMaxBandwidth the maximum allowed video bandwidth
      */
-    public void setVideoMaxBandwidth(int videoMaxBandwidth)
+    public void setVideoRTPPacingThreshold(int videoMaxBandwidth)
     {
         this.videoMaxBandwidth = videoMaxBandwidth;
 
@@ -904,10 +922,55 @@ public class DeviceConfiguration
 
         if (cfg != null)
         {
-            if (videoMaxBandwidth != DEFAULT_VIDEO_MAX_BANDWIDTH)
-                cfg.setProperty(PROP_VIDEO_MAX_BANDWIDTH, videoMaxBandwidth);
+            if (videoMaxBandwidth != DEFAULT_VIDEO_RTP_PACING_THRESHOLD)
+                cfg.setProperty(PROP_VIDEO_RTP_PACING_THRESHOLD,
+                                videoMaxBandwidth);
             else
-                cfg.removeProperty(PROP_VIDEO_MAX_BANDWIDTH);
+                cfg.removeProperty(PROP_VIDEO_RTP_PACING_THRESHOLD);
+        }
+    }
+
+    /**
+     * Gets the video bitrate.
+     *
+     * @return the video codec bitrate. The default value is
+     * {@link #DEFAULT_VIDEO_BITRATE}.
+     */
+    public int getVideoBitrate()
+    {
+        if (videoBitrate == -1)
+        {
+            ConfigurationService cfg = LibJitsi.getConfigurationService();
+            int value = DEFAULT_VIDEO_BITRATE;
+
+            if (cfg != null)
+                value = cfg.getInt(PROP_VIDEO_BITRATE, value);
+
+            if(value > 0)
+                videoBitrate = value;
+            else
+                videoBitrate = DEFAULT_VIDEO_BITRATE;
+        }
+        return videoBitrate;
+    }
+
+    /**
+     * Sets and stores the video bitrate.
+     *
+     * @param videoBitrate the video codec bitrate
+     */
+    public void setVideoBitrate(int videoBitrate)
+    {
+        this.videoBitrate = videoBitrate;
+
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+        if (cfg != null)
+        {
+            if (videoBitrate != DEFAULT_VIDEO_BITRATE)
+                cfg.setProperty(PROP_VIDEO_BITRATE, videoBitrate);
+            else
+                cfg.removeProperty(PROP_VIDEO_BITRATE);
         }
     }
 
@@ -1072,7 +1135,7 @@ public class DeviceConfiguration
         {
             videoSize = null;
         }
-        else if (PROP_VIDEO_MAX_BANDWIDTH.equals(propertyName))
+        else if (PROP_VIDEO_RTP_PACING_THRESHOLD.equals(propertyName))
         {
             videoMaxBandwidth = -1;
         }

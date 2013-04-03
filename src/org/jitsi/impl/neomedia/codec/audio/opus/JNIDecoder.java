@@ -13,8 +13,10 @@ import net.sf.fmj.media.*;
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.control.*;
+import org.jitsi.util.*;
 
 import java.awt.*;
+import java.util.*;
 
 /**
  * Implements an Opus decoder.
@@ -22,9 +24,15 @@ import java.awt.*;
  * @author Boris Grozev
  */
 public class JNIDecoder
-    extends AbstractCodecExt
+    extends AbstractCodec2
     implements FECDecoderControl
 {
+    /**
+     * The <tt>Logger</tt> used by this <tt>JNIDecoder</tt> instance
+     * for logging output.
+     */
+    private static final Logger logger = Logger.getLogger(JNIDecoder.class);
+
     /**
      * The list of <tt>Format</tt>s of audio data supported as input by
      * <tt>JNIDecoder</tt> instances.
@@ -93,6 +101,15 @@ public class JNIDecoder
      * Number of packets decoded with FEC
      */
     private int nbDecodedFec = 0;
+
+    /**
+     * Buffer used to store output decoded from FEC.
+     */
+    private byte[] fecBuffer
+            = new byte[2 /* channels */ *
+                       2 /* bytes per sample */ *
+                       120 /* max ms per opus packet */ *
+                       (outputSamplingRate / 1000) /* samples per ms */];
 
     /**
      * Initializes a new <tt>JNIDecoder</tt> instance.
@@ -168,28 +185,62 @@ public class JNIDecoder
               (inputSequenceNumber != lastPacketSeq + 1) &&
               !(inputSequenceNumber == 0 && lastPacketSeq == 65535))
             decodeFec = true;
+        if ((inputBuffer.getFlags() & Buffer.FLAG_SKIP_FEC) != 0)
+        {
+            decodeFec = false;
+            if (logger.isTraceEnabled())
+                logger.trace("Not decoding FEC for " + inputSequenceNumber +
+                                " because SKIP_FEC is set");
+        }
 
+        /* We figured out what should be decoded. Now decode it. */
+        int fecSamples = 0;
+        int outputLength = 0;
         byte[] inputData = (byte[]) inputBuffer.getData();
         int inputOffset = inputBuffer.getOffset();
         int inputLength = inputBuffer.getLength();
 
-        int outputLength =  Opus.decoder_get_nb_samples(decoder,
+        if (decodeFec)
+        {
+            fecSamples = Opus.decode(decoder,
+                                     inputData, inputOffset, inputLength,
+                                     fecBuffer, fecBuffer.length,
+                                     1 /* decode fec */);
+            outputLength += fecSamples * 2;
+        }
+
+        outputLength +=  Opus.decoder_get_nb_samples(decoder,
                 inputData, inputOffset, inputLength) * 2 /* sizeof(short) */;
-        byte[] outputData = validateByteArraySize(outputBuffer, outputLength);
+        byte[] outputData
+            = validateByteArraySize(outputBuffer, outputLength, false);
 
         int samplesCount = Opus.decode(decoder,
-                inputData, inputOffset, inputLength,
-                outputData, outputLength,
-                decodeFec ? 1 : 0);
+                                       inputData, inputOffset, inputLength,
+                                       outputData, outputLength,
+                                       0 /* no fec */);
 
-        if (samplesCount > 0)
+        if (fecSamples > 0)
+        {
+            /*
+             * TODO: add output offset to Opus.decode(), so that we don't have
+             * to do this shift
+             */
+            System.arraycopy(outputData, 0,
+                             outputData, fecSamples * 2,
+                             samplesCount * 2);
+            System.arraycopy(fecBuffer, 0,
+                             outputData, 0,
+                             fecSamples * 2);
+        }
+
+        if (outputLength > 0)
         {
             outputBuffer.setDuration(
-                    (samplesCount*1000*1000)/outputSamplingRate);
+                    ((samplesCount + fecSamples) *1000*1000)/outputSamplingRate);
             outputBuffer.setFormat(getOutputFormat());
-            outputBuffer.setLength(2*samplesCount); //16bit pcm
+            outputBuffer.setLength(outputLength);
             outputBuffer.setOffset(0);
-            if(decodeFec)
+            if(fecSamples > 0)
                 nbDecodedFec++;
         }
         else
@@ -198,14 +249,7 @@ public class JNIDecoder
             discardOutputBuffer(outputBuffer);
         }
 
-
         firstPacketProcessed = true;
-
-        if(decodeFec)
-        {
-            lastPacketSeq = inputSequenceNumber - 1;
-            return BUFFER_PROCESSED_OK | INPUT_BUFFER_NOT_CONSUMED;
-        }
 
         lastPacketSeq = inputSequenceNumber;
         return BUFFER_PROCESSED_OK;
