@@ -75,6 +75,7 @@ public class AudioSystemClipImpl
     @Override
     protected void enterRunInPlayThread()
     {
+        logger.debug("Enter run in play thread called");
         buffer = new Buffer();
         bufferData = new byte[DEFAULT_BUFFER_DATA_LENGTH];
         buffer.setData(bufferData);
@@ -88,6 +89,7 @@ public class AudioSystemClipImpl
     @Override
     protected void exitRunInPlayThread()
     {
+        logger.debug("Exit run in play thread called");
         buffer = null;
         bufferData = null;
         renderer = null;
@@ -99,6 +101,7 @@ public class AudioSystemClipImpl
     @Override
     protected void exitRunOnceInPlayThread()
     {
+        logger.debug("Exit run once in play thread called");
         if (renderer != null)
         {
             try
@@ -114,6 +117,7 @@ public class AudioSystemClipImpl
 
     protected boolean runOnceInPlayThread()
     {
+        logger.debug("Run once in play thread called");
         InputStream audioStream = null;
 
         try
@@ -133,7 +137,7 @@ public class AudioSystemClipImpl
         {
             Format rendererFormat = audioSystem.getFormat(audioStream);
 
-            if (rendererFormat == null)
+            if (rendererFormat == null || renderer == null)
                 return false;
 
             Format resamplerFormat = null;
@@ -168,6 +172,9 @@ public class AudioSystemClipImpl
                     }
                 }
             }
+            
+            if (buffer == null)
+                return false;
 
             Buffer rendererBuffer = buffer;
             Buffer resamplerBuffer;
