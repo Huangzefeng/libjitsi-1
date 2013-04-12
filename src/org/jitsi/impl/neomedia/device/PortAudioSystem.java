@@ -536,7 +536,7 @@ public class PortAudioSystem
             String deviceUID
                 = Pa.DeviceInfo_getDeviceUID(deviceInfo);
             String modelIdentifier = null;
-            if(CoreAudioDevice.isLoaded)
+            if(CoreAudioDevice.isLoaded && deviceUID != null)
                 modelIdentifier
                     = CoreAudioDevice.getDeviceModelIdentifier(deviceUID);
             String deviceLocatorID
