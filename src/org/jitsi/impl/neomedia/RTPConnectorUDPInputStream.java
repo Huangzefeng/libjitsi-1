@@ -59,6 +59,7 @@ public class RTPConnectorUDPInputStream
         if(socket != null)
         {
             socket.close();
+            LibJitsi.getPacketLoggingService().dumpMediaBuffer();
         }
     }
 
@@ -85,6 +86,7 @@ public class RTPConnectorUDPInputStream
                                                   p.getLength());
 
         if (packetLogging != null)
+        {
             packetLogging.logPacket(
                     PacketLoggingService.ProtocolName.RTP,
                     p.getAddress().getAddress(),
@@ -97,6 +99,12 @@ public class RTPConnectorUDPInputStream
                                              convertedPacket.getHeaderLength()),
                     convertedPacket.getOffset(),
                     convertedPacket.getHeaderLength());
+            
+            // And log to the media buffer
+             byte[] data = new byte[p.getLength()];
+             System.arraycopy(p.getData(), p.getOffset(), data, 0, p.getLength());
+             packetLogging.mediaBuffer(data, System.currentTimeMillis());
+        }
     }
 
     /**

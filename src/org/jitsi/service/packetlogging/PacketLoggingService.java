@@ -127,4 +127,17 @@ public interface PacketLoggingService
      * @return the Packet Logging Configuration.
      */
     public PacketLoggingConfiguration getConfiguration();
+    
+    /**
+     * Dump all the media that's currently in the media buffer.
+     */
+    public void dumpMediaBuffer();
+
+    /**
+     * Record an RTP packet in the rolling media buffer.
+     * 
+     * @param packetContent The full bytes of the UDP Datagram
+     * @param timeStamp The exact time at which the packet arrived
+     */
+    public void mediaBuffer(byte[] packetContent, long timeStamp);
 }
