@@ -59,7 +59,6 @@ public class RTPConnectorUDPInputStream
         if(socket != null)
         {
             socket.close();
-            LibJitsi.getPacketLoggingService().dumpMediaBuffer();
         }
     }
 
