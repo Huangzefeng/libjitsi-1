@@ -52,7 +52,7 @@ public class EncodingConfigurationConfigImpl
         Map<String, String> properties = new HashMap<String, String>();
 
         for (String pName :
-               configurationService.getPropertyNamesByPrefix(propPrefix, false))
+               configurationService.getPropertyNamesByPrefix(propPrefix, true))
             properties.put(pName, configurationService.getString(pName));
 
         loadProperties(properties);
