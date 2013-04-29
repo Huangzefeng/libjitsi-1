@@ -251,7 +251,8 @@ public abstract class AudioSystem
                     catch (SecurityException se)
                     {
                     }
-                    if ((constructor != null) && constructor.isAccessible())
+
+                    if (constructor != null)
                     {
                         superCreateRenderer = false;
                         try
