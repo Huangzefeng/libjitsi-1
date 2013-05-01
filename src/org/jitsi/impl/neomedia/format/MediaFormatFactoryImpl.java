@@ -255,13 +255,15 @@ public class MediaFormatFactoryImpl
          /*
           * MediaFormatImpl is immutable so if the caller wants to change the
           * format parameters and/or the advanced attributes, we'll have to
-          * create a new MediaFormatImpl.
+          * create a new MediaFormatImpl. Use the format parameters from
+          * mediaFormat as we may have modified these - e.g. if there is a
+          * packetization-mode mismatch
           */
         Map<String, String> formatParameters = null;
         Map<String, String> advancedParameters = null;
 
         if ((formatParams != null) && !formatParams.isEmpty())
-            formatParameters = formatParams;
+          formatParameters = mediaFormat.getFormatParameters();
         if ((advancedParams != null ) && !advancedParams.isEmpty())
             advancedParameters = advancedParams;
 
