@@ -70,7 +70,6 @@ public class DeviceConfiguration
             OSUtils.IS_ANDROID ? ".audio.AudioTrackRenderer" : null,
             OSUtils.IS_ANDROID ? ".audio.OpenSLESRenderer" : null,
             OSUtils.IS_LINUX ? ".audio.PulseAudioRenderer" : null,
-            OSUtils.IS_WINDOWS ? ".audio.WASAPIRenderer" : null,
             OSUtils.IS_ANDROID ? null : ".audio.PortAudioRenderer",
             ".video.JAWTRenderer"
         };
@@ -499,7 +498,7 @@ public class DeviceConfiguration
                                 List<CaptureDeviceInfo2> playbackDevices
                                     = audioSystem.getDevices(
                                         AudioSystem.DataFlow.PLAYBACK);
-    
+
                                 if ((playbackDevices == null)
                                         || (playbackDevices.size() <= 0))
                                 {
