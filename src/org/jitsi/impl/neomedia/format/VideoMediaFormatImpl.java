@@ -13,6 +13,7 @@ import javax.media.format.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.*;
 
 /**
  * Implements <tt>VideoMediaFormat</tt> for the JMF <tt>VideoFormat</tt>.
@@ -34,6 +35,13 @@ public class VideoMediaFormatImpl
      * The clock rate of this <tt>VideoMediaFormat</tt>.
      */
     private final double clockRate;
+
+    /**
+     * The <tt>Logger</tt> used by the <tt>VideoMediaFormatImpl</tt> class and
+     * its instances for logging output.
+     */
+    private static final Logger logger
+            = Logger.getLogger(VideoMediaFormatImpl.class);
 
     /**
      * Initializes a new <tt>VideoMediaFormatImpl</tt> instance with a specific
@@ -263,14 +271,17 @@ public class VideoMediaFormatImpl
 
     /**
      * Determines whether two sets of format parameters match in the context of
-     * a specific encoding.
+     * a specific encoding. A set of compatible format parameters is counted
+     * as a match - e.g. the packetization-mode offered is higher than what is
+     * supported.
      *
      * @param encoding the encoding (name) related to the two sets of format
      * parameters to be matched.
      * @param fmtps1 the first set of format parameters which is to be matched
-     * against <tt>fmtps2</tt>
+     * against <tt>fmtps2</tt>. This should always be the set of format
+     * parameters that this client supports.
      * @param fmtps2 the second set of format parameters which is to be matched
-     * against <tt>fmtps1</tt>
+     * against <tt>fmtps1</tt>.
      * @return <tt>true</tt> if the two sets of format parameters match in the
      * context of the specified <tt>encoding</tt>; otherwise, <tt>false</tt>
      */
@@ -288,17 +299,34 @@ public class VideoMediaFormatImpl
                 || "h264/rtp".equalsIgnoreCase(encoding))
         {
             String packetizationMode = "packetization-mode";
-            String pm1
-                = (fmtps1 == null) ? null : fmtps1.get(packetizationMode);
-            String pm2
-                = (fmtps2 == null) ? null : fmtps2.get(packetizationMode);
+            String strPM1
+                = (fmtps1 == null) ?
+                         null :
+                         fmtps1.get(packetizationMode);
+            String strPM2
+                = (fmtps2 == null) ?
+                         null :
+                         fmtps2.get(packetizationMode);
 
-            if (pm1 == null)
-                pm1 = "0";
-            if (pm2 == null)
-                pm2 = "0";
-            if (!pm1.equals(pm2))
+            // It is acceptable to omit the packetization interval. RFC 3984
+            // says that this should be interpreted as 0.
+            strPM1 = (strPM1 == null) ? "0" : strPM1;
+            strPM2 = (strPM2 == null) ? "0" : strPM2;
+
+            try
+            {
+              int intPM1 = Integer.parseInt(strPM1);
+              int intPM2 = Integer.parseInt(strPM2);
+
+              if (intPM1 > intPM2)
                 return false;
+            }
+            catch (NumberFormatException ex)
+            {
+              // Error parsing SDP packetization mode
+              logger.error("Could not parse SDP packetization mode");
+              return false;
+            }
         }
 
         return true;
