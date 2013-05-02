@@ -70,7 +70,11 @@ public class DeviceConfiguration
             OSUtils.IS_ANDROID ? ".audio.AudioTrackRenderer" : null,
             OSUtils.IS_ANDROID ? ".audio.OpenSLESRenderer" : null,
             OSUtils.IS_LINUX ? ".audio.PulseAudioRenderer" : null,
-            OSUtils.IS_ANDROID ? null : ".audio.PortAudioRenderer",
+            (OSUtils.IS_WINDOWS_7 ||
+                OSUtils.IS_WINDOWS_8) ? ".audio.WASAPIRenderer" : null,
+            (OSUtils.IS_ANDROID ||
+                OSUtils.IS_WINDOWS_7 ||
+                    OSUtils.IS_WINDOWS_8) ? null : ".audio.PortAudioRenderer",
             ".video.JAWTRenderer"
         };
 
