@@ -201,7 +201,11 @@ public abstract class DeviceSystem
                     OSUtils.IS_ANDROID ? ".AudioRecordSystem" : null,
                     OSUtils.IS_ANDROID ? ".OpenSLESSystem" : null,
                     OSUtils.IS_LINUX ? ".PulseAudioSystem" : null,
-                    OSUtils.IS_ANDROID ? null : ".PortAudioSystem",
+                    (OSUtils.IS_WINDOWS_7 ||
+                        OSUtils.IS_WINDOWS_8)? ".WASAPISystem" : null,
+                    (OSUtils.IS_ANDROID ||
+                        OSUtils.IS_WINDOWS_7 ||
+                            OSUtils.IS_WINDOWS_8) ? null : ".PortAudioSystem",
                     ".NoneAudioSystem"
                 };
             break;
@@ -232,7 +236,7 @@ public abstract class DeviceSystem
      * instance will be invoked if the <tt>DeviceSystem</tt> instance returns a
      * set of flags from its {@link #getFeatures()} which contains
      * {@link #FEATURE_REINITIALIZE}.
-     * 
+     *
      * @param classNames the names of the classes which extend the
      * <tt>DeviceSystem</tt> class and instances of which are to be initialized
      */
@@ -589,7 +593,7 @@ public abstract class DeviceSystem
      * interface to render media on a playback or notification device associated
      * with this <tt>DeviceSystem</tt>. Invoked by
      * {@link #createRenderer(boolean)}.
-     * 
+     *
      * @return the name of the class which implements the <tt>Renderer</tt>
      * interface to render media on a playback or notification device associated
      * with this <tt>DeviceSystem</tt> or <tt>null</tt> if no <tt>Renderer</tt>
@@ -635,7 +639,7 @@ public abstract class DeviceSystem
      * completed successfully. The implementation of <tt>DeviceSystem</tt> fires
      * a new <tt>PropertyChangeEvent</tt> to notify that the value of the
      * property {@link #PROP_DEVICES} of this instance may have changed i.e.
-     * that the list of devices detected by this instance may have changed. 
+     * that the list of devices detected by this instance may have changed.
      */
     protected void postInitialize()
     {
