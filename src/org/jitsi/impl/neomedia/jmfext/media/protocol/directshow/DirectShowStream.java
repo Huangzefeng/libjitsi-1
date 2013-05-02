@@ -6,17 +6,25 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.directshow;
 
-import java.io.*;
+import java.io.IOException;
 
-import javax.media.*;
-import javax.media.control.*;
-import javax.media.format.*;
-import javax.media.protocol.*;
+import javax.media.Buffer;
+import javax.media.Format;
+import javax.media.control.FormatControl;
+import javax.media.control.FrameRateControl;
+import javax.media.format.VideoFormat;
+import javax.media.protocol.BufferTransferHandler;
+import javax.media.protocol.PushBufferStream;
+import javax.swing.JOptionPane;
 
-import net.java.sip.communicator.impl.neomedia.directshow.*;
+import net.java.sip.communicator.impl.neomedia.directshow.DSCaptureDevice;
 
-import org.jitsi.impl.neomedia.codec.video.*;
-import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
+import org.jitsi.impl.neomedia.codec.video.AVFrame;
+import org.jitsi.impl.neomedia.codec.video.AVFrameFormat;
+import org.jitsi.impl.neomedia.codec.video.ByteBuffer;
+import org.jitsi.impl.neomedia.jmfext.media.protocol.AbstractPushBufferStream;
+import org.jitsi.impl.neomedia.jmfext.media.protocol.ByteBufferPool;
+import org.jitsi.util.Logger;
 
 /**
  * Implements a <tt>PushBufferStream</tt> using DirectShow.
@@ -35,6 +43,12 @@ public class DirectShowStream
      */
     private boolean automaticallyDropsLateVideoFrames = false;
 
+    /**
+     * The logger used by this class.
+     */
+    private static final Logger logger
+                    = Logger.getLogger(DirectShowStream.class);
+    
     /**
      * The pool of <tt>ByteBuffer</tt>s this instances is using to transfer the
      * media data captured by {@link #grabber} out of this instance
@@ -376,7 +390,24 @@ public class DirectShowStream
 
                     try
                     {
-                        dataSyncRoot.wait();
+                        dataSyncRoot.wait(1000);
+                        if (data == null)
+                        {
+                            // If we still have no data then we're probably never going to get any
+                            // Most likely reason is that the camera is in use
+                            logger.error("Failed to get data stream from " + getClass().getSimpleName());
+                            JOptionPane.showMessageDialog(null, "Failed to access webcam", "Error",
+                                    JOptionPane.ERROR_MESSAGE);
+                            
+                            try
+                            {
+                                stop();
+                            }
+                            catch (IOException ex)
+                            {
+                                logger.error("Failed to stop " + getClass().getSimpleName(), ex);
+                            }
+                        }
                     }
                     catch (InterruptedException iex)
                     {
