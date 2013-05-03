@@ -535,7 +535,7 @@ public class PortAudioSystem
             = new LinkedList<CaptureDeviceInfo2>();
         final boolean loggerIsDebugEnabled = logger.isDebugEnabled();
 
-        if(CoreAudioDevice.isLoaded)
+        if(CoreAudioDevice.isLoaded && deviceUID != null)
             CoreAudioDevice.initDevices();
         for (int deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
         {
@@ -909,9 +909,9 @@ public class PortAudioSystem
         /**
          * The time in milliseconds of (uninterrupted) malfunctioning after
          * which the respective <tt>DiagnosticsControl</tt> is to be reported
-         * (to the user).
+         * (to the user). 
          */
-        private static final long MALFUNCTIONING_TIMEOUT = 10000;
+        private static final long MALFUNCTIONING_TIMEOUT = 10 * 1000;
 
         /**
          * The interval of time in milliseconds between subsequent checks upon
@@ -961,7 +961,7 @@ public class PortAudioSystem
          * <tt>DiagnosticsControl</tt>s to be reported to the user
          */
         private static void reportMalfunctioning(
-                final List<DiagnosticsControl> malfunctioning)
+                final List<WeakReference<DiagnosticsControl>> malfunctioning)
         {
             if (!SwingUtilities.isEventDispatchThread())
             {
@@ -1002,23 +1002,16 @@ public class PortAudioSystem
 
             synchronized (DiagnosticsControlMonitor.class)
             {
-                for (DiagnosticsControl key : malfunctioning)
+                for (WeakReference<DiagnosticsControl> aMalfunctioning
+                        : malfunctioning)
                 {
-                    if (diagnosticsControls.containsKey(key)
+                    DiagnosticsControl key = aMalfunctioning.get();
+
+                    if ((key != null)
+                            && diagnosticsControls.containsKey(key)
                             && (diagnosticsControls.get(key) == null))
                     {
-                        String deviceID = key.toString();
-                        int deviceIndex = Pa.getDeviceIndex(deviceID, 0, 0);
-
-                        if (deviceIndex == Pa.paNoDevice)
-                            continue;
-
-                        long deviceInfo = Pa.GetDeviceInfo(deviceIndex);
-
-                        if (deviceInfo == 0)
-                            continue;
-
-                        String name = Pa.DeviceInfo_getName(deviceInfo);
+                        String name = key.toString();
 
                         if ((name == null) || (name.length() == 0))
                             continue;
@@ -1069,9 +1062,12 @@ public class PortAudioSystem
              */
             synchronized (DiagnosticsControlMonitor.class)
             {
-                for (DiagnosticsControl key : malfunctioning)
+                for (WeakReference<DiagnosticsControl> aMalfunctioning
+                        : malfunctioning)
                 {
-                    if (diagnosticsControls.containsKey(key))
+                    DiagnosticsControl key = aMalfunctioning.get();
+
+                    if ((key != null) && diagnosticsControls.containsKey(key))
                         diagnosticsControls.put(key, true);
                 }
             }
@@ -1102,7 +1098,7 @@ public class PortAudioSystem
 
                 int keyCount = 0;
                 long now = System.currentTimeMillis();
-                List<DiagnosticsControl> malfunctioning = null;
+                List<WeakReference<DiagnosticsControl>> malfunctioning = null;
 
                 for (int i = 0; i < keys.length; i++)
                 {
@@ -1119,40 +1115,42 @@ public class PortAudioSystem
                      */
                     keys[i] = null;
 
-                    String deviceID = key.toString();
-                    int deviceIndex = Pa.getDeviceIndex(deviceID, 0, 0);
+                    /*
+                     * The PortAudio device represented by the
+                     * DiagnosticsControl may have already been disconnected. We
+                     * do not have reliable way of detecting that fact here so
+                     * we will rely on the garbage collector and the
+                     * implementation of DiagnosticsControl#toString().
+                     */
+                    keyCount++;
 
-                    if (deviceIndex == Pa.paNoDevice)
+                    long malfunctioningSince = key.getMalfunctioningSince();
+
+                    if (malfunctioningSince == DiagnosticsControl.NEVER)
+                        continue;
+                    if (now - malfunctioningSince < MALFUNCTIONING_TIMEOUT)
+                        continue;
+
+                    if (malfunctioning == null)
                     {
-                        synchronized (DiagnosticsControlMonitor.class)
-                        {
-                            diagnosticsControls.remove(key);
-                        }
+                        malfunctioning
+                            = new LinkedList<WeakReference<DiagnosticsControl>>();
                     }
-                    else
-                    {
-                        keyCount++;
-
-                        long malfunctioningSince = key.getMalfunctioningSince();
-
-                        if (malfunctioningSince == DiagnosticsControl.NEVER)
-                            continue;
-                        if (now - malfunctioningSince < MALFUNCTIONING_TIMEOUT)
-                            continue;
-
-                        if (malfunctioning == null)
-                        {
-                            malfunctioning
-                                = new LinkedList<DiagnosticsControl>();
-                        }
-                        malfunctioning.add(key);
-                    }
+                    malfunctioning.add(
+                            new WeakReference<DiagnosticsControl>(key));
                 }
                 if (keyCount == 0)
                     break;
 
                 if ((malfunctioning != null) && !malfunctioning.isEmpty())
+                {
                     reportMalfunctioning(malfunctioning);
+                    /*
+                     * Make sure we are not accidentally preventing the garbage
+                     * collection of DiagnosticsControl instances.
+                     */
+                    malfunctioning = null;
+                }
 
                 try
                 {
