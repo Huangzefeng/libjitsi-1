@@ -8,15 +8,19 @@ package org.jitsi.impl.neomedia.device;
 
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.regex.*;
 
 import javax.media.*;
 import javax.media.format.*;
+import javax.swing.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
 import org.jitsi.impl.neomedia.portaudio.*;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.resources.*;
 import org.jitsi.util.*;
 
 /**
@@ -346,7 +350,7 @@ public class PortAudioSystem
     public static void monitorFunctionalHealth(
             DiagnosticsControl diagnosticsControl)
     {
-        // TODO Auto-generated method stub
+      DiagnosticsControlMonitor.monitorFunctionalHealth(diagnosticsControl);
     }
 
     public static void removePaUpdateAvailableDeviceListListener(
@@ -510,6 +514,8 @@ public class PortAudioSystem
     protected void doInitialize()
         throws Exception
     {
+        logger.debug("doInitialise called");
+
         /*
          * If PortAudio fails to initialize because of, for example, a missing
          * native counterpart, it will throw an exception here and the PortAudio
@@ -718,6 +724,7 @@ public class PortAudioSystem
                     {
                         try
                         {
+                            logger.debug("devices changed callback runing");
                             reinitialize();
                         }
                         catch (Throwable t)
@@ -840,6 +847,7 @@ public class PortAudioSystem
     private void reinitialize()
         throws Exception
     {
+        logger.debug("Reinitialize called");
         synchronized (paUpdateAvailableDeviceListSyncRoot)
         {
             willPaUpdateAvailableDeviceList();
@@ -872,5 +880,289 @@ public class PortAudioSystem
     public String toString()
     {
         return "PortAudio";
+    }
+
+    /**
+     * Encapsulates the monitoring of the functional health of
+     * procedures/processes represented as <tt>DiagnosticsControl</tt>
+     * implementations.
+     */
+    private static class DiagnosticsControlMonitor
+    {
+        /**
+         * The <tt>Runnable</tt> to be executed by {@link #executor} and to
+         * monitor the functional health of {@link #diagnosticsControls}.
+         */
+        private static Runnable command;
+
+        /**
+         * The <tt>DiagnosticControl</tt>s representing procedures/processes
+         * whose functional health is to be monitored.
+         */
+        private static final Map<DiagnosticsControl,Boolean> diagnosticsControls
+            = new WeakHashMap<DiagnosticsControl,Boolean>();
+
+        private static WeakReference<JDialog> dialog;
+
+        private static ExecutorService executor;
+
+        /**
+         * The time in milliseconds of (uninterrupted) malfunctioning after
+         * which the respective <tt>DiagnosticsControl</tt> is to be reported
+         * (to the user).
+         */
+        private static final long MALFUNCTIONING_TIMEOUT = 10000;
+
+        /**
+         * The interval of time in milliseconds between subsequent checks upon
+         * the functional health of the monitored <tt>DiagnosticsControl</tt>s.s
+         */
+        private static final long MONITOR_INTERVAL = 1000;
+
+        /**
+         * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
+         * functional health because of a malfunction in its procedure/process.
+         * The monitoring will automatically cease after the procedure/process
+         * resumes executing normally or is garbage collected.
+         *
+         * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be
+         * placed under monitoring of its functional health because of a
+         * malfunction in its procedure/process
+         */
+        public static synchronized void monitorFunctionalHealth(
+                DiagnosticsControl diagnosticsControl)
+        {
+            if (!diagnosticsControls.containsKey(diagnosticsControl))
+            {
+                diagnosticsControls.put(diagnosticsControl, null);
+
+                if (executor == null)
+                    executor = Executors.newSingleThreadExecutor();
+                if (command == null)
+                {
+                    command
+                        = new Runnable()
+                        {
+                            public void run()
+                            {
+                                runInCommand();
+                            }
+                        };
+                }
+                executor.execute(command);
+            }
+        }
+
+        /**
+         * Reports a specific list of malfunctioning
+         * <tt>DiagnosticsControl</tt>s to the user.
+         *
+         * @param malfunctioning the list of malfunctioning
+         * <tt>DiagnosticsControl</tt>s to be reported to the user
+         */
+        private static void reportMalfunctioning(
+                final List<DiagnosticsControl> malfunctioning)
+        {
+            if (!SwingUtilities.isEventDispatchThread())
+            {
+                SwingUtilities.invokeLater(
+                        new Runnable()
+                        {
+                            public void run()
+                            {
+                                reportMalfunctioning(malfunctioning);
+                            }
+                        });
+                return;
+            }
+
+            /*
+             * If the dialog is shown, do not report any subsequent
+             * malfunctioning until the dialog is hidden in order to prevent
+             * multiple dialogs.
+             */
+            JDialog dialog;
+
+            if (DiagnosticsControlMonitor.dialog == null)
+                dialog = null;
+            else
+            {
+                dialog = DiagnosticsControlMonitor.dialog.get();
+                if ((dialog != null) && dialog.isVisible())
+                    return;
+            }
+
+            /*
+             * Prepare a message to be displayed to the user listing the names
+             * of the audio device which are malfunctioning.
+             */
+            StringBuilder param = new StringBuilder();
+            String lineSeparator = System.getProperty("line.separator");
+            int malfunctioningCount = 0;
+
+            synchronized (DiagnosticsControlMonitor.class)
+            {
+                for (DiagnosticsControl key : malfunctioning)
+                {
+                    if (diagnosticsControls.containsKey(key)
+                            && (diagnosticsControls.get(key) == null))
+                    {
+                        String deviceID = key.toString();
+                        int deviceIndex = Pa.getDeviceIndex(deviceID, 0, 0);
+
+                        if (deviceIndex == Pa.paNoDevice)
+                            continue;
+
+                        long deviceInfo = Pa.GetDeviceInfo(deviceIndex);
+
+                        if (deviceInfo == 0)
+                            continue;
+
+                        String name = Pa.DeviceInfo_getName(deviceInfo);
+
+                        if ((name == null) || (name.length() == 0))
+                            continue;
+
+                        param.append(name).append(lineSeparator);
+                        malfunctioningCount++;
+                    }
+                }
+            }
+            if (malfunctioningCount == 0)
+                return;
+
+            ResourceManagementService r
+                = LibJitsi.getResourceManagementService();
+
+            if (r == null)
+                return;
+
+            /*
+             * Do display the list of malfunctioning audio devices to the user.
+             */
+            String message
+                = r.getI18NString(
+                        "impl.neomedia.device.portaudiosystem"
+                            + ".diagnosticscontrolmonitor.MESSAGE",
+                        new String[] { param.toString() });
+            String title
+                = r.getI18NString(
+                        "impl.neomedia.device.portaudiosystem"
+                            + ".diagnosticscontrolmonitor.TITLE");
+
+            JOptionPane optionPane = new JOptionPane();
+
+            optionPane.setMessage(message);
+            optionPane.setMessageType(JOptionPane.WARNING_MESSAGE);
+            optionPane.setOptionType(JOptionPane.DEFAULT_OPTION);
+
+            dialog = optionPane.createDialog(null, title);
+            dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            dialog.setModal(false);
+
+            DiagnosticsControlMonitor.dialog
+                = new WeakReference<JDialog>(dialog);
+
+            /*
+             * Once a device is reported to be malfunctioning, do not report it
+             * again until sufficient time has passed to warrant its new report.
+             */
+            synchronized (DiagnosticsControlMonitor.class)
+            {
+                for (DiagnosticsControl key : malfunctioning)
+                {
+                    if (diagnosticsControls.containsKey(key))
+                        diagnosticsControls.put(key, true);
+                }
+            }
+
+            dialog.setVisible(true);
+        }
+
+        /**
+         * Implements {@link Runnable#run()} in {@link #command}. Monitors the
+         * functional health of {@link #diagnosticsControls}.
+         */
+        private static void runInCommand()
+        {
+            DiagnosticsControl[] keys = new DiagnosticsControl[0];
+
+            do
+            {
+                synchronized (DiagnosticsControlMonitor.class)
+                {
+                    if (diagnosticsControls.isEmpty())
+                        break;
+
+                    Set<DiagnosticsControl> keySet
+                        = diagnosticsControls.keySet();
+
+                    keys = keySet.toArray(keys);
+                }
+
+                int keyCount = 0;
+                long now = System.currentTimeMillis();
+                List<DiagnosticsControl> malfunctioning = null;
+
+                for (int i = 0; i < keys.length; i++)
+                {
+                    DiagnosticsControl key = keys[i];
+
+                    if (key == null)
+                        continue;
+
+                    /*
+                     * XXX The array keys will live as much as possible in order
+                     * to reduce allocations. However, its elements should be
+                     * referenced as little as possible in order to not prevent
+                     * their garbage collection.
+                     */
+                    keys[i] = null;
+
+                    String deviceID = key.toString();
+                    int deviceIndex = Pa.getDeviceIndex(deviceID, 0, 0);
+
+                    if (deviceIndex == Pa.paNoDevice)
+                    {
+                        synchronized (DiagnosticsControlMonitor.class)
+                        {
+                            diagnosticsControls.remove(key);
+                        }
+                    }
+                    else
+                    {
+                        keyCount++;
+
+                        long malfunctioningSince = key.getMalfunctioningSince();
+
+                        if (malfunctioningSince == DiagnosticsControl.NEVER)
+                            continue;
+                        if (now - malfunctioningSince < MALFUNCTIONING_TIMEOUT)
+                            continue;
+
+                        if (malfunctioning == null)
+                        {
+                            malfunctioning
+                                = new LinkedList<DiagnosticsControl>();
+                        }
+                        malfunctioning.add(key);
+                    }
+                }
+                if (keyCount == 0)
+                    break;
+
+                if ((malfunctioning != null) && !malfunctioning.isEmpty())
+                    reportMalfunctioning(malfunctioning);
+
+                try
+                {
+                    Thread.sleep(MONITOR_INTERVAL);
+                }
+                catch (InterruptedException ie)
+                {
+                }
+            }
+            while (true);
+        }
     }
 }
