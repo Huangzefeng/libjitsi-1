@@ -6,25 +6,21 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.directshow;
 
-import java.io.IOException;
+import java.io.*;
 
-import javax.media.Buffer;
-import javax.media.Format;
-import javax.media.control.FormatControl;
-import javax.media.control.FrameRateControl;
-import javax.media.format.VideoFormat;
-import javax.media.protocol.BufferTransferHandler;
-import javax.media.protocol.PushBufferStream;
-import javax.swing.JOptionPane;
+import javax.media.*;
+import javax.media.control.*;
+import javax.media.format.*;
+import javax.media.protocol.*;
+import javax.swing.*;
 
-import net.java.sip.communicator.impl.neomedia.directshow.DSCaptureDevice;
+import net.java.sip.communicator.impl.neomedia.directshow.*;
 
-import org.jitsi.impl.neomedia.codec.video.AVFrame;
-import org.jitsi.impl.neomedia.codec.video.AVFrameFormat;
-import org.jitsi.impl.neomedia.codec.video.ByteBuffer;
-import org.jitsi.impl.neomedia.jmfext.media.protocol.AbstractPushBufferStream;
-import org.jitsi.impl.neomedia.jmfext.media.protocol.ByteBufferPool;
-import org.jitsi.util.Logger;
+import org.jitsi.impl.neomedia.codec.video.*;
+import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.resources.*;
+import org.jitsi.util.*;
 
 /**
  * Implements a <tt>PushBufferStream</tt> using DirectShow.
@@ -48,7 +44,7 @@ public class DirectShowStream
      */
     private static final Logger logger
                     = Logger.getLogger(DirectShowStream.class);
-    
+
     /**
      * The pool of <tt>ByteBuffer</tt>s this instances is using to transfer the
      * media data captured by {@link #grabber} out of this instance
@@ -77,6 +73,18 @@ public class DirectShowStream
      * <tt>PushBufferStream</tt>.
      */
     private final Format format;
+
+    /**
+     * The resource string used to display an error message to the user if the
+     * device cannot be read
+     */
+    private static final String deviceReadErrorProp =
+                                 "service.protocol.media.ERROR_READING_WEBCAM";
+
+    /**
+     * The resource string used for the error message title
+     */
+    private static final String errorTitleProp = "service.gui.ERROR";
 
     /**
      * Delegate class to handle video data.
@@ -391,21 +399,31 @@ public class DirectShowStream
                     try
                     {
                         dataSyncRoot.wait(1000);
-                        if (data == null)
+                        if (data == null && transferData == false)
                         {
-                            // If we still have no data then we're probably never going to get any
-                            // Most likely reason is that the camera is in use
-                            logger.error("Failed to get data stream from " + getClass().getSimpleName());
-                            JOptionPane.showMessageDialog(null, "Failed to access webcam", "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                            
+                            // If we still have no data then we're probably
+                            // never going to get any. Most likely reason is
+                            // that the camera is in use elsewhere
+                            logger.error("Failed to get data stream from " +
+                                                   getClass().getSimpleName());
+
+                            ResourceManagementService res = LibJitsi.
+                                                getResourceManagementService();
+                            String error = res.getI18NString(deviceReadErrorProp);
+                            String errorTitle = res.getI18NString(errorTitleProp);
+
+                            JOptionPane.showMessageDialog(null,
+                                                    error,
+                                                    errorTitle,
+                                                    JOptionPane.ERROR_MESSAGE);
                             try
                             {
                                 stop();
                             }
                             catch (IOException ex)
                             {
-                                logger.error("Failed to stop " + getClass().getSimpleName(), ex);
+                                logger.error("Failed to stop " +
+                                               getClass().getSimpleName(), ex);
                             }
                         }
                     }
