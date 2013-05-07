@@ -535,8 +535,9 @@ public class PortAudioSystem
             = new LinkedList<CaptureDeviceInfo2>();
         final boolean loggerIsDebugEnabled = logger.isDebugEnabled();
 
-        if(CoreAudioDevice.isLoaded && deviceUID != null)
+        if(CoreAudioDevice.isLoaded)
             CoreAudioDevice.initDevices();
+
         for (int deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
         {
             long deviceInfo = Pa.GetDeviceInfo(deviceIndex);
@@ -554,7 +555,7 @@ public class PortAudioSystem
             String deviceUID
                 = Pa.DeviceInfo_getDeviceUID(deviceInfo);
             String modelIdentifier = null;
-            if(CoreAudioDevice.isLoaded)
+            if(CoreAudioDevice.isLoaded  && deviceUID != null)
                 modelIdentifier
                     = CoreAudioDevice.getDeviceModelIdentifier(deviceUID);
             String deviceLocatorID
@@ -909,7 +910,7 @@ public class PortAudioSystem
         /**
          * The time in milliseconds of (uninterrupted) malfunctioning after
          * which the respective <tt>DiagnosticsControl</tt> is to be reported
-         * (to the user). 
+         * (to the user).
          */
         private static final long MALFUNCTIONING_TIMEOUT = 10 * 1000;
 
