@@ -308,10 +308,7 @@ public abstract class DeviceSystem
                 {
                     try
                     {
-<<<<<<< HEAD
                         logger.debug("initialising device systems");
-=======
->>>>>>> 9179986... Implements an alternative to PortAudio on Windows which uses Windows Audio Session API (WASAPI) and related Core Audio APIs such as Multimedia Device (MMDevice) API.
                         invokeDeviceSystemInitialize(deviceSystem);
                     }
                     catch (Throwable t)
