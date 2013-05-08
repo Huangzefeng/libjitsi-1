@@ -337,6 +337,22 @@ public class PortAudioSystem
         return supportedSampleRate;
     }
 
+    /**
+     * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
+     * functional health because of a malfunction in its procedure/process. The
+     * monitoring will automatically cease after the procedure/process resumes
+     * executing normally or is garbage collected.
+     *
+     * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be placed
+     * under monitoring of its functional health because of a malfunction in its
+     * procedure/process
+     */
+    public static void monitorFunctionalHealth(
+            DiagnosticsControl diagnosticsControl)
+    {
+      DiagnosticsControlMonitor.monitorFunctionalHealth(diagnosticsControl);
+    }
+
     public static void removePaUpdateAvailableDeviceListListener(
             PaUpdateAvailableDeviceListListener listener)
     {
@@ -498,6 +514,8 @@ public class PortAudioSystem
     protected void doInitialize()
         throws Exception
     {
+        logger.debug("doInitialise called");
+
         /*
          * If PortAudio fails to initialize because of, for example, a missing
          * native counterpart, it will throw an exception here and the PortAudio
@@ -519,6 +537,7 @@ public class PortAudioSystem
 
         if(CoreAudioDevice.isLoaded)
             CoreAudioDevice.initDevices();
+
         for (int deviceIndex = 0; deviceIndex < deviceCount; deviceIndex++)
         {
             long deviceInfo = Pa.GetDeviceInfo(deviceIndex);
@@ -536,7 +555,7 @@ public class PortAudioSystem
             String deviceUID
                 = Pa.DeviceInfo_getDeviceUID(deviceInfo);
             String modelIdentifier = null;
-            if(CoreAudioDevice.isLoaded && deviceUID != null)
+            if(CoreAudioDevice.isLoaded  && deviceUID != null)
                 modelIdentifier
                     = CoreAudioDevice.getDeviceModelIdentifier(deviceUID);
             String deviceLocatorID
@@ -706,6 +725,7 @@ public class PortAudioSystem
                     {
                         try
                         {
+                            logger.debug("devices changed callback runing");
                             reinitialize();
                         }
                         catch (Throwable t)
@@ -814,22 +834,6 @@ public class PortAudioSystem
     }
 
     /**
-     * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
-     * functional health because of a malfunction in its procedure/process. The
-     * monitoring will automatically cease after the procedure/process resumes
-     * executing normally or is garbage collected.
-     *
-     * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be placed
-     * under monitoring of its functional health because of a malfunction in its
-     * procedure/process
-     */
-    public static void monitorFunctionalHealth(
-            DiagnosticsControl diagnosticsControl)
-    {
-        DiagnosticsControlMonitor.monitorFunctionalHealth(diagnosticsControl);
-    }
-
-    /**
      * Reinitializes this <tt>PortAudioSystem</tt> in order to bring it up to
      * date with possible changes in the PortAudio devices. Invokes
      * <tt>Pa_UpdateAvailableDeviceList()</tt> to update the devices on the
@@ -906,7 +910,7 @@ public class PortAudioSystem
         /**
          * The time in milliseconds of (uninterrupted) malfunctioning after
          * which the respective <tt>DiagnosticsControl</tt> is to be reported
-         * (to the user). 
+         * (to the user).
          */
         private static final long MALFUNCTIONING_TIMEOUT = 10 * 1000;
 

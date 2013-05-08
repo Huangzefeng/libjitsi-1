@@ -922,10 +922,16 @@ public class ZRTPTransformEngine
     }
 
     /**
+     * Switch on the security.
      *
-     * @param c
-     * @param s
-     * @param verified
+     * ZRTP calls this method after it has computed the SAS and check
+     * if it is verified or not.
+     *
+     * @param c The name of the used cipher algorithm and mode, or NULL.
+     * @param s The SAS string.
+     * @param verified if <code>verified</code> is true then SAS was
+     *    verified by both parties during a previous call.
+     *
      * @see gnu.java.zrtp.ZrtpCallback#srtpSecretsOn(java.lang.String,
      *                                               java.lang.String, boolean)
      */
@@ -934,11 +940,10 @@ public class ZRTPTransformEngine
         if (securityEventManager != null)
         {
             securityEventManager.secureOn(c);
-        }
-
-        if (securityEventManager != null && (s != null || verified))
-        {
-            securityEventManager.showSAS(s, verified);
+            if(s != null || !verified)
+            {
+                securityEventManager.showSAS(s, verified);
+            }
         }
     }
 
@@ -1127,6 +1132,9 @@ public class ZRTPTransformEngine
     {
         if (zrtpEngine != null)
             zrtpEngine.SASVerified();
+
+        if(securityEventManager != null)
+            securityEventManager.setSASVerified(true);
     }
 
     /**
@@ -1136,6 +1144,9 @@ public class ZRTPTransformEngine
     {
         if (zrtpEngine != null)
             zrtpEngine.resetSASVerified();
+
+        if(securityEventManager != null)
+            securityEventManager.setSASVerified(false);
     }
 
     /**
