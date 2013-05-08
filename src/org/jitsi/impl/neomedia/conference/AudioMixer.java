@@ -259,10 +259,6 @@ public class AudioMixer
                     }
                 }
             }
-            else
-            {
-
-            }
         }
     }
 

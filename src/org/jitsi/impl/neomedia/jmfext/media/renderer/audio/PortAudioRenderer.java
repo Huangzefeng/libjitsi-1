@@ -771,22 +771,22 @@ public class PortAudioRenderer
 
     private boolean shouldChart()
     {
-    	if (trace != null)
-    	{
-    		return true;
-    	}
+        if (trace != null)
+        {
+            return true;
+        }
 
-    	if (chart != null)
-    	{
-    	    // Perform init
-    		trace = new Trace2DLtd(datapointsToKeep, getName());
-    		chart.addTrace(trace);
-    		trace.setColor(Color.blue);
-    		lastArrivalTimeNanos = System.nanoTime();
-    		return true;
-    	}
+        if (chart != null)
+        {
+            // Perform init
+            trace = new Trace2DLtd(datapointsToKeep, getName());
+            chart.addTrace(trace);
+            trace.setColor(Color.blue);
+            lastArrivalTimeNanos = System.nanoTime();
+            return true;
+        }
 
-    	return false;
+        return false;
     }
 
     /**
@@ -822,9 +822,9 @@ public class PortAudioRenderer
 
         if (shouldChart())
         {
-        	long timeNow = System.nanoTime();
-        	trace.addPoint(timeNow, (timeNow - lastArrivalTimeNanos)/1000000);
-        	lastArrivalTimeNanos = timeNow;
+            long timeNow = System.nanoTime();
+            trace.addPoint(timeNow, (timeNow - lastArrivalTimeNanos)/1000000);
+            lastArrivalTimeNanos = timeNow;
         }
 
         try

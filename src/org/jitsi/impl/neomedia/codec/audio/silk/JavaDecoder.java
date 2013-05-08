@@ -7,7 +7,6 @@
 package org.jitsi.impl.neomedia.codec.audio.silk;
 
 import java.awt.*;
-
 import javax.media.*;
 import javax.media.format.*;
 
@@ -160,7 +159,7 @@ public class JavaDecoder
     public JavaDecoder()
     {
         super("SILK Decoder", AudioFormat.class, SUPPORTED_OUTPUT_FORMATS);
-
+        
         inputFormats = SUPPORTED_INPUT_FORMATS;
 
         addControl(new Stats());

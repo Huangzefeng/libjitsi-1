@@ -720,14 +720,6 @@ public class MediaStreamStatsImpl
         return nbDiscardedShrink;
     }
 
-    public int getNbSilenceInserted()
-    {
-        int nbSilenceInserted = 0;
-        for(PacketQueueControl pqc : getPacketQueueControls())
-            nbSilenceInserted =+ pqc.getSilenceInserted();
-        return nbSilenceInserted;
-    }
-
     /**
      * Returns the number of Protocol Data Units (PDU) discarded by the
      * FMJ packet queue since the beginning of the session because it was full.
@@ -1106,7 +1098,6 @@ public class MediaStreamStatsImpl
                 getNbDiscardedReset(),
                 getNbDiscardedLate(),
                 getNbDiscardedShrink(),
-                getNbDiscardedFull(),
-                getNbSilenceInserted());
+                getNbDiscardedFull());
     }
 }

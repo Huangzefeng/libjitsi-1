@@ -242,7 +242,5 @@ public interface MediaStreamStats
      */
     public int getPacketQueueCountPackets();
 
-    public int getNbSilenceInserted();
-
 
 }

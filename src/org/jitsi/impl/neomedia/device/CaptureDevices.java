@@ -37,8 +37,6 @@ public class CaptureDevices
     public static final String PROP_DEVICE = "captureDevice";
 
     /**
-=======
->>>>>>> 9179986... Implements an alternative to PortAudio on Windows which uses Windows Audio Session API (WASAPI) and related Core Audio APIs such as Multimedia Device (MMDevice) API.
      * Initializes the capture device list management.
      *
      * @param audioSystem The audio system managing this capture device list.
