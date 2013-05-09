@@ -119,7 +119,7 @@ public class DeviceConfiguration
     /**
      * The default value for video maximum bandwidth.
      */
-    public static final int DEFAULT_VIDEO_RTP_PACING_THRESHOLD = 192; // 256;
+    public static final int DEFAULT_VIDEO_RTP_PACING_THRESHOLD = 256;
 
     /**
      * The default video width.
