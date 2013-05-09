@@ -1070,8 +1070,7 @@ public class MediaStreamStatsImpl
                     + "Discarded: Total=%s Current=%4.2f%% FEC=%s\n"
                     + "Jitter Buffer (Adaptive=%b) %s/%s\n"
                     + "  Delay %s packets (%sms.)\n"
-                    + "  Discarded Reset=%s Late=%s Shrink=%s Full=%s"
-                    + "    Silence Inserted=%s",
+                    + "  Discarded Reset=%s Late=%s Shrink=%s Full=%s",
                 getLocalIPAddress(),
                 getLocalPort(),
                 getRemoteIPAddress(),
