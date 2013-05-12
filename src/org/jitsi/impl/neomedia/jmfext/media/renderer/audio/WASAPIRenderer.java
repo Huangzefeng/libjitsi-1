@@ -410,6 +410,11 @@ public class WASAPIRenderer
                 throw (ResourceUnavailableException) t;
             else
             {
+                logger.error(
+                        "Failed to open a WASAPIRenderer"
+                            + " on an audio endpoint device.",
+                        t);
+
                 ResourceUnavailableException rue
                     = new ResourceUnavailableException();
 
