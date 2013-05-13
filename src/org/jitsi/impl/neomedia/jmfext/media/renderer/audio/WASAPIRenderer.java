@@ -16,6 +16,8 @@ import java.util.concurrent.*;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.utility.charting.Charting;
+
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.*;
 import org.jitsi.util.*;
@@ -655,6 +657,7 @@ public class WASAPIRenderer
                     {
                         try
                         {
+                        	Charting.wroteToWasapi(toWrite);
                             written
                                 = IAudioRenderClient_Write(
                                         iAudioRenderClient,
@@ -831,6 +834,7 @@ public class WASAPIRenderer
 
                         try
                         {
+                        	Charting.wroteToWasapi(toWrite);
                             written
                                 = IAudioRenderClient_Write(
                                         iAudioRenderClient,
