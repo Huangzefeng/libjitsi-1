@@ -730,7 +730,7 @@ public class MediaServiceImpl
         if (outputVolumeControl == null)
         {
             outputVolumeControl
-                = new AbstractVolumeControl(
+                = new BasicVolumeControl(
                         VolumeControl.PLAYBACK_VOLUME_LEVEL_PROPERTY_NAME);
         }
         return outputVolumeControl;
@@ -767,7 +767,7 @@ public class MediaServiceImpl
             if (inputVolumeControl == null)
             {
                 inputVolumeControl
-                    = new AbstractVolumeControl(
+                    = new BasicVolumeControl(
                             VolumeControl.CAPTURE_VOLUME_LEVEL_PROPERTY_NAME);
             }
         }
