@@ -1234,6 +1234,7 @@ public class MediaDeviceSession
                 Renderer renderer = device.createRenderer();
 
                 if (renderer != null)
+                {
                     try
                     {
                         tc.setRenderer(renderer);
@@ -1241,12 +1242,11 @@ public class MediaDeviceSession
                     catch (UnsupportedPlugInException upie)
                     {
                         logger.warn(
-                                "Failed to set "
-                                    + renderer.getClass().getName()
-                                    + " renderer on track "
-                                    + i,
+                                "Failed to set " + renderer.getClass().getName()
+                                    + " renderer on track " + i,
                                 upie);
                     }
+                }
             }
         }
     }
