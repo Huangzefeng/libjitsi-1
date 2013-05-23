@@ -29,7 +29,9 @@ import org.jitsi.util.*;
 public class WASAPIStream
     extends AbstractPullBufferStream
 {
-    /**
+    private static final int LOG_INTERVAL = 1000;
+
+	/**
      * The default duration of the audio data in milleseconds to be read from
      * <tt>WASAPIStream</tt> in an invocation of {@link #read(Buffer)}. 
      */
@@ -422,6 +424,7 @@ public class WASAPIStream
 
                 buffer.setFlags(Buffer.FLAG_SYSTEM_TIME);
                 buffer.setTimeStamp(timeStamp);
+                updateReadWASAPIData(read);
             }
         }
         else
@@ -436,7 +439,48 @@ public class WASAPIStream
         return read;
     }
 
-    /**
+    long timeFirstRead = 0;
+    long totalReads = 0;
+    long lastLogTime = 0;
+    long lastLogReads = 0;
+    
+    private void updateReadWASAPIData(int read) {
+		if (timeFirstRead == 0)
+		{
+			timeFirstRead = System.currentTimeMillis();
+		}
+		
+		totalReads += read;
+		
+		long currentTime = System.currentTimeMillis();
+		if (lastLogTime < currentTime - LOG_INTERVAL)
+		{
+			long readsInLastInterval = totalReads - lastLogReads;
+			lastLogReads = totalReads;
+			
+			long lastIntervalLength = currentTime - lastLogTime;
+			lastLogTime = currentTime;
+			
+			long totalTime = currentTime - timeFirstRead;
+			
+			String logLine = String.format("Reads - Total=%s in %s (%s per sec)\n" +
+					      "        In last %s ms. = %s (%s per sec)",
+					      totalReads, totalTime, calculatePerSec(totalTime, totalReads), lastIntervalLength, readsInLastInterval, calculatePerSec(lastIntervalLength, readsInLastInterval) 
+					);
+			
+			logger.info(logLine);
+			System.out.println(logLine);
+		}
+		
+	}
+    
+    private double calculatePerSec(long intervalInMs, long count)
+    {
+    	double intervalInSecs = intervalInMs / 1000d;
+    	return count / intervalInSecs;
+    }
+
+	/**
      * Gets the <tt>MediaLocator</tt> of this instance which identifies the
      * audio endpoint device this <tt>SourceStream</tt> is to capture data from.
      *
@@ -651,6 +695,7 @@ public class WASAPIStream
                  */
                 IAudioClient_Stop(iAudioClient);
                 started = false;
+                initClockChecker();
             }
             catch (HResultException hre)
             {
@@ -658,6 +703,13 @@ public class WASAPIStream
             }
         }
     }
+
+	private void initClockChecker() {
+		timeFirstRead = 0;
+		totalReads = 0;
+		lastLogTime = 0;
+		lastLogReads = 0;
+	}
 
     /**
      * Throws a new <tt>IOException</tt> instance initialized with a specific
