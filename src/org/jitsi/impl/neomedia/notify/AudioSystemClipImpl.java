@@ -115,6 +115,7 @@ public class AudioSystemClipImpl
         }
     }
 
+    @Override
     protected boolean runOnceInPlayThread()
     {
         logger.debug("Run once in play thread called");

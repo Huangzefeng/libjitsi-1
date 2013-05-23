@@ -83,6 +83,7 @@ public class RTPConnectorTCPInputStream
      *
      * @param p packet to log
      */
+    @Override
     protected void doLogPacket(DatagramPacket p)
     {
         if(socket.getLocalAddress() == null)
@@ -123,6 +124,7 @@ public class RTPConnectorTCPInputStream
      * @param p packet for receiving
      * @throws IOException if something goes wrong during receiving
      */
+    @Override
     protected void receivePacket(DatagramPacket p)
         throws IOException
     {

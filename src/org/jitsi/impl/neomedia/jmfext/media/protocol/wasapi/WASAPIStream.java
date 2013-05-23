@@ -33,7 +33,7 @@ public class WASAPIStream
 
 	/**
      * The default duration of the audio data in milleseconds to be read from
-     * <tt>WASAPIStream</tt> in an invocation of {@link #read(Buffer)}. 
+     * <tt>WASAPIStream</tt> in an invocation of {@link #read(Buffer)}.
      */
     private static final long DEFAULT_BUFFER_DURATION = 20;
 
@@ -51,7 +51,7 @@ public class WASAPIStream
 
     /**
      * The length in bytes of the <tt>Buffer</tt> to be filled in an invocation
-     * of {@link #read(Buffer)}. 
+     * of {@link #read(Buffer)}.
      */
     private int bufferLength;
 
@@ -65,7 +65,7 @@ public class WASAPIStream
 
     /**
      * The number of channels which which this <tt>SourceStream</tt> has been
-     * connected. 
+     * connected.
      */
     private int dstChannels;
 
@@ -236,7 +236,7 @@ public class WASAPIStream
                     /*
                      * We will very likely be inefficient if we fail to
                      * synchronize with the scheduling period of the audio
-                     * engine but we have to make do with what we have. 
+                     * engine but we have to make do with what we have.
                      */
                     if (periodicity <= 1)
                     {
@@ -613,7 +613,7 @@ public class WASAPIStream
                 else
                 {
                     IOException ioe = new IOException();
-    
+
                     ioe.initCause(cause);
                     throw ioe;
                 }
