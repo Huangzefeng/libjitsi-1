@@ -81,6 +81,7 @@ public class CaptureDevices
      *
      * @return The property of the capture devices.
      */
+    @Override
     protected String getPropDevice()
     {
         return PROP_DEVICE;

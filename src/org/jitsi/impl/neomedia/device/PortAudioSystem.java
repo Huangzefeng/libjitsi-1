@@ -511,6 +511,7 @@ public class PortAudioSystem
     /**
      * {@inheritDoc}
      */
+    @Override
     protected void doInitialize()
         throws Exception
     {

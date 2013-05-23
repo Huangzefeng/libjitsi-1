@@ -582,7 +582,7 @@ public class MediaStreamStatsImpl
         {
             return 0;
         }
-        return ((double) 100 * nbLost) / ((double)(nbLostAndRecv));
+        return ((double) 100 * nbLost) / ((nbLostAndRecv));
     }
 
     /**

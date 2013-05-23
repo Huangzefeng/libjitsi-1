@@ -159,12 +159,13 @@ public class JavaDecoder
     public JavaDecoder()
     {
         super("SILK Decoder", AudioFormat.class, SUPPORTED_OUTPUT_FORMATS);
-        
+
         inputFormats = SUPPORTED_INPUT_FORMATS;
 
         addControl(new Stats());
     }
 
+    @Override
     protected void doClose()
     {
         if (logger.isDebugEnabled())
@@ -181,6 +182,7 @@ public class JavaDecoder
         decControl = null;
     }
 
+    @Override
     protected void doOpen()
         throws ResourceUnavailableException
     {
@@ -202,6 +204,7 @@ public class JavaDecoder
         lastSeqNo = Buffer.SEQUENCE_UNKNOWN;
     }
 
+    @Override
     protected int doProcess(Buffer inBuffer, Buffer outBuffer)
     {
         byte[] in = (byte[]) inBuffer.getData();
