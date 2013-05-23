@@ -1587,8 +1587,7 @@ public class ConfigurationServiceImpl
         {
             Properties fileProps = new Properties();
 
-            fileProps.load(ClassLoader.getSystemClassLoader()
-                .getSystemResourceAsStream(fileName));
+            fileProps.load(ClassLoader.getSystemResourceAsStream(fileName));
 
             // now get those properties and place them into the mutable and
             // immutable properties maps.
