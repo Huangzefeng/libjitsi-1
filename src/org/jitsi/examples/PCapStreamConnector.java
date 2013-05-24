@@ -24,7 +24,7 @@ public class PCapStreamConnector implements StreamConnector {
 	{
 		DatagramSocket sock = null;
 		try {
-			sock = new PCapDatagramSocket(filename);
+			sock = new TimedPCapDatagramSocket(filename);
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}

@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.util.Date;
 
 /**
  * A datagram socket that gets its data from a pcap file.
@@ -34,19 +33,25 @@ public class PCapDatagramSocket extends DatagramSocket
     @Override
     public synchronized void receive(DatagramPacket p) throws IOException
     {
+        receiveWithTimeStamp(p);
+    }
+
+    public synchronized long receiveWithTimeStamp(DatagramPacket p) throws IOException
+    {
         byte[] intByteArray = new byte[4];
 
         //  First 4 bytes are ts in seconds
         //  Next 4 bytes are ts in nano seconds
         fis.read(intByteArray);
         int timeStampSeconds = byteArrayToInt(intByteArray);
-        
+
         fis.read(intByteArray);
         int timeStampMicroSecondsOnly = byteArrayToInt(intByteArray);
-        
+
+
         long timeStampNanoSeconds = combineTimestamps(timeStampSeconds, timeStampMicroSecondsOnly);
 //        System.out.println(String.format("Timestamp from packet %s secs, %s nanos (%s))", timeStampNanoSeconds/1000000000, timeStampNanoSeconds % 1000000000, new Date(timeStampNanoSeconds / 1000000)));
-        
+
         //  next 4 bytes are total packet length
         fis.read(intByteArray);
         int payloadLength = byteArrayToInt(intByteArray);
@@ -71,56 +76,9 @@ public class PCapDatagramSocket extends DatagramSocket
 
         //Set a random port - I don't know if this is required.
         p.setPort(5000);
-        
-        try
-        {
-            if (! hasMediaOffsetEverBeenSet())
-            {
-            	// Set the media time offset to be the difference between the
-            	// current time and the time the packet was captured.
-            	mediaTimeOffset = System.nanoTime() - timeStampNanoSeconds;
-            }
-            else
-            {
-            	// Don't return until we actually would have read the packet.
-            	// Sleeping is more accurate than using a timer.
-            	long currentTime = System.nanoTime();
-            	long timeToPlayPacket = convertMediaToSystemTime(timeStampNanoSeconds);
-            	
-            	long timeToSleepFor = timeToPlayPacket - currentTime;
-            	long timeToSleepForJustMillis = timeToSleepFor / 1000000;
-            	int timeToSleepForJustNanos = (int) (timeToSleepFor % 1000000);
-            	
-            	if (timeToSleepFor > 0)
-            	{
-            		Thread.sleep(timeToSleepForJustMillis, timeToSleepForJustNanos);
-            	}
-            }
-        }
-        catch (InterruptedException e)
-        {
-            e.printStackTrace();
-        }
+
+        return timeStampNanoSeconds;
     }
-    
-    private long convertMediaToSystemTime(long timeStampNanoSeconds) {
-		return timeStampNanoSeconds + mediaTimeOffset;
-	}
-
-	private boolean hasMediaOffsetEverBeenSet() {
-		return mediaTimeOffset != Long.MIN_VALUE;
-	}
-
-	// An offset between the time the packet was written and the current nano time reading
-	// It's the amount of time to add to the media time to make it system time.
-    long mediaTimeOffset = Long.MIN_VALUE;
-
-    /**
-     * @return a timestamp in nanoseconds
-     */
-    private long combineTimestamps(int timeStampSeconds, int timeStampMicroSecondsOnly) {
-    	return (timeStampSeconds * 1000000000L) + (timeStampMicroSecondsOnly * 1000L);
-	}
 
 	@Override
     public void close()
@@ -135,6 +93,14 @@ public class PCapDatagramSocket extends DatagramSocket
         {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * @return a timestamp in nanoseconds
+     */
+    private long combineTimestamps(int timeStampSeconds, int timeStampMicroSecondsOnly)
+    {
+        return (timeStampSeconds * 1000000000L) + (timeStampMicroSecondsOnly * 1000L);
     }
 
     // Test method. Just read a single packet...
