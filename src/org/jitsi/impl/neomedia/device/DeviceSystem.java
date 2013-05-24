@@ -284,9 +284,9 @@ public abstract class DeviceSystem
                     {
                         if (t instanceof ThreadDeath)
                             throw (ThreadDeath) t;
-                        else if (logger.isDebugEnabled())
+                        else
                         {
-                            logger.debug(
+                            logger.warn(
                                     "Failed to initialize " + className,
                                     t);
                         }
@@ -315,9 +315,9 @@ public abstract class DeviceSystem
                     {
                         if (t instanceof ThreadDeath)
                             throw (ThreadDeath) t;
-                        else if (logger.isDebugEnabled())
+                        else
                         {
-                            logger.debug(
+                            logger.warn(
                                     "Failed to reinitialize " + className,
                                     t);
                         }
