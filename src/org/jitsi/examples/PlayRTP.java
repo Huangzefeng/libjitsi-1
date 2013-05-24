@@ -1,17 +1,12 @@
 package org.jitsi.examples;
 
-import java.io.PrintStream;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
-import org.jitsi.service.libjitsi.LibJitsi;
-import org.jitsi.service.neomedia.MediaDirection;
-import org.jitsi.service.neomedia.MediaService;
-import org.jitsi.service.neomedia.MediaStream;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.MediaUseCase;
-import org.jitsi.service.neomedia.StreamConnector;
-import org.jitsi.service.neomedia.device.MediaDevice;
-import org.jitsi.service.neomedia.format.MediaFormat;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.device.*;
+import org.jitsi.service.neomedia.format.*;
 
 /**
  * Play RTP from a file.
@@ -20,6 +15,7 @@ public class PlayRTP
 {
     private MediaStream mediaStream;
     private String      filename;
+    StreamConnector connector;
 
     private PlayRTP(String filename) throws Exception
     {
@@ -69,7 +65,7 @@ public class PlayRTP
         mediaStream.setFormat(format);
 
         // connector
-        StreamConnector connector = new PCapStreamConnector(filename);
+        connector = new PCapStreamConnector(filename);
         mediaStream.setConnector(connector);
         mediaStream.start();
 
@@ -127,15 +123,11 @@ public class PlayRTP
 
                 if (playRTP.initialize())
                 {
-                    try
+                    while (playRTP.connector.getDataSocket().isConnected())
                     {
-                        Thread.sleep(Integer.MAX_VALUE);
+                        Thread.sleep(1000);
                     }
-                    finally
-                    {
-                        playRTP.close();
-                    }
-
+                    playRTP.close();
                     System.err.println("Exiting");
                 }
                 else

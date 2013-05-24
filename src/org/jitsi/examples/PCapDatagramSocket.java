@@ -1,10 +1,8 @@
 
 package org.jitsi.examples;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
+import java.io.*;
+import java.net.*;
 
 /**
  * A datagram socket that gets its data from a pcap file.
@@ -13,6 +11,7 @@ import java.net.DatagramSocket;
  */
 public class PCapDatagramSocket extends DatagramSocket
 {
+    private boolean connected = true;
     private final FileInputStream fis;
 
     public PCapDatagramSocket(String filename) throws IOException
@@ -42,12 +41,18 @@ public class PCapDatagramSocket extends DatagramSocket
 
         //  First 4 bytes are ts in seconds
         //  Next 4 bytes are ts in nano seconds
-        fis.read(intByteArray);
+        int readResult = fis.read(intByteArray);
         int timeStampSeconds = byteArrayToInt(intByteArray);
 
         fis.read(intByteArray);
         int timeStampMicroSecondsOnly = byteArrayToInt(intByteArray);
 
+        if (readResult == -1)
+        {
+            //End of file has been reached - assumes that EOF is aligned with packets
+            close();
+            return 0;
+        }
 
         long timeStampNanoSeconds = combineTimestamps(timeStampSeconds, timeStampMicroSecondsOnly);
 //        System.out.println(String.format("Timestamp from packet %s secs, %s nanos (%s))", timeStampNanoSeconds/1000000000, timeStampNanoSeconds % 1000000000, new Date(timeStampNanoSeconds / 1000000)));
@@ -84,6 +89,7 @@ public class PCapDatagramSocket extends DatagramSocket
     public void close()
     {
         super.close();
+        connected = false;
 
         try
         {
@@ -95,6 +101,11 @@ public class PCapDatagramSocket extends DatagramSocket
         }
     }
 
+    @Override
+    public synchronized boolean isConnected()
+    {
+        return connected;
+    }
     /**
      * @return a timestamp in nanoseconds
      */
