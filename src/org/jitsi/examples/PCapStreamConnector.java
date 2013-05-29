@@ -1,60 +1,84 @@
 package org.jitsi.examples;
 
-import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.Socket;
-import java.net.SocketException;
+import java.io.*;
+import java.net.*;
 
-import org.jitsi.service.neomedia.StreamConnector;
+import org.jitsi.service.neomedia.*;
 
 /**
- * Support UDP only.
- * RTP only - no RTCP
+ * Support UDP only. RTP only - no RTCP
  */
-public class PCapStreamConnector implements StreamConnector {
+public class PCapStreamConnector
+    implements StreamConnector
+{
 
     private String filename;
-	public PCapStreamConnector(String filename)
+
+    public PCapStreamConnector(String filename)
     {
-	    this.filename = filename;
+        this.filename = filename;
+    }
+
+    DatagramSocket sock = null;
+
+    @Override
+    public DatagramSocket getDataSocket()
+    {
+        if (sock == null)
+        {
+            try
+            {
+                sock = new TimedPCapDatagramSocket(filename);
+            }
+            catch (SocketException e)
+            {
+                e.printStackTrace();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+        }
+
+        return sock;
     }
 
     @Override
-	public DatagramSocket getDataSocket()
-	{
-		DatagramSocket sock = null;
-		try {
-			sock = new PCapDatagramSocket(filename);
-		} catch (SocketException e) {
-			e.printStackTrace();
-		}
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-		return sock;
-	}
+    public Protocol getProtocol()
+    {
+        return Protocol.UDP;
+    }
 
-	@Override
-	public Protocol getProtocol() {
-		return Protocol.UDP;
-	}
+    @Override
+    public void close()
+    {
+    }
 
-	@Override
-	public void close() {}
+    @Override
+    public void started()
+    {
+    }
 
-	@Override
-	public void started() {}
+    @Override
+    public void stopped()
+    {
+    }
 
-	@Override
-	public void stopped() {}
+    @Override
+    public DatagramSocket getControlSocket()
+    {
+        return null;
+    }
 
-	@Override
-	public DatagramSocket getControlSocket() {return null;}
+    @Override
+    public Socket getDataTCPSocket()
+    {
+        return null;
+    }
 
-	@Override
-	public Socket getDataTCPSocket() {return null;}
-
-	@Override
-	public Socket getControlTCPSocket() {return null;}
+    @Override
+    public Socket getControlTCPSocket()
+    {
+        return null;
+    }
 }
