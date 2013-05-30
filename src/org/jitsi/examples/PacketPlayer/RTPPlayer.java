@@ -1,6 +1,10 @@
 package org.jitsi.examples.PacketPlayer;
 
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.*;
 import java.io.*;
 import java.util.*;
@@ -132,7 +136,25 @@ public class RTPPlayer
         mframe.setBounds(100, 100, 517, 366);
         mframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        
         JButton btnChooseFile = new JButton("Choose File");
+        btnChooseFile.setDropTarget(new DropTarget() {
+        	public synchronized void drop(DropTargetDropEvent evt) {
+        		try {
+        			evt.acceptDrop(DnDConstants.ACTION_COPY);
+        			List<File> droppedFiles = (List<File>)
+        					evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+        			
+        			if (droppedFiles.size() == 1)
+        			{
+        				loadFile(droppedFiles.get(0));
+        			}
+        			
+        		} catch (Exception ex) {
+        			ex.printStackTrace();
+        		}
+        	}
+        });
         btnChooseFile.addActionListener(new ActionListener()
         {
             public void actionPerformed(ActionEvent arg0)
