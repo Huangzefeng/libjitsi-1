@@ -30,7 +30,7 @@ import org.jitsi.util.*;
  * @author Lyubomir Marinov
  */
 public class WASAPIStream
-    extends AbstractPullBufferStream
+    extends AbstractPushBufferStream
 {
 	/**
      * The default duration of the audio data in milliseconds to be read from
@@ -948,14 +948,9 @@ public class WASAPIStream
                  * S_FALSE.
                  */
                 IAudioClient_Stop(iAudioClient);
-<<<<<<< HEAD
                 started = false;
-=======
-                started = false;
-                initClockChecker();
                 waitWhileEventHandleCmd();
                 remainderLength = 0;
->>>>>>> 17852d8... Fixes quality degradation issues in the Windows Audio Session API backend.
             }
             catch (HResultException hre)
             {
