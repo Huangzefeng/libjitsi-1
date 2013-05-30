@@ -1,4 +1,4 @@
-package org.jitsi.examples;
+package org.jitsi.examples.PacketPlayer;
 
 import java.io.*;
 import java.net.*;
@@ -13,10 +13,12 @@ public class PCapStreamConnector
 {
 
     private String filename;
+    private int ssrc;
 
-    public PCapStreamConnector(String filename)
+    public PCapStreamConnector(String filename, int ssrc)
     {
         this.filename = filename;
+        this.ssrc = ssrc;
     }
 
     DatagramSocket sock = null;
@@ -28,10 +30,15 @@ public class PCapStreamConnector
         {
             try
             {
-                sock = new TimedPCapDatagramSocket(filename);
+                sock = new TimedPCapDatagramSocket(filename, ssrc);
             }
             catch (SocketException e)
             {
+                e.printStackTrace();
+            }
+            catch (FileNotFoundException e)
+            {
+                e.getMessage();
                 e.printStackTrace();
             }
             catch (IOException e)

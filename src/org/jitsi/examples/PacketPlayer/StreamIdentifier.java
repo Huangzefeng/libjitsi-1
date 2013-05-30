@@ -1,4 +1,4 @@
-package org.jitsi.examples;
+package org.jitsi.examples.PacketPlayer;
 
 import java.io.*;
 import java.net.*;
@@ -78,7 +78,7 @@ public class StreamIdentifier
         }
     }
 
-    private int readSSRC(ByteBuffer wrapped)
+    public static int readSSRC(ByteBuffer wrapped)
     {
         int SSRC = wrapped.getInt(8);
         return SSRC;

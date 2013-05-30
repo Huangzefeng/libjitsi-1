@@ -1,5 +1,5 @@
 
-package org.jitsi.examples;
+package org.jitsi.examples.PacketPlayer;
 
 import java.io.*;
 import java.net.*;
