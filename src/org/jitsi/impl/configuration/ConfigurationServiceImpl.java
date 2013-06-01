@@ -1633,8 +1633,11 @@ public class ConfigurationServiceImpl
         catch (Exception ex)
         {
             //we can function without defaults so we are just logging those.
-            logger.error("Failed to load property file: "
-                + fileName, ex);
+            logger.info("No defaults property file loaded: " + fileName
+                + ". Not a problem.");
+
+            if(logger.isDebugEnabled())
+                logger.debug("load exception", ex);
         }
     }
 
