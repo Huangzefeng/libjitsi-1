@@ -26,13 +26,13 @@ import org.jitsi.util.*;
  *
  * @author Lyubomir Marinov
  */
-class InputStreamDesc
+class InStreamDesc
 {
-    private static final Logger logger = Logger.getLogger(InputStreamDesc.class);
+    private static final Logger logger = Logger.getLogger(InStreamDesc.class);
 
     /**
      * The <tt>Buffer</tt> into which media data is to be read from
-     * {@link #inputStream}.
+     * {@link #inStream}.
      */
     private SoftReference<Buffer> buffer;
 
@@ -40,13 +40,13 @@ class InputStreamDesc
      * The <tt>DataSource</tt> which created the <tt>SourceStream</tt> described
      * by this instance and additional information about it.
      */
-    public final InputDataSourceDesc inputDataSourceDesc;
+    public final InDataSourceDesc inDataSourceDesc;
 
     /**
      * The <tt>SourceStream</tt> for which additional information is described
      * by this instance.
      */
-    private SourceStream inputStream;
+    private SourceStream inStream;
 
     /**
      * The number of reads of this input stream which did not return any
@@ -55,24 +55,24 @@ class InputStreamDesc
     long nonContributingReadCount;
 
     /**
-     * Initializes a new <tt>InputStreamDesc</tt> instance which is to describe
+     * Initializes a new <tt>InStreamDesc</tt> instance which is to describe
      * additional information about a specific input audio <tt>SourceStream</tt>
      * of an <tt>AudioMixer</tt>. Associates the specified <tt>SourceStream</tt>
      * with the <tt>DataSource</tt> which created it and additional information
      * about it.
      *
-     * @param inputStream a <tt>SourceStream</tt> for which additional
+     * @param inStream a <tt>SourceStream</tt> for which additional
      * information is to be described by the new instance
-     * @param inputDataSourceDesc the <tt>DataSource</tt> which created the
+     * @param inDataSourceDesc the <tt>DataSource</tt> which created the
      * <tt>SourceStream</tt> to be described by the new instance and additional
      * information about it
      */
-    public InputStreamDesc(
-        SourceStream inputStream,
-        InputDataSourceDesc inputDataSourceDesc)
+    public InStreamDesc(
+            SourceStream inStream,
+            InDataSourceDesc inDataSourceDesc)
     {
-        this.inputStream = inputStream;
-        this.inputDataSourceDesc = inputDataSourceDesc;
+        this.inStream = inStream;
+        this.inDataSourceDesc = inDataSourceDesc;
     }
 
     /**
@@ -101,9 +101,9 @@ class InputStreamDesc
      *
      * @return the <tt>SourceStream</tt> described by this instance
      */
-    public SourceStream getInputStream()
+    public SourceStream getInStream()
     {
-        return inputStream;
+        return inStream;
     }
 
     /**
@@ -115,9 +115,9 @@ class InputStreamDesc
      * contribution of the <tt>SourceStream</tt> described by this instance is
      * to not be included
      */
-    public AudioMixingPushBufferDataSource getOutputDataSource()
+    public AudioMixingPushBufferDataSource getOutDataSource()
     {
-        return inputDataSourceDesc.outputDataSource;
+        return inDataSourceDesc.outDataSource;
     }
 
     /**
@@ -136,22 +136,22 @@ class InputStreamDesc
     /**
      * Sets the <tt>SourceStream</tt> to be described by this instance.
      *
-     * @param inputStream the <tt>SourceStream</tt> to be described by this
+     * @param inStream the <tt>SourceStream</tt> to be described by this
      * instance
      */
-    public void setInputStream(SourceStream inputStream)
+    public void setInStream(SourceStream inStream)
     {
-        if (this.inputStream != inputStream)
+        if (this.inStream != inStream)
         {
-            if (this.inputStream != null)
+            if (this.inStream != null)
             {
-              logger.debug("Changing inputStream from " + this.inputStream.hashCode() + " to " + inputStream.hashCode());
+              logger.debug("Changing inputStream from " + this.inStream.hashCode() + " to " + inStream.hashCode());
             }
 
-            this.inputStream = inputStream;
+            this.inStream = inStream;
 
             /*
-             * Since the inputStream has changed, one may argue that the Buffer
+             * Since the inStream has changed, one may argue that the Buffer
              * of the old value is not optimal for the new value.
              */
             setBuffer(null);
