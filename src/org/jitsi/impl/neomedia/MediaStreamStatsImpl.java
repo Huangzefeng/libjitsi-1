@@ -17,9 +17,7 @@ import javax.media.rtp.*;
 
 import net.sf.fmj.media.rtp.*;
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.apache.commons.math3.stat.descriptive.SynchronizedSummaryStatistics;
-import org.apache.commons.math3.util.MathUtils;
+import org.apache.commons.math3.stat.descriptive.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.control.*;
@@ -67,7 +65,7 @@ public class MediaStreamStatsImpl
     private long[] nbPackets = {0, 0};
     
     /**
-     * The last number of received/sent packets.
+     * Statistics (min/max/avg) about jitter in both directions.
      */
     private SummaryStatistics[] jitterStats = { new SynchronizedSummaryStatistics(),  new SynchronizedSummaryStatistics()};
 
@@ -126,7 +124,7 @@ public class MediaStreamStatsImpl
     private long rttMs = -1;
     
     /**
-     * The average of the RTT values or -1 if the RTT has not been computed yet.
+     * RTT statistics.
      */
     private SummaryStatistics  rttMsSummary = new SynchronizedSummaryStatistics();
     
@@ -399,19 +397,19 @@ public class MediaStreamStatsImpl
      */
     public float getDownloadTotalPercentLost()
     {
-    	long downloadedPackets = getDownloadTotalPackets();
-    	downloadedPackets = Math.max(downloadedPackets, 1);
+        long downloadedPackets = getDownloadTotalPackets();
+        downloadedPackets = Math.max(downloadedPackets, 1);
         return (nbLost[StreamDirection.DOWNLOAD.ordinal()] / downloadedPackets) * 100;
     }
     
     /**
      * @return the total percentage packet loss in the upload direction
      */
-	public float getUploadTotalPercentLost() {
-    	long uploadedPackets = getUploadTotalPackets();
-    	uploadedPackets = Math.max(uploadedPackets, 1);
-		return (nbLost[StreamDirection.UPLOAD.ordinal()] / uploadedPackets) * 100; 
-	}
+    public float getUploadTotalPercentLost() {
+        long uploadedPackets = getUploadTotalPackets();
+        uploadedPackets = Math.max(uploadedPackets, 1);
+        return (nbLost[StreamDirection.UPLOAD.ordinal()] / uploadedPackets) * 100; 
+    }
     
     /**
      * @return the total number of packets downloaded
@@ -591,7 +589,7 @@ public class MediaStreamStatsImpl
         // Assume RTT information arrives at regular intervals.
         if (rttMs != -1)
         {
-        	rttMsSummary.addValue(rttMs);
+            rttMsSummary.addValue(rttMs);
         }
     }
 
@@ -1080,11 +1078,7 @@ public class MediaStreamStatsImpl
     }
     
     /**
-     * Returns the number of packets in the first <tt>PacketQueueControl</tt>
-     * found via <tt>getPacketQueueControls</tt>.
-     *
-     * @return the number of packets in the first <tt>PacketQueueControl</tt>
-     * found via <tt>getPacketQueueControls</tt>.
+     * @return the first <tt>PacketQueueControl</tt> found via <tt>getPacketQueueControls</tt>.
      */
     @Override
     public PacketQueueControl getAPacketQueueControl()
@@ -1181,33 +1175,39 @@ public class MediaStreamStatsImpl
                 getNbDiscardedFull());
     }
 
-	@Override
-	public double getUploadJitterMin() {
-		return jitterStats[StreamDirection.UPLOAD.ordinal()].getMin();
-	}
+    @Override
+    public double getUploadJitterMin()
+    {
+        return jitterStats[StreamDirection.UPLOAD.ordinal()].getMin();
+    }
 
-	@Override
-	public double getUploadJitterMax() {
-		return jitterStats[StreamDirection.UPLOAD.ordinal()].getMax();
-	}
+    @Override
+    public double getUploadJitterMax()
+    {
+        return jitterStats[StreamDirection.UPLOAD.ordinal()].getMax();
+    }
 
-	@Override
-	public double getUploadJitterMean() {
-		return jitterStats[StreamDirection.UPLOAD.ordinal()].getMean();
-	}
+    @Override
+    public double getUploadJitterMean()
+    {
+        return jitterStats[StreamDirection.UPLOAD.ordinal()].getMean();
+    }
 
-	@Override
-	public double getDownloadJitterMin() {
-		return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMin();
-	}
+    @Override
+    public double getDownloadJitterMin()
+    {
+        return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMin();
+    }
 
-	@Override
-	public double getDownloadJitterMax() {
-		return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMax();
-	}
+    @Override
+    public double getDownloadJitterMax()
+    {
+        return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMax();
+    }
 
-	@Override
-	public double getDownloadJitterMean() {
-		return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMean();
-	}
+    @Override
+    public double getDownloadJitterMean()
+    {
+        return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMean();
+    }
 }
