@@ -2,7 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib/fmj.jar"/>
 	<classpathentry kind="lib" path="lib/ice4j.jar"/>
 	<classpathentry kind="lib" path="lib/jain-sdp.jar"/>
 	<classpathentry kind="lib" path="lib/json-simple-1.1.1.jar"/>
@@ -13,6 +12,7 @@
 	<classpathentry kind="lib" path="lib/jchart2d-3.2.2.jar"/>
 	<classpathentry kind="lib" path="lib/bccontrib-1.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib/bcprov-jdk15on-148.jar"/>
+	<classpathentry kind="lib" path="lib/commons-math3-3.2.jar"/>
 	<classpathentry kind="src" path="/fmj"/>
 	<classpathentry kind="output" path="classes_eclipse"/>
 </classpath>
