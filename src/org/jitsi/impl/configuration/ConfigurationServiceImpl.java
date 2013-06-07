@@ -735,6 +735,9 @@ public class ConfigurationServiceImpl
     private void storeConfiguration(File file)
         throws IOException
     {
+        if (logger.isDebugEnabled())
+            logger.debug("Storing configuration to: " + file);
+
         /*
          * If the configuration file is forcibly considered read-only, do not
          * write it.
@@ -803,6 +806,9 @@ public class ConfigurationServiceImpl
     {
         if (this.configurationFile == null)
         {
+            if (logger.isDebugEnabled())
+                logger.debug("Configuration file not set");
+
             createConfigurationFile();
 
             /*
@@ -824,6 +830,8 @@ public class ConfigurationServiceImpl
     private void createConfigurationFile()
         throws IOException
     {
+        if (logger.isDebugEnabled())
+            logger.debug("Creating configuration file");
 
         /*
          * Choose the format of the configuration file so that the
@@ -838,6 +846,10 @@ public class ConfigurationServiceImpl
              * It's strange that there's no configuration file name but let it
              * play out as it did when the configuration file was in XML format.
              */
+
+            if (logger.isDebugEnabled())
+                logger.debug("No configuration file - defaulting to XML");
+
             setConfigurationStore(XMLConfigurationStore.class);
         }
         else
@@ -861,6 +873,9 @@ public class ConfigurationServiceImpl
              */
             if (".properties".equalsIgnoreCase(extension))
             {
+                if (logger.isDebugEnabled())
+                    logger.debug(".properties configuration file");
+
                 this.configurationFile = configurationFile;
                 if (!(this.store instanceof PropertyConfigurationStore))
                     this.store = new PropertyConfigurationStore();
@@ -893,6 +908,9 @@ public class ConfigurationServiceImpl
                  */
                 if (newConfigurationFile.exists())
                 {
+                    if (logger.isDebugEnabled())
+                        logger.debug("Using existing.properties configuration file");
+
                     this.configurationFile = newConfigurationFile;
                     if (!(this.store instanceof PropertyConfigurationStore))
                         this.store = new PropertyConfigurationStore();
@@ -918,6 +936,9 @@ public class ConfigurationServiceImpl
                      */
                     if (configurationFile.exists())
                     {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Converting .xml configuration file");
+
                         ConfigurationStore xmlStore
                             = new XMLConfigurationStore();
                         try
@@ -928,6 +949,10 @@ public class ConfigurationServiceImpl
                         {
                             IOException ioex = new IOException();
                             ioex.initCause(xmlex);
+
+                            if (logger.isDebugEnabled())
+                               logger.debug("Failed to load configuration", xmlex);
+
                             throw ioex;
                         }
 
@@ -949,26 +974,40 @@ public class ConfigurationServiceImpl
                             exception = ioex;
                         }
                         if (exception == null)
+                        {
+                            if (logger.isDebugEnabled())
+                                logger.debug("Deleting XML configuration file");
+
                             configurationFile.delete();
+                        }
                         else
                         {
+                            if (logger.isDebugEnabled())
+                                logger.debug("Error converting XML: ", exception);
+
                             this.configurationFile = configurationFile;
                             this.store = xmlStore;
                         }
                     }
                     else
                     {
+                        if (logger.isDebugEnabled())
+                            logger.debug("Setting configuration to: " + defaultConfigurationStoreClass);
+
                         setConfigurationStore(defaultConfigurationStoreClass);
                     }
                 }
                 else
                 {
-
                     /*
                      * The .xml extension is forced on us so we have to assume
                      * that whoever forced it knows what she wants to get so we
                      * have to obey and use the XML format.
                      */
+
+                    if (logger.isDebugEnabled())
+                        logger.debug("Forced to use .xml configuration file: " + this.configurationFile);
+
                     this.configurationFile =
                             configurationFile.exists()
                                 ? configurationFile
@@ -1091,6 +1130,11 @@ public class ConfigurationServiceImpl
     private File getConfigurationFile(String extension, boolean create)
         throws IOException
     {
+        if (logger.isDebugEnabled())
+            logger.debug("Get configuration file with extension: " + extension
+                    + " and create: " + create);
+
+
         //see whether we have a user specified name for the conf file
         String pFileName = getSystemProperty(PNAME_CONFIGURATION_FILE_NAME);
         if (pFileName == null)
@@ -1138,18 +1182,28 @@ public class ConfigurationServiceImpl
             {
                 configDir.mkdirs();
                 configFileInUserHomeDir.createNewFile();
+
+                if (logger.isDebugEnabled())
+                    logger.debug(
+                    "Created an empty file in $HOME: "
+                        + configFileInUserHomeDir.getAbsolutePath());
             }
-            if (logger.isDebugEnabled())
-                logger.debug(
-                "Created an empty file in $HOME: "
-                    + configFileInUserHomeDir.getAbsolutePath());
+            else
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(
+                    "Returning: "
+                        + configFileInUserHomeDir.getAbsolutePath());
+            }
+
             return configFileInUserHomeDir;
         }
 
-        if (logger.isTraceEnabled())
-            logger.trace(
+        if (logger.isDebugEnabled())
+            logger.debug(
             "Copying config file from JAR into "
                 + configFileInUserHomeDir.getAbsolutePath());
+
         configDir.mkdirs();
         try
         {
@@ -1163,10 +1217,7 @@ public class ConfigurationServiceImpl
             }
             catch (IOException ioex)
             {
-                /*
-                 * Ignore it because it doesn't matter and, most importantly, it
-                 * shouldn't prevent us from using the configuration file.
-                 */
+                logger.debug("Ignoring exception attempting to copy config file:", ioex);
             }
         }
         return configFileInUserHomeDir;
