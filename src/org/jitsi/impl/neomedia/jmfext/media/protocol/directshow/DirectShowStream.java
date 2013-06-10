@@ -148,19 +148,6 @@ public class DirectShowStream
     private static final String errorTitleProp = "service.gui.ERROR";
 
     /**
-     * Delegate class to handle video data.
-     */
-    private final DSCaptureDevice.GrabberDelegate grabber
-        = new DSCaptureDevice.GrabberDelegate()
-                {
-                    @Override
-                    public void frameReceived(long ptr, int length)
-                    {
-                        processFrame(ptr, length);
-                    }
-                };
-
-    /**
      * The captured media data to become the value of {@link #data} as soon as
      * the latter becomes is consumed. Thus prepares this
      * <tt>DirectShowStream</tt> to provide the latest available frame and not
