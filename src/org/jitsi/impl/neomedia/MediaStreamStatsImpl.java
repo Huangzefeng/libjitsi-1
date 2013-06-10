@@ -17,6 +17,7 @@ import javax.media.rtp.*;
 
 import net.sf.fmj.media.rtp.*;
 
+import org.apache.commons.math3.stat.descriptive.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.control.*;
@@ -62,6 +63,11 @@ public class MediaStreamStatsImpl
      * The last number of received/sent packets.
      */
     private long[] nbPackets = {0, 0};
+    
+    /**
+     * Statistics (min/max/avg) about jitter in both directions.
+     */
+    private SummaryStatistics[] jitterStats = { new SynchronizedSummaryStatistics(),  new SynchronizedSummaryStatistics()};
 
     /**
      * The last number of sent packets when the last feedback has been received.
@@ -116,7 +122,12 @@ public class MediaStreamStatsImpl
      * -1 if the RTT has not been computed yet. Otherwise the RTT in ms.
      */
     private long rttMs = -1;
-
+    
+    /**
+     * RTT statistics.
+     */
+    private SummaryStatistics  rttMsSummary = new SynchronizedSummaryStatistics();
+    
     /**
      * Creates a new instance of stats concerning a MediaStream.
      *
@@ -380,6 +391,41 @@ public class MediaStreamStatsImpl
     {
         return this.percentLoss[StreamDirection.DOWNLOAD.ordinal()];
     }
+    
+    /**
+     * @return the total percentage packet loss in the download direction
+     */
+    public float getDownloadTotalPercentLost()
+    {
+        long downloadedPackets = getDownloadTotalPackets();
+        downloadedPackets = Math.max(downloadedPackets, 1);
+        return (nbLost[StreamDirection.DOWNLOAD.ordinal()] / downloadedPackets) * 100;
+    }
+    
+    /**
+     * @return the total percentage packet loss in the upload direction
+     */
+    public float getUploadTotalPercentLost() {
+        long uploadedPackets = getUploadTotalPackets();
+        uploadedPackets = Math.max(uploadedPackets, 1);
+        return (nbLost[StreamDirection.UPLOAD.ordinal()] / uploadedPackets) * 100; 
+    }
+    
+    /**
+     * @return the total number of packets downloaded
+     */
+    public long getDownloadTotalPackets()
+    {
+        return this.nbPackets[StreamDirection.DOWNLOAD.ordinal()];
+    }
+    
+    /**
+     * @return the total number of packets
+     */
+    public long getUploadTotalPackets()
+    {
+        return this.nbPackets[StreamDirection.UPLOAD.ordinal()];
+    }
 
     /**
      * Returns the percent of discarded packets
@@ -496,6 +542,8 @@ public class MediaStreamStatsImpl
         // contains a mean deviation of the jitter.
         this.jitterRTPTimestampUnits[streamDirection.ordinal()] =
             feedback.getJitter();
+        
+        jitterStats[streamDirection.ordinal()].addValue(getJitterMs(streamDirection));
     }
 
     /**
@@ -527,16 +575,22 @@ public class MediaStreamStatsImpl
         // this is the only information source available for the upalod stream.
         long uploadNewNbRecv = feedback.getXtndSeqNum();
         long newNbLost =
-            feedback.getNumLost() - this.nbLost[streamDirection.ordinal()];
-        long nbSteps = uploadNewNbRecv - this.uploadFeedbackNbPackets;
+            feedback.getNumLost() - nbLost[streamDirection.ordinal()];
+        long nbSteps = uploadNewNbRecv - uploadFeedbackNbPackets;
 
         updateNbLoss(streamDirection, newNbLost, nbSteps);
 
         // Updates the upload loss counters.
-        this.uploadFeedbackNbPackets = uploadNewNbRecv;
+        uploadFeedbackNbPackets = uploadNewNbRecv;
 
         // Computes RTT.
-        this.rttMs = computeRTTInMs(feedback);
+        rttMs = computeRTTInMs(feedback);
+        
+        // Assume RTT information arrives at regular intervals.
+        if (rttMs != -1)
+        {
+            rttMsSummary.addValue(rttMs);
+        }
     }
 
     /**
@@ -880,6 +934,15 @@ public class MediaStreamStatsImpl
     {
         return this.rttMs;
     }
+    
+    /**
+     * @return The average of the RTT computed from RTCP. Returns -1 if the RTT
+     * has not been computed yet.
+     */
+    public double getAverageRttMs()
+    {
+        return rttMsSummary.getMean();
+    }
 
     /**
      * Returns the number of packets for which FEC data was decoded. Currently
@@ -1013,6 +1076,18 @@ public class MediaStreamStatsImpl
             return pqc.getCurrentPacketCount();
         return 0;
     }
+    
+    /**
+     * @return the first <tt>PacketQueueControl</tt> found via <tt>getPacketQueueControls</tt>.
+     */
+    @Override
+    public PacketQueueControl getAPacketQueueControl()
+    {
+        for(PacketQueueControl pqc : getPacketQueueControls())
+            return pqc;
+        
+        return new JitterBufferStats(null);
+    }
 
     /**
      * Returns the set of <tt>PacketQueueControls</tt> found for all the
@@ -1098,5 +1173,41 @@ public class MediaStreamStatsImpl
                 getNbDiscardedLate(),
                 getNbDiscardedShrink(),
                 getNbDiscardedFull());
+    }
+
+    @Override
+    public double getUploadJitterMin()
+    {
+        return jitterStats[StreamDirection.UPLOAD.ordinal()].getMin();
+    }
+
+    @Override
+    public double getUploadJitterMax()
+    {
+        return jitterStats[StreamDirection.UPLOAD.ordinal()].getMax();
+    }
+
+    @Override
+    public double getUploadJitterMean()
+    {
+        return jitterStats[StreamDirection.UPLOAD.ordinal()].getMean();
+    }
+
+    @Override
+    public double getDownloadJitterMin()
+    {
+        return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMin();
+    }
+
+    @Override
+    public double getDownloadJitterMax()
+    {
+        return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMax();
+    }
+
+    @Override
+    public double getDownloadJitterMean()
+    {
+        return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMean();
     }
 }
