@@ -479,7 +479,7 @@ public class ConfigurationServiceImpl
                                  resultKeySet);
 
         //finally, get property names from mutable default property set.
-        if(immutableDefaultProperties.size() > 0)
+        if(defaultProperties.size() > 0)
         {
             propertyNameSet = defaultProperties.keySet();
 
@@ -1603,7 +1603,7 @@ public class ConfigurationServiceImpl
                     continue;
                 }
 
-                if (name.startsWith("!"))
+                if (name.startsWith("*"))
                 {
                     name = name.substring(1);
 
