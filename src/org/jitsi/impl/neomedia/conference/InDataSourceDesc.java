@@ -122,7 +122,7 @@ class InDataSourceDesc
         {
             if (connectThread == null)
             {
-                connectThread = new Thread()
+                connectThread = new Thread("AudioMixerConnectThread")
                 {
                     @Override
                     public void run()

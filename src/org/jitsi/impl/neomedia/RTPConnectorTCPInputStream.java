@@ -54,7 +54,7 @@ public class RTPConnectorTCPInputStream
             }
 
             closed = false;
-            receiverThread = new Thread(this);
+            receiverThread = new Thread(this, "RTPConnectorTCPInputStreamThread");
             receiverThread.start();
         }
     }

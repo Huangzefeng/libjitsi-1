@@ -44,7 +44,7 @@ public class RTPConnectorUDPInputStream
         if(socket != null)
         {
             closed = false;
-            receiverThread = new Thread(this);
+            receiverThread = new Thread(this, "RTPConnectorUDPInputStreamThread");
             receiverThread.start();
         }
     }

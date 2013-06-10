@@ -300,7 +300,7 @@ public class AudioLevelEventDispatcher
     private synchronized void startThread()
     {
         thread
-            = new Thread()
+            = new Thread("AudioLevelEventDispatcherThread")
             {
                 @Override
                 public void run()

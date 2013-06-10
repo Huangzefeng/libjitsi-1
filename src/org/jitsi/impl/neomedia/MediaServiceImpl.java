@@ -1203,7 +1203,7 @@ public class MediaServiceImpl
                 player.deallocate();
                 player.close();
             }
-        }).start();
+        }, "DisposePlayerThread").start();
     }
 
     /**

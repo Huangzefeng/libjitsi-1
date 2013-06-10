@@ -733,7 +733,7 @@ public class DePacketizer
             if ((this.requestKeyFrame) && (requestKeyFrameThread == null))
             {
                 requestKeyFrameThread
-                    = new Thread()
+                    = new Thread("RequestKeyFrameThread")
                     {
                         @Override
                         public void run()

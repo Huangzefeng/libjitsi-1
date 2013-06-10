@@ -150,6 +150,11 @@ public class ZrtpFortunaEntropyGatherer
         private boolean bufferAvailable = false;
         private final Object bufferSync = new Object();
 
+        GatherAudio()
+        {
+            super("GatherAudioEntropyThread");
+        }
+        
         /**
          * Prepares to read entropy data from portaudio capture device.
          *

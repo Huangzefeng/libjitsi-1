@@ -244,7 +244,7 @@ public class DtmfTransformEngine
             if (dtmfDispatcher == null)
             {
                 dtmfDispatcher = new DTMFDispatcher();
-                new Thread(dtmfDispatcher).start();
+                new Thread(dtmfDispatcher, "DTMFDispatcherThread").start();
             }
             dtmfDispatcher.addTonePacket(p);
 
