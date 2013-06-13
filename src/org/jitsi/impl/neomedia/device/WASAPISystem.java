@@ -301,6 +301,7 @@ public class WASAPISystem
         try
         {
             int count = IMMDeviceCollection_GetCount(iMMDeviceCollection);
+            logger.debug("WASAPI returned " + count + " devices");
 
             captureDevices = new ArrayList<CaptureDeviceInfo2>(count);
             playbackDevices = new ArrayList<CaptureDeviceInfo2>(count);
@@ -934,15 +935,18 @@ public class WASAPISystem
                             int role,
                             String pwstrDefaultDevice)
                     {
+                        logger.info("Default device changed - ignoring");
                     }
 
                     public void OnDeviceAdded(String pwstrDeviceId)
                     {
+                        logger.info("Device added: " + pwstrDeviceId);
                         reinitialize(pwstrDeviceId);
                     }
 
                     public void OnDeviceRemoved(String pwstrDeviceId)
                     {
+                        logger.info("Device removed: " + pwstrDeviceId);
                         reinitialize(pwstrDeviceId);
                     }
 
@@ -950,6 +954,8 @@ public class WASAPISystem
                             String pwstrDeviceId,
                             int dwNewState)
                     {
+                        logger.info("Device (" + pwstrDeviceId + 
+                                    ") state changed to " + dwNewState);
                         reinitialize(pwstrDeviceId);
                     }
 
@@ -957,6 +963,7 @@ public class WASAPISystem
                             String pwstrDeviceId,
                             long key)
                     {
+                        logger.info("Device property changed - ignoring");
                     }
                 };
         }
@@ -1003,6 +1010,7 @@ public class WASAPISystem
              * dispatches the notifications after the respective changes have
              * been realized anyway.
              */
+            logger.info("Reinitializing WASAPI");
             invokeDeviceSystemInitialize(this, true);
         }
         catch (Exception e)

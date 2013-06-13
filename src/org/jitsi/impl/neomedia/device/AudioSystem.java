@@ -500,12 +500,11 @@ public abstract class AudioSystem
 
             for (CaptureDeviceInfo2 activeDevice : activeDevices)
             {
-                activeDevicesString.append(activeDevice.getIdentifier());
+                activeDevicesString.append(activeDevice.getName());
             }
 
             logger.debug("Active devices " + activeDevicesString);
-            logger.debug("About to set device to " + selectedActiveDevice,
-                         new Exception());
+            logger.debug("About to set device to " + selectedActiveDevice);
         }
 
         // Sets the default device as selected. The function will fire a
