@@ -139,7 +139,8 @@ public class MediaDeviceImpl
 
         CaptureDeviceInfo captureDeviceInfo
             = captureDevice.getCaptureDeviceInfo();
-        MediaLocator mediaLocator = captureDeviceInfo.getLocator();
+        MediaLocator mediaLocator = (captureDeviceInfo == null) ? 
+                                          null : captureDeviceInfo.getLocator();
 
         str.append((mediaLocator == null) ? captureDeviceInfo : mediaLocator);
         return str.toString();
