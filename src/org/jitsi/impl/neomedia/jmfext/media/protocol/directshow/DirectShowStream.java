@@ -124,6 +124,12 @@ public class DirectShowStream
                 };
 
     /**
+     * Whether the device is active. This means it has been started and has
+     * not yet been stopped
+     */
+    private boolean deviceRunning;
+
+    /**
      * The <tt>DSCaptureDevice</tt> which identifies the DirectShow video
      * capture device this <tt>SourceStream</tt> is to capture data from.
      */
@@ -452,8 +458,8 @@ public class DirectShowStream
 
                     try
                     {
-                        dataSyncRoot.wait(1000);
-                        if (data == null && transferData == false)
+                        dataSyncRoot.wait(3000);
+                        if (data == null && transferData == false && deviceRunning)
                         {
                             // If we still have no data then we're probably
                             // never going to get any. Most likely reason is
@@ -655,8 +661,6 @@ public class DirectShowStream
     {
         super.start();
 
-        boolean started = false;
-
         try
         {
             setDeviceFormat(getFormat());
@@ -680,11 +684,11 @@ public class DirectShowStream
 
             device.start();
 
-            started = true;
+            deviceRunning = true;
         }
         finally
         {
-            if (!started)
+            if (!deviceRunning)
                 stop();
         }
     }
@@ -702,6 +706,8 @@ public class DirectShowStream
         try
         {
             device.stop();
+
+            deviceRunning = false;
 
             transferDataThread = null;
 
