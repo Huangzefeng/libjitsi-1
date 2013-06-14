@@ -1298,8 +1298,15 @@ class AudioMixerPushBufferStream
         }
         catch (IOException ex)
         {
+            String inStreamsString = "[";
+            for (InStreamDesc aInStream : inStreams)
+            {
+                inStreamsString += aInStream.getInStream().hashCode() + " ";
+            }
+            inStreamsString += "]";
+            
             logger.error("AudioMixerPushBufferStream " + this.hashCode() +
-                         " hit error reading from buffer");
+                         " hit error reading a buffer from an InputStream " + inStreamsString);
             throw new UndeclaredThrowableException(ex);
         }
 
