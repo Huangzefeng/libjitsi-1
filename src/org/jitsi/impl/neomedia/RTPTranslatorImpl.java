@@ -273,7 +273,6 @@ public class RTPTranslatorImpl
      * Creates {@link #fakeSendStream} if it does not exist yet and is
      * considered necessary; otherwise, does nothing.
      */
-    @SuppressWarnings("unused")
     private synchronized void createFakeSendStreamIfNecessary()
     {
         /*
@@ -285,8 +284,7 @@ public class RTPTranslatorImpl
          * because there is no other remote peer to disperse the received RTP
          * and RTCP to.
          */
-        if (CREATE_FAKE_SEND_STREAM_IF_NECESSARY
-                && (fakeSendStream == null)
+        if ((fakeSendStream == null)
                 && sendStreams.isEmpty()
                 && (streamRTPManagers.size() > 1))
         {
