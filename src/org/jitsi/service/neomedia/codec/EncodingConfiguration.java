@@ -8,6 +8,7 @@ package org.jitsi.service.neomedia.codec;
 
 import java.util.*;
 
+import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
@@ -396,4 +397,14 @@ public abstract class EncodingConfiguration
     {
         return (getEnabledEncodings(mediaType).length > 0);
     }
+    
+    /**
+     * @param prefix The prefix to find in the config
+     * @return an EncodingConfiguration instance for a given config prefix.
+     */
+    public static EncodingConfiguration getInstanceForPrefix(String prefix)
+    {
+        return new EncodingConfigurationConfigImpl(prefix);
+    }
+    
 }
