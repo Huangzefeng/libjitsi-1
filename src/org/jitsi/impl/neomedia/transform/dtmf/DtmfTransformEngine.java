@@ -326,7 +326,7 @@ public class DtmfTransformEngine
             if (currentDuration > 0xFFFF)
             {
                 // When duration > 0xFFFF we first send a packet with duration =
-                // 0xFFFF. For the next packet, the duration start from begining
+                // 0xFFFF. For the next packet, the duration start from beginning
                 // but the audioPacketTimestamp is set to the time when the long
                 // duration event occurs.
                 pktDuration = 0xFFFF;
@@ -368,6 +368,14 @@ public class DtmfTransformEngine
                     currentTone.remove(0);
                 }
             }
+        }
+
+        // skip packets before reaching minimal duration
+        if(minimalToneDuration != -1
+            && currentDuration < minimalToneDuration)
+        {
+            // do not send packets
+            return null;
         }
 
         dtmfPkt.init(
