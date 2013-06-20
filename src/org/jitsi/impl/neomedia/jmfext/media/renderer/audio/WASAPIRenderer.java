@@ -1131,6 +1131,8 @@ public class WASAPIRenderer
         {
             if (writeIsMalfunctioningSince == DiagnosticsControl.NEVER)
             {
+            	logger.warn("Device (" + diagnosticsControl + ") is malfunctioning!!",
+            			    new Throwable());
                 writeIsMalfunctioningSince = System.currentTimeMillis();
                 WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
             }
