@@ -360,7 +360,7 @@ public class WASAPIRenderer
         try
         {
             MediaLocator locator = getLocator();
-            
+
             if (locator == null)
                 throw new NullPointerException("No locator/MediaLocator set.");
 
