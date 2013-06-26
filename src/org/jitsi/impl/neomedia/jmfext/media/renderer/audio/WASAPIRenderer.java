@@ -646,19 +646,11 @@ public class WASAPIRenderer
                     if (eventHandle == 0)
                     {
                         /*
-                         * There is NO available space in the rendering endpoint
-                         * buffer into which this Renderer can write data.
+                         * The renderer is closed so we can't process it.  Just
+                         * back off.
                          */
                         ret |= INPUT_BUFFER_NOT_CONSUMED;
                         sleep = devicePeriod;
-                        /*
-                         * The writing to the render endpoint buffer may or may
-                         * not be malfunctioning, it depends on the interval of
-                         * time that the state remains unchanged.
-                         */
-                        if (writeIsMalfunctioningSince
-                                == DiagnosticsControl.NEVER)
-                            setWriteIsMalfunctioning(true);
                     }
                     else
                     {
