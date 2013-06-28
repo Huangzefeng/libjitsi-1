@@ -277,7 +277,7 @@ public class JavaDecoder
                 outBuffer.setFlags(outBuffer.getFlags() & ~BUFFER_FLAG_PLC);
 
                 // We have decoded the expected sequence number from FEC data.
-                lastSeqNo = incrementSeqNo(lastSeqNo);
+                lastSeqNo = seqNo;
                 return INPUT_BUFFER_NOT_CONSUMED;
             }
             else
@@ -339,7 +339,7 @@ public class JavaDecoder
 
                     processed = INPUT_BUFFER_NOT_CONSUMED;
                     // We have decoded the expected sequence number with PLC.
-                    lastSeqNo = incrementSeqNo(lastSeqNo);
+                    lastSeqNo = seqNo;
                 }
             }
             else
