@@ -287,7 +287,14 @@ public abstract class Devices
                         .split("\", \"");
                     for(int i = 0; i < deviceIdentifiers.length; ++i)
                     {
-                        devicePreferences.add(deviceIdentifiers[i]);
+                    	// XXX: Temporary hack to handle migration from old 
+                        // WASAPI devices - old config for USB devices has a
+                        // USB port number in it which we now strip in
+                        // getIMMDeviceFriendlyName().
+                        String pattern = "\\([0-9]+- ";
+                        String deviceName = 
+                            deviceIdentifiers[i].replaceAll(pattern, "(");
+                        devicePreferences.add(deviceName);
                     }
                 }
                 // Else, use the old property to load the last preferred device.

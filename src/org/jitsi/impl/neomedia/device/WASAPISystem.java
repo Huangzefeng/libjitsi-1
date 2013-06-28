@@ -9,6 +9,7 @@ package org.jitsi.impl.neomedia.device;
 import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPI.*;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -671,11 +672,21 @@ public class WASAPISystem
                 = IPropertyStore_GetString(
                         iPropertyStore,
                         PKEY_Device_FriendlyName);
+            
+            // The device name returned by WASAPI is sometimes bogus - namely
+            // that if this is a USB device the USB port number may be
+            // prepended to the device name (i.e. the bit inside the braces).
+            // We remove any such port numbers here to ensure that the same
+            // device is treated as the same when plugged into a different USB
+            // port. 
+            String pattern = "\\([0-9]+- ";
+            deviceFriendlyName = deviceFriendlyName.replaceAll(pattern, "(");
         }
         finally
         {
             IPropertyStore_Release(iPropertyStore);
         }
+        
         return deviceFriendlyName;
     }
 
