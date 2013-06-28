@@ -538,8 +538,7 @@ public class WASAPIStream
 					      totalReads, totalTime, calculatePerSec(totalTime, totalReads), lastIntervalLength, readsInLastInterval, calculatePerSec(lastIntervalLength, readsInLastInterval) 
 					);
 			
-			logger.error(logLine);
-			System.out.println(logLine);
+			logger.debug(logLine);
 		}
 		
 	}
