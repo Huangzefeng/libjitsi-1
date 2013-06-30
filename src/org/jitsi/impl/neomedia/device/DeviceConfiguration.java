@@ -127,20 +127,6 @@ public class DeviceConfiguration
     public static final int DEFAULT_VIDEO_WIDTH = 320; // 640;
 
     /**
-     * The name of the <tt>boolean</tt> property which determines whether noise
-     * suppression is to be performed for captured audio.
-     */
-    static final String PROP_AUDIO_DENOISE
-        = "net.java.sip.communicator.impl.neomedia.denoise";
-
-    /**
-     * The name of the <tt>boolean</tt> property which determines whether echo
-     * cancellation is to be performed for captured audio.
-     */
-    static final String PROP_AUDIO_ECHOCANCEL
-        = "net.java.sip.communicator.impl.neomedia.echocancel";
-
-    /**
      * The name of the <tt>long</tt> property which determines the filter length
      * in milliseconds to be used by the echo cancellation implementation. The
      * recommended filter length is approximately the third of the room
@@ -913,41 +899,6 @@ public class DeviceConfiguration
     }
 
     /**
-     * Gets the indicator which determines whether noise suppression is to be
-     * performed for captured audio
-     *
-     * @return <tt>true</tt> if noise suppression is to be performed for
-     * captured audio; otherwise, <tt>false</tt>
-     */
-    public boolean isDenoise()
-    {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-        boolean value = DEFAULT_AUDIO_DENOISE;
-
-        if (cfg != null)
-            value = cfg.getBoolean(PROP_AUDIO_DENOISE, value);
-
-        return value;
-    }
-
-    /**
-     * Gets the indicator which determines whether echo cancellation is to be
-     * performed for captured audio.
-     *
-     * @return <tt>true</tt> if echo cancellation is to be performed for
-     * captured audio; otherwise, <tt>false</tt>
-     */
-    public boolean isEchoCancel()
-    {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-        boolean value = DEFAULT_AUDIO_ECHOCANCEL;
-
-        if (cfg != null)
-            value = cfg.getBoolean(PROP_AUDIO_ECHOCANCEL, value);
-        return value;
-    }
-
-    /**
      * Notifies this <tt>PropertyChangeListener</tt> about
      * <tt>PropertyChangeEvent</tt>s fired by, for example, the
      * <tt>ConfigurationService</tt> and the <tt>DeviceSystem</tt>s which
@@ -1181,36 +1132,6 @@ public class DeviceConfiguration
 
             firePropertyChange(PROP_AUDIO_SYSTEM, oldValue, this.audioSystem);
         }
-    }
-
-    /**
-     * Sets the indicator which determines whether noise suppression is to be
-     * performed for captured audio.
-     *
-     * @param denoise <tt>true</tt> if noise suppression is to be performed for
-     * captured audio; otherwise, <tt>false</tt>
-     */
-    public void setDenoise(boolean denoise)
-    {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        if (cfg != null)
-            cfg.setProperty(PROP_AUDIO_DENOISE, denoise);
-    }
-
-    /**
-     * Sets the indicator which determines whether echo cancellation is to be
-     * performed for captured audio.
-     *
-     * @param echoCancel <tt>true</tt> if echo cancellation is to be performed
-     * for captured audio; otherwise, <tt>false</tt>
-     */
-    public void setEchoCancel(boolean echoCancel)
-    {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        if (cfg != null)
-            cfg.setProperty(PROP_AUDIO_ECHOCANCEL, echoCancel);
     }
 
     /**

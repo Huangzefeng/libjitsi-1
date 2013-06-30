@@ -474,7 +474,7 @@ public abstract class AudioSystem
     /**
      * Gets the (full) name of the <tt>ConfigurationService</tt> property which
      * is associated with a (base) <tt>AudioSystem</tt>-specific property name.
-     *
+     * 
      * @param basePropertyName the (base) <tt>AudioSystem</tt>-specific property
      * name of which the associated (full) <tt>ConfigurationService</tt>
      * property name is to be returned
@@ -500,9 +500,43 @@ public abstract class AudioSystem
     public CaptureDeviceInfo2 getSelectedDevice(DataFlow dataFlow)
     {
         return
-            devices[dataFlow.ordinal()].getSelectedDevice(
-                    getLocatorProtocol(),
-                    getDevices(dataFlow));
+            devices[dataFlow.ordinal()].getSelectedDevice(getDevices(dataFlow));
+    }
+
+    /**
+     * Gets the indicator which determines whether noise suppression is to be
+     * performed for captured audio.
+     *
+     * @return <tt>true</tt> if noise suppression is to be performed for
+     * captured audio; otherwise, <tt>false</tt>
+     */
+    public boolean isDenoise()
+    {
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+        boolean value = ((getFeatures() & FEATURE_DENOISE) == FEATURE_DENOISE);
+
+        if (cfg != null)
+            value = cfg.getBoolean(getPropertyName(PNAME_DENOISE), value);
+        return value;
+    }
+
+    /**
+     * Gets the indicator which determines whether echo cancellation is to be
+     * performed for captured audio.
+     *
+     * @return <tt>true</tt> if echo cancellation is to be performed for
+     * captured audio; otherwise, <tt>false</tt>
+     */
+    public boolean isEchoCancel()
+    {
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+        boolean value
+            = ((getFeatures() & FEATURE_ECHO_CANCELLATION)
+                    == FEATURE_ECHO_CANCELLATION);
+
+        if (cfg != null)
+            value = cfg.getBoolean(getPropertyName(PNAME_ECHOCANCEL), value);
+        return value;
     }
 
     /**
@@ -595,9 +629,8 @@ public abstract class AudioSystem
         List<CaptureDeviceInfo2> activeDevices = getDevices(dataFlow);
         // Gets the default device.
         Devices devices = this.devices[dataFlow.ordinal()];
-        String locatorProtocol = getLocatorProtocol();
         CaptureDeviceInfo2 selectedActiveDevice
-            = devices.getSelectedDevice(locatorProtocol, activeDevices);
+            = devices.getSelectedDevice(activeDevices);
 
         if (logger.isDebugEnabled())
         {
@@ -617,7 +650,7 @@ public abstract class AudioSystem
         // configuration. The "set" part is important because only the fired
         // property event provides a way to get the hotplugged devices working
         // during a call.
-        devices.setDevice(locatorProtocol, selectedActiveDevice, false);
+        devices.setDevice(selectedActiveDevice, false);
     }
 
     /**
@@ -675,6 +708,21 @@ public abstract class AudioSystem
     }
 
     /**
+     * Sets the indicator which determines whether noise suppression is to be
+     * performed for captured audio.
+     *
+     * @param denoise <tt>true</tt> if noise suppression is to be performed for
+     * captured audio; otherwise, <tt>false</tt>
+     */
+    public void setDenoise(boolean denoise)
+    {
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+        if (cfg != null)
+            cfg.setProperty(getPropertyName(PNAME_DENOISE), denoise);
+    }
+
+    /**
      * Selects the active device.
      *
      * @param dataFlow the data flow of the device to set: capture, notify or
@@ -688,10 +736,22 @@ public abstract class AudioSystem
             CaptureDeviceInfo2 device,
             boolean save)
     {
-        devices[dataFlow.ordinal()].setDevice(
-                getLocatorProtocol(),
-                device,
-                save);
+        devices[dataFlow.ordinal()].setDevice(device,save);
+    }
+
+    /**
+     * Sets the indicator which determines whether echo cancellation is to be
+     * performed for captured audio.
+     *
+     * @param echoCancel <tt>true</tt> if echo cancellation is to be performed
+     * for captured audio; otherwise, <tt>false</tt>
+     */
+    public void setEchoCancel(boolean echoCancel)
+    {
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+        if (cfg != null)
+            cfg.setProperty(getPropertyName(PNAME_ECHOCANCEL), echoCancel);
     }
 
     /**
