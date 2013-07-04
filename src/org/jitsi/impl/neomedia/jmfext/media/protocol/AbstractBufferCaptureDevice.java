@@ -67,6 +67,7 @@ public abstract class AbstractBufferCaptureDevice
      * of each one of the capture streams.
      */
     private FormatControl[] formatControls;
+    private final Object formatControlsLock = new Object();
 
     /**
      * The <tt>FrameRateControl</tt>s of this
@@ -78,6 +79,7 @@ public abstract class AbstractBufferCaptureDevice
      * The <tt>RTPInfo</tt>s of this <tt>AbstractBufferCaptureDevice</tt>.
      */
     private RTPInfo[] rtpInfos;
+    private final Object rtpInfosLock = new Object();
 
     /**
      * The indicator which determines whether the transfer of media data from
@@ -94,6 +96,7 @@ public abstract class AbstractBufferCaptureDevice
      * </p>
      */
     private AbstractBufferStream[] streams;
+    private final Object streamsLock = new Object();
 
     /**
      * Opens a connection to the media source of this
@@ -601,47 +604,54 @@ public abstract class AbstractBufferCaptureDevice
      * @return an array of the <tt>SourceStream</tt>s through which this
      * <tt>AbstractBufferCaptureDevice</tt> gives access to its media data
      */
-    public synchronized
+    public 
         <SourceStreamT extends SourceStream>
             SourceStreamT[] getStreams(Class<SourceStreamT> clz)
     {
-        if (streams == null)
+        synchronized (streamsLock)
         {
-            FormatControl[] formatControls = internalGetFormatControls();
-
-            if (formatControls != null)
+            if (streams == null)
             {
-                int formatControlCount = formatControls.length;
+                FormatControl[] formatControls = internalGetFormatControls();
 
-                streams = new AbstractBufferStream[formatControlCount];
-                for (int i = 0; i < formatControlCount; i++)
-                    streams[i] = createStream(i, formatControls[i]);
+                if (formatControls != null)
+                {
+                    int formatControlCount = formatControls.length;
 
-                /*
-                 * Start the streams if this DataSource has already been
-                 * started.
-                 */
-                if (started)
-                    for (AbstractBufferStream stream : streams)
-                        try
+                    streams = new AbstractBufferStream[formatControlCount];
+                    for (int i = 0; i < formatControlCount; i++)
+                        streams[i] = createStream(i, formatControls[i]);
+
+                    /*
+                     * Start the streams if this DataSource has already been
+                     * started.
+                     */
+                    if (started)
+                    {
+                        for (AbstractBufferStream stream : streams)
                         {
-                            stream.start();
+                            try
+                            {
+                                stream.start();
+                            }
+                            catch (IOException ioex)
+                            {
+                                throw new UndeclaredThrowableException(ioex);
+                            }
                         }
-                        catch (IOException ioex)
-                        {
-                            throw new UndeclaredThrowableException(ioex);
-                        }
+                    }
+                }
             }
+
+            int streamCount = (streams == null) ? 0 : streams.length;
+            @SuppressWarnings("unchecked")
+            SourceStreamT[] clone =
+                (SourceStreamT[]) Array.newInstance(clz, streamCount);
+
+            if (streamCount != 0)
+                System.arraycopy(streams, 0, clone, 0, streamCount);
+            return clone;
         }
-
-        int streamCount = (streams == null) ? 0 : streams.length;
-        @SuppressWarnings("unchecked")
-        SourceStreamT[] clone
-            = (SourceStreamT[]) Array.newInstance(clz, streamCount);
-
-        if (streamCount != 0)
-            System.arraycopy(streams, 0, clone, 0, streamCount);
-        return clone;
     }
 
     /**
@@ -678,7 +688,7 @@ public abstract class AbstractBufferCaptureDevice
      */
     private Format internalGetFormat(int streamIndex, Format oldValue)
     {
-        synchronized (this)
+        synchronized (streamsLock)
         {
             if (streams != null)
             {
@@ -705,11 +715,14 @@ public abstract class AbstractBufferCaptureDevice
      * can be used before {@link #connect()} to get and set the capture
      * <tt>Format</tt> of each one of the capture streams
      */
-    private synchronized FormatControl[] internalGetFormatControls()
+    private FormatControl[] internalGetFormatControls()
     {
-        if (formatControls == null)
-            formatControls = createFormatControls();
-        return formatControls;
+        synchronized (formatControlsLock)
+        {
+            if (formatControls == null)
+                formatControls = createFormatControls();
+            return formatControls;
+        }
     }
 
     /**
@@ -721,19 +734,21 @@ public abstract class AbstractBufferCaptureDevice
      * to get and/or set the output frame rate of this
      * <tt>AbstractBufferCaptureDevice</tt>.
      */
-    private synchronized FrameRateControl[] internalGetFrameRateControls()
+    private FrameRateControl[] internalGetFrameRateControls()
     {
-        if (frameRateControls == null)
+        synchronized (formatControlsLock)
         {
-            FrameRateControl frameRateControl = createFrameRateControl();
+            if (frameRateControls == null)
+            {
+                FrameRateControl frameRateControl = createFrameRateControl();
 
-            // Don't try to create the FrameRateControl more than once.
-            frameRateControls
-                = (frameRateControl == null)
-                    ? new FrameRateControl[0]
-                    : new FrameRateControl[] { frameRateControl };
+                // Don't try to create the FrameRateControl more than once.
+                frameRateControls = (frameRateControl == null) ?
+                    new FrameRateControl[0] :
+                    new FrameRateControl[] { frameRateControl };
+            }
+            return frameRateControls;
         }
-        return frameRateControls;
     }
 
     /**
@@ -743,19 +758,20 @@ public abstract class AbstractBufferCaptureDevice
      * @return an array of <tt>RTPInfo</tt> instances of this
      * <tt>AbstractBufferCaptureDevice</tt>.
      */
-    private synchronized RTPInfo[] internalGetRTPInfos()
+    private RTPInfo[] internalGetRTPInfos()
     {
-        if (rtpInfos == null)
+        synchronized (rtpInfosLock)
         {
-            RTPInfo rtpInfo = createRTPInfo();
+            if (rtpInfos == null)
+            {
+                RTPInfo rtpInfo = createRTPInfo();
 
-            // Don't try to create the RTPInfo more than once.
-            rtpInfos
-                = (rtpInfo == null)
-                    ? new RTPInfo[0]
-                    : new RTPInfo[] { rtpInfo };
+                // Don't try to create the RTPInfo more than once.
+                rtpInfos = (rtpInfo == null) ? new RTPInfo[0] :
+                    new RTPInfo[] { rtpInfo };
+            }
+            return rtpInfos;
         }
-        return rtpInfos;
     }
 
     /**
@@ -779,7 +795,7 @@ public abstract class AbstractBufferCaptureDevice
             int streamIndex,
             Format oldValue, Format newValue)
     {
-        synchronized (this)
+        synchronized (streamsLock)
         {
             if (streams != null)
             {
@@ -864,10 +880,13 @@ public abstract class AbstractBufferCaptureDevice
      *
      * @return the internal array of <tt>AbstractBufferStream</tt>s through
      * which this <tt>AbstractBufferCaptureDevice</tt> gives access to its media
-     * data
+     * data 
      */
     AbstractBufferStream[] streams()
     {
-        return streams;
+        synchronized (streamsLock)
+        {
+            return streams;
+        }
     }
 }

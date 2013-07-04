@@ -34,7 +34,7 @@ public class WASAPIStream
 {
     private static final int LOG_INTERVAL = 1000;
 
-	/**
+    /**
      * The default duration of the audio data in milliseconds to be read from
      * <tt>WASAPIStream</tt> in an invocation of {@link #read(Buffer)}.
      */
@@ -513,43 +513,43 @@ public class WASAPIStream
     long totalReads = 0;
     long lastLogTime = 0;
     long lastLogReads = 0;
-    
+
     private void updateReadWASAPIData(int read) {
-		if (timeFirstRead == 0)
-		{
-			timeFirstRead = System.currentTimeMillis();
-		}
-		
-		totalReads += read;
-		
-		long currentTime = System.currentTimeMillis();
-		if (lastLogTime < currentTime - LOG_INTERVAL)
-		{
-			long readsInLastInterval = totalReads - lastLogReads;
-			lastLogReads = totalReads;
-			
-			long lastIntervalLength = currentTime - lastLogTime;
-			lastLogTime = currentTime;
-			
-			long totalTime = currentTime - timeFirstRead;
-			
-			String logLine = String.format("Reads - Total=%s in %s (%s per sec)\n" +
-					      "        In last %s ms. = %s (%s per sec)",
-					      totalReads, totalTime, calculatePerSec(totalTime, totalReads), lastIntervalLength, readsInLastInterval, calculatePerSec(lastIntervalLength, readsInLastInterval) 
-					);
-			
-			logger.debug(logLine);
-		}
-		
-	}
-    
-    private double calculatePerSec(long intervalInMs, long count)
-    {
-    	double intervalInSecs = intervalInMs / 1000d;
-    	return count / intervalInSecs;
+        if (timeFirstRead == 0)
+        {
+            timeFirstRead = System.currentTimeMillis();
+        }
+
+        totalReads += read;
+
+        long currentTime = System.currentTimeMillis();
+        if (lastLogTime < currentTime - LOG_INTERVAL)
+        {
+            long readsInLastInterval = totalReads - lastLogReads;
+            lastLogReads = totalReads;
+
+            long lastIntervalLength = currentTime - lastLogTime;
+            lastLogTime = currentTime;
+
+            long totalTime = currentTime - timeFirstRead;
+
+            String logLine = String.format("Reads - Total=%s in %s (%s per sec)\n" +
+                    "        In last %s ms. = %s (%s per sec)",
+                    totalReads, totalTime, calculatePerSec(totalTime, totalReads), lastIntervalLength, readsInLastInterval, calculatePerSec(lastIntervalLength, readsInLastInterval) 
+                    );
+
+            logger.debug(logLine);
+        }
+
     }
 
-	/**
+    private double calculatePerSec(long intervalInMs, long count)
+    {
+        double intervalInSecs = intervalInMs / 1000d;
+        return count / intervalInSecs;
+    }
+
+    /**
      * Gets the <tt>MediaLocator</tt> of this instance which identifies the
      * audio endpoint device this <tt>SourceStream</tt> is to capture data from.
      *
@@ -796,7 +796,9 @@ public class WASAPIStream
                     if ((iAudioClient == 0)
                             || (iAudioCaptureClient == 0)
                             || !started)
+                    {
                         break;
+                    }
 
                     /*
                      * The value of eventHandle will remain valid while this
@@ -844,9 +846,8 @@ public class WASAPIStream
                             throw (ThreadDeath) t;
                         else
                         {
-                            logger.error(
-                                    "BufferTransferHandler.transferData",
-                                    t);
+                            logger.error("BufferTransferHandler.transferData",
+                                t);
                         }
                     }
                 }
@@ -1007,12 +1008,13 @@ public class WASAPIStream
         }
     }
 
-	private void initClockChecker() {
-		timeFirstRead = 0;
-		totalReads = 0;
-		lastLogTime = 0;
-		lastLogReads = 0;
-	}
+    private void initClockChecker()
+    {
+        timeFirstRead = 0;
+        totalReads = 0;
+        lastLogTime = 0;
+        lastLogReads = 0;
+    }
 
     /**
      * Waits on this instance while the value of {@link #busy} is equal to
