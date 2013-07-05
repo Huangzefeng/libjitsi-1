@@ -406,6 +406,19 @@ public abstract class AudioSystem
     }
 
     /**
+     * Gets the list of all devices in user preferences with a specific data
+     * flow: capture, notify or playback.
+     *
+     * @param dataFlow the data flow of the devices to retrieve: capture, notify
+     * or playback
+     * @return the list of all devices with the specified <tt>dataFlow</tt>
+     */
+    public String[] getAllDevices(DataFlow dataFlow)
+    {
+        return devices[dataFlow.ordinal()].getAllDevices();
+    }
+
+    /**
      * Returns the FMJ format of a specific <tt>InputStream</tt> providing audio
      * media.
      *

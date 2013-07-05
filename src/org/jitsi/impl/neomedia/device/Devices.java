@@ -45,7 +45,7 @@ public abstract class Devices
     /**
      * The selected active device.
      */
-    private CaptureDeviceInfo2 device;
+    private CaptureDeviceInfo2 device = null;
 
     /**
      * The list of device ID/names saved by the configuration service and
@@ -54,9 +54,15 @@ public abstract class Devices
     private final List<String> devicePreferences = new ArrayList<String>();
 
     /**
+     * Whether we have already loaded device configuration from the config
+     * service.
+     */
+    private boolean loadedDeviceConfig = false;
+
+    /**
      * The list of <tt>CaptureDeviceInfo2</tt>s which are active/plugged-in.
      */
-    private List<CaptureDeviceInfo2> devices;
+    private List<CaptureDeviceInfo2> activeDevices;
 
     /**
      * Initializes the device list management.
@@ -111,9 +117,9 @@ public abstract class Devices
     {
         CaptureDeviceInfo2 device = null;
 
-        if (devices != null)
+        if ((locator != null) && (activeDevices != null))
         {
-            for (CaptureDeviceInfo2 aDevice : devices)
+            for (CaptureDeviceInfo2 aDevice : activeDevices)
             {
                 MediaLocator aLocator = aDevice.getLocator();
 
@@ -138,11 +144,26 @@ public abstract class Devices
     {
         List<CaptureDeviceInfo2> devices;
 
-        if (this.devices == null)
+        if (this.activeDevices == null)
             devices = Collections.emptyList();
         else
-            devices = new ArrayList<CaptureDeviceInfo2>(this.devices);
+            devices = new ArrayList<CaptureDeviceInfo2>(this.activeDevices);
         return devices;
+    }
+
+    /**
+     * Returns the list of the <tt>CaptureDeviceInfo2</tt>s which have ever
+     * been seen (and are therefore saved in config).
+     *
+     * @return the list of the <tt>CaptureDeviceInfo2</tt>s which have ever
+     * been seen
+     */
+    public String[] getAllDevices()
+    {
+        synchronized(devicePreferences)
+        {
+            return devicePreferences.toArray(new String[0]);
+        }
     }
 
     /**
@@ -169,7 +190,6 @@ public abstract class Devices
             logger.debug("Got some active devices");
             String property = getPropDevice();
             loadDevicePreferences(locator, property);
-            renameOldFashionedIdentifier(activeDevices);
 
             // Search if an active device is a new one (is not stored in the
             // preferences yet). If true, then active this device and set it as
@@ -258,25 +278,31 @@ public abstract class Devices
      */
     private void loadDevicePreferences(String locator, String property)
     {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        if (cfg != null)
+        synchronized (devicePreferences)
         {
-            String new_property
-                = DeviceConfiguration.PROP_AUDIO_SYSTEM
+            // Don't load the preferences from the config service if we already
+            // have them available.  Note:  the calling code really shouldn't
+            // be calling this method in this case but it currently does (e.g.
+            // over 100 times during startup).
+            if (loadedDeviceConfig)
+                return;
+
+            ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+            if (cfg != null)
+            {
+                String new_property = DeviceConfiguration.PROP_AUDIO_SYSTEM
                     + "."
                     + locator
                     + "."
                     + property
                     + "_list";
 
-            String deviceIdentifiersString = cfg.getString(new_property);
+                String deviceIdentifiersString = cfg.getString(new_property);
 
-            logger.debug("Loading device preferences to be " +
-                                                       deviceIdentifiersString);
+                logger.debug("Loading device preferences to be " +
+                        deviceIdentifiersString);
 
-            synchronized(devicePreferences)
-            {
                 if (deviceIdentifiersString != null)
                 {
                     devicePreferences.clear();
@@ -287,13 +313,24 @@ public abstract class Devices
                         .split("\", \"");
                     for(int i = 0; i < deviceIdentifiers.length; ++i)
                     {
-                    	// XXX: Temporary hack to handle migration from old 
+                        // XXX: Temporary hack to handle migration from old
                         // WASAPI devices - old config for USB devices has a
                         // USB port number in it which we now strip in
                         // getIMMDeviceFriendlyName().
                         String pattern = "\\([0-9]+- ";
-                        String deviceName = 
+                        String deviceName =
                             deviceIdentifiers[i].replaceAll(pattern, "(");
+
+                        // If we've already added this device name to the list,
+                        // don't do so again.
+                        if (devicePreferences.contains(deviceName))
+                        {
+                            logger.debug(
+                                "Removing duplicate device from config: " +
+                                deviceName);
+                            continue;
+                        }
+
                         devicePreferences.add(deviceName);
                     }
                 }
@@ -318,8 +355,13 @@ public abstract class Devices
                         devicePreferences.add(deviceIdentifiersString);
                     }
                 }
+
+                loadedDeviceConfig = true;
             }
         }
+
+        // Now do some hack to do with old config style.
+        renameOldFashionedIdentifier(activeDevices);
     }
 
     /**
@@ -442,7 +484,7 @@ public abstract class Devices
      */
     public void setDevices(List<CaptureDeviceInfo2> devices)
     {
-        this.devices
+        this.activeDevices
             = (devices == null)
                 ? null
                 : new ArrayList<CaptureDeviceInfo2>(devices);

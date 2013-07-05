@@ -31,7 +31,6 @@ public class CaptureDevices
     private static Logger logger = Logger.getLogger(CaptureDevices.class);
 
     /**
-<<<<<<< HEAD
      * The property of the capture devices.
      */
     public static final String PROP_DEVICE = "captureDevice";
