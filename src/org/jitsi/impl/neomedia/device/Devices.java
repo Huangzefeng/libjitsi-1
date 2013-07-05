@@ -12,7 +12,7 @@ import javax.media.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.util.Logger;
+import org.jitsi.util.*;
 
 /**
  * Manages the list of active (currently plugged-in) capture/notify/playback
@@ -145,9 +145,13 @@ public abstract class Devices
         List<CaptureDeviceInfo2> devices;
 
         if (this.activeDevices == null)
+        {
             devices = Collections.emptyList();
+        }
         else
+        {
             devices = new ArrayList<CaptureDeviceInfo2>(this.activeDevices);
+        }
         return devices;
     }
 
@@ -162,7 +166,8 @@ public abstract class Devices
     {
         synchronized(devicePreferences)
         {
-            return devicePreferences.toArray(new String[0]);
+            return devicePreferences.toArray(
+                new String[devicePreferences.size()]);
         }
     }
 
@@ -195,13 +200,12 @@ public abstract class Devices
             // preferences yet). If true, then active this device and set it as
             // default device (only for USB devices since the user has
             // deliberately plugged in the device).
-            for(int i = activeDevices.size() - 1; i >= 0; i--)
+            for (int i = activeDevices.size() - 1; i >= 0; i--)
             {
                 CaptureDeviceInfo2 activeDevice = activeDevices.get(i);
-                logger.debug("Examining " + activeDevice.getModelIdentifier());
+                logger.debug("Examining " + activeDevice.getName());
 
-                if(!devicePreferences.contains(
-                            activeDevice.getModelIdentifier()))
+                if (!devicePreferences.contains(activeDevice.getName()))
                 {
                     logger.debug("Device preferences does not contain model");
 
@@ -212,8 +216,7 @@ public abstract class Devices
                         = LibJitsi.getConfigurationService();
                     // Desactivate the USB device automatic selection if the
                     // property is set to true.
-                    if(cfg != null
-                            && cfg.getBoolean(
+                    if ((cfg != null) && cfg.getBoolean(
                                 PROP_DISABLE_USB_DEVICE_AUTO_SELECTION,
                                 false))
                     {
@@ -236,24 +239,23 @@ public abstract class Devices
             // in the preferences.
             synchronized(devicePreferences)
             {
-                for(String devicePreference : devicePreferences)
+                for (String devicePreference : devicePreferences)
                 {
                     logger.debug("Searching preferred devices, looking at " +
                                                               devicePreference);
 
-                    for(CaptureDeviceInfo2 activeDevice : activeDevices)
+                    for (CaptureDeviceInfo2 activeDevice : activeDevices)
                     {
                         // If we have found the "preferred" device among active
                         // device.
-                        if(devicePreference.equals(
-                                activeDevice.getModelIdentifier()))
+                        if (devicePreference.equals(activeDevice.getName()))
                         {
                             logger.debug("Found a preferred active device");
                             return activeDevice;
                         }
                         // If the "none" device is the "preferred" device among
                         // "active" device.
-                        else if(devicePreference.equals(
+                        else if (devicePreference.equals(
                                     NoneAudioSystem.LOCATOR_PROTOCOL))
                         {
                             logger.debug("Found a none device");
@@ -285,7 +287,9 @@ public abstract class Devices
             // be calling this method in this case but it currently does (e.g.
             // over 100 times during startup).
             if (loadedDeviceConfig)
+            {
                 return;
+            }
 
             ConfigurationService cfg = LibJitsi.getConfigurationService();
 
@@ -359,57 +363,6 @@ public abstract class Devices
                 loadedDeviceConfig = true;
             }
         }
-
-        // Now do some hack to do with old config style.
-        renameOldFashionedIdentifier(activeDevices);
-    }
-
-    /**
-     * Renames the old fashioned identifier (name only), into new fashioned one
-     * (UID, or name + transport type).
-     *
-     * @param activeDevices The list of the active devices.
-     */
-    private void renameOldFashionedIdentifier(
-            List<CaptureDeviceInfo2> activeDevices)
-    {
-        // Renames the old fashioned device identifier for all active devices.
-        for(CaptureDeviceInfo2 activeDevice : activeDevices)
-        {
-            String name = activeDevice.getName();
-            String id = activeDevice.getModelIdentifier();
-
-            // We can only switch to the new fashioned notation, only if the OS
-            // API gives us a unique identifier (different from the device
-            // name).
-            if(!name.equals(id))
-            {
-                synchronized(devicePreferences)
-                {
-                    do
-                    {
-                        int nameIndex = devicePreferences.indexOf(name);
-
-                        // If there is one old fashioned identifier.
-                        if(nameIndex == -1)
-                            break;
-                        else
-                        {
-                            int idIndex = devicePreferences.indexOf(id);
-
-                            // If the corresponding new fashioned identifier
-                            // does not exist, then renames the old one into
-                            // the new one.
-                            if(idIndex == -1)
-                                devicePreferences.set(nameIndex, id);
-                            else // Remove the duplicate.
-                                devicePreferences.remove(nameIndex);
-                        }
-                    }
-                    while(true);
-                }
-            }
-        }
     }
 
     /**
@@ -429,9 +382,8 @@ public abstract class Devices
             boolean isSelected)
     {
         String selectedDeviceIdentifier
-            = (device == null)
-                ? NoneAudioSystem.LOCATOR_PROTOCOL
-                : device.getModelIdentifier();
+            = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
+                device.getName();
 
         // Sorts the user preferences to put the selected device on top.
         addToDevicePreferences(
@@ -518,7 +470,9 @@ public abstract class Devices
                 {
                     value.append(devicePreferences.get(0));
                     for(int i = 1; i < devicePreferenceCount; i++)
+                    {
                         value.append("\", \"").append(devicePreferences.get(i));
+                    }
                 }
             }
             value.append("\"]");
