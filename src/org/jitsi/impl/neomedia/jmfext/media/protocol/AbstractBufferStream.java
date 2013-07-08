@@ -22,7 +22,7 @@ import org.jitsi.util.*;
  *
  * @author Lyubomir Marinov
  */
-abstract class AbstractBufferStream<T extends DataSource>
+abstract class AbstractBufferStream
     extends AbstractControls
     implements SourceStream
 {
@@ -44,7 +44,7 @@ abstract class AbstractBufferStream<T extends DataSource>
      * The <tt>DataSource</tt> which has created this instance and which
      * contains it as one of its <tt>streams</tt>.
      */
-    protected final T dataSource;
+    protected final DataSource dataSource;
 
     /**
      * The <tt>FormatControl</tt> which gives access to the <tt>Format</tt> of
@@ -63,7 +63,9 @@ abstract class AbstractBufferStream<T extends DataSource>
      * @param formatControl the <tt>FormatControl</tt> which is to abstract the
      * <tt>Format</tt>-related information of the new instance
      */
-    protected AbstractBufferStream(T dataSource, FormatControl formatControl)
+    protected AbstractBufferStream(
+            DataSource dataSource,
+            FormatControl formatControl)
     {
         this.dataSource = dataSource;
         this.formatControl = formatControl;

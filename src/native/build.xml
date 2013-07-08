@@ -384,14 +384,10 @@
       <compilerarg value="-std=c99" />
       <compilerarg value="-Wall" />
 
-      <linkerarg value="-ldmoguids" location="end" />
-      <linkerarg value="-lmsdmo" location="end" />
       <linkerarg value="-lole32" location="end" />
       <linkerarg value="-m32" if="cross_32" />
       <linkerarg value="-m64" if="cross_64" />
       <linkerarg value="-ojnwasapi.dll" />
-      <linkerarg value="-static-libgcc" />
-      <linkerarg value="-Wl,--as-needed" />
       <linkerarg value="-Wl,--kill-at" />
 
       <fileset dir="${src}/native/windows/wasapi" includes="*.c"/>
