@@ -385,6 +385,9 @@ public class WASAPIStream
         throw ioe;
     }
 
+    /**
+     * The maximum capacity/number of bytes of {@link #iMediaBuffer}.
+     */
     private int bufferMaxLength;
 
     /**
@@ -393,10 +396,23 @@ public class WASAPIStream
      */
     private int bufferSize;
 
+    /**
+     * The abstraction which delivers audio samples from the capture endpoint
+     * device into this instance.
+     */
     private AudioCaptureClient capture;
 
+    /**
+     * The maximum capacity/number of bytes of {@link #captureIMediaBuffer}.
+     */
     private int captureBufferMaxLength;
 
+    /**
+     * The <tt>IMediaBuffer</tt> instance which delivers audio samples from the
+     * capture endpoint device i.e. {@link #capture} into the voice capture DMO
+     * that implements the acoustic echo cancellation (AEC) feature i.e.
+     * {@link #iMediaBuffer}.
+     */
     private PtrMediaBuffer captureIMediaBuffer;
 
     /**
@@ -407,6 +423,10 @@ public class WASAPIStream
      */
     private boolean captureIsBusy;
 
+    /**
+     * The number of nonseconds of audio encoded in the <tt>outFormat</tt> of
+     * {@link #capture} represented by a <tt>byte</tt>.
+     */
     private double captureNanosPerByte;
 
     /**
@@ -415,6 +435,11 @@ public class WASAPIStream
      */
     private long devicePeriod;
 
+    /**
+     * The <tt>DMO_OUTPUT_DATA_BUFFER</tt> which provides {@link #iMediaBuffer}
+     * to
+     * {@link VoiceCaptureDSP#IMediaObject_ProcessOutput(long, int, int, long)}.
+     */
     private long dmoOutputDataBuffer;
 
     /**
@@ -422,6 +447,10 @@ public class WASAPIStream
      */
     private AudioFormat format;
 
+    /**
+     * The <tt>IMediaBuffer</tt> which receives the output of
+     * {@link #iMediaObject} i.e. the acoustic echo cancellation.
+     */
     private long iMediaBuffer;
 
     /**
@@ -436,20 +465,60 @@ public class WASAPIStream
      */
     private MediaLocator locator;
 
+    /**
+     * The buffer which stores the result/output of the processing performed by
+     * {@link #iMediaObject} i.e. the acoustic echo cancellation.
+     */
     private byte[] processed;
 
+    /**
+     * The number of bytes in {@link #processed} which represent actual audio
+     * data/samples.
+     */
     private int processedLength;
 
+    /**
+     * An array of <tt>byte</tt>s utilized by {@link #processInput(int, int)}
+     * and cached in order to reduce the effects of the garbage collector. 
+     */
     private byte[] processInputBuffer;
 
+    /**
+     * The background thread which invokes
+     * {@link VoiceCaptureDSP#IMediaObject_ProcessInput(long, int, long, int, long, long)}
+     * and
+     * {@link VoiceCaptureDSP#IMediaObject_ProcessOutput(long, int, int, long)}
+     * i.e. delivers audio samples from the capture and render endpoint devices
+     * into the voice capture DMO, invokes the acoustic echo cancellation and
+     * stores the result/output in {@link #processed} so that it may later be
+     * read out of this instance via {@link #read(Buffer)}.  
+     */
     private Thread processThread;
 
+    /**
+     * The abstraction which delivers audio samples from the render endpoint
+     * device into this instance (for the purposes of acoustic echo
+     * cancellation).
+     */
     private AudioCaptureClient render;
 
+    /**
+     * The maximum capacity/number of bytes of {@link #renderIMediaBuffer}.
+     */
     private int renderBufferMaxLength;
 
+    /**
+     * The number of bytes of audio encoded in the <tt>outFormat</tt> of
+     * {@link #render} which represent a duration of one nanosecond.
+     */
     private double renderBytesPerNano;
 
+    /**
+     * The <tt>IMediaBuffer</tt> instance which delivers audio samples from the
+     * render endpoint device i.e. {@link #render} into the voice capture DMO
+     * that implements the acoustic echo cancellation (AEC) feature i.e.
+     * {@link #iMediaBuffer}.
+     */
     private PtrMediaBuffer renderIMediaBuffer;
 
     /**
@@ -504,6 +573,16 @@ public class WASAPIStream
         return (long) (length * captureNanosPerByte);
     }
 
+    /**
+     * Computes/determines the number of bytes of a specific duration in
+     * nanoseconds of audio samples  encoded in the <tt>outFormat</tt> of
+     * {@link #render}.
+     *
+     * @param duration the duration in nanoseconds of the audio samples of which
+     * the number of bytes is to be computed/determined
+     * @return the number of bytes of the specified duration in nanoseconds of
+     * audio samples encoded in the <tt>outFormat</tt> of <tt>render</tt>
+     */
     private int computeRenderLength(long duration)
     {
         return (int) (duration * renderBytesPerNano);
@@ -750,6 +829,20 @@ public class WASAPIStream
         return locator;
     }
 
+    /**
+     * Initializes the <tt>IMediaObject</tt> which is to perform acoustic echo
+     * cancellation.
+     *
+     * @param inFormat0 the <tt>AudioFormat</tt> of the media which will be
+     * delivered to the input stream representing the audio from the microphone
+     * @param inFormat1 the <tt>AudioFormat</tt> of the media which will be
+     * delivered to the input stream representing the audio from the speaker
+     * (line)
+     * @param outFormat the <tt>AudioFormat</tt> of the media which is to be
+     * output by the <tt>IMediaObject</tt>/acoustic echo cancellation
+     * @throws Exception if the initialization of the <tt>IMediaObject</tt>
+     * implementing acoustic echo cancellation fails
+     */
     private void initializeAEC(
             AudioFormat inFormat0, AudioFormat inFormat1,
             AudioFormat outFormat)
@@ -979,6 +1072,17 @@ public class WASAPIStream
         }
     }
 
+    /**
+     * Initializes the delivery of audio data/samples from a capture endpoint
+     * device identified by a specific <tt>MediaLocator</tt> into this instance.
+     *
+     * @param locator the <tt>MediaLocator</tt> identifying the capture endpoint
+     * device from which this instance is to read
+     * @param format the <tt>AudioFormat</tt> of the media to be read from the
+     * specified capture endpoint device
+     * @throws Exception if the initialization of the delivery of audio samples
+     * from the specified capture endpoint into this instance fails
+     */
     private void initializeCapture(MediaLocator locator, AudioFormat format)
         throws Exception
     {
@@ -1008,6 +1112,19 @@ public class WASAPIStream
         devicePeriod = capture.devicePeriod;
     }
 
+    /**
+     * Initializes the delivery of audio data/samples from a render endpoint
+     * device identified by a specific <tt>MediaLocator</tt> into this instance
+     * for the purposes of acoust echo cancellation (AEC).
+     *
+     * @param locator the <tt>MediaLocator</tt> identifying the render endpoint
+     * device from which this instance is to read
+     * @param format the <tt>AudioFormat</tt> of the media to be read from the
+     * specified render endpoint device
+     * @throws Exception if the initialization of the delivery of audio samples
+     * from the specified render endpoint into this instance for the purposes of
+     * acoustic echo cancellation (AEC) fails
+     */
     private void initializeRender(final MediaLocator locator, AudioFormat format)
         throws Exception
     {
