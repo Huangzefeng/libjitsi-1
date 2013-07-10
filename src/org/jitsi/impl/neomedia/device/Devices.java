@@ -363,6 +363,62 @@ public abstract class Devices
                 loadedDeviceConfig = true;
             }
         }
+
+        // Now replace any old device config (old PortAudio config) that has
+        // the UID of the devices with the names instead.
+        renameToDeviceNames(activeDevices);
+    }
+
+    /**
+     * Renames any devices with UIDs as their name to have names.
+     *
+     * @param activeDevices The list of the active devices.
+     */
+    private void renameToDeviceNames(
+            List<CaptureDeviceInfo2> activeDevices)
+    {
+        for (CaptureDeviceInfo2 activeDevice : activeDevices)
+        {
+            String name = activeDevice.getName();
+            String id = activeDevice.getModelIdentifier();
+
+            // If the name and identifier for the device don't match and the
+            // identifier is currently used in the device preferences, replace
+            // it with the name.
+            if (!name.equals(id))
+            {
+                synchronized (devicePreferences)
+                {
+                    do
+                    {
+                        int idIndex = devicePreferences.indexOf(id);
+                        if (idIndex == -1)
+                        {
+                            // Not in device preferences so nothing to do.
+                            break;
+                        }
+                        else
+                        {
+                            // The id is in the preferences.  We need to either
+                            // remove it (if the name is also in there) or
+                            // replace it (if the name isn't there).
+                            int nameIndex = devicePreferences.indexOf(name);
+                            if (nameIndex == -1)
+                            {
+                                // No name, replace id with name.
+                                devicePreferences.set(idIndex, name);
+                            }
+                            else
+                            {
+                                // Name exists, just remove id.
+                                devicePreferences.remove(idIndex);
+                            }
+                        }
+                    }
+                    while (true);
+                }
+            }
+        }
     }
 
     /**
