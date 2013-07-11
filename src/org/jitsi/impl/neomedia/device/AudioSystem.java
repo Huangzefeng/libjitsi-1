@@ -739,9 +739,6 @@ public abstract class AudioSystem
              * Prepare a message to be displayed to the user listing the names
              * of the audio device which are malfunctioning.
              */
-            ResourceManagementService r = LibJitsi.getResourceManagementService();
-            if (r == null)
-            	return;
             StringBuilder param = new StringBuilder();
             String lineSeparator = System.getProperty("line.separator");
             int malfunctioningCount = 0;
@@ -770,6 +767,12 @@ public abstract class AudioSystem
             if (malfunctioningCount == 0)
                 return;
 
+            ResourceManagementService r
+                = LibJitsi.getResourceManagementService();
+
+            if (r == null)
+                return;
+
             /*
              * Do display the list of malfunctioning audio devices to the user.
              */
@@ -778,7 +781,6 @@ public abstract class AudioSystem
                         "impl.neomedia.device.audiosystem"
                             + ".diagnosticscontrolmonitor.MESSAGE",
                         new String[] { param.toString() });
-            logger.warn("Reporting device as malfunctioning: " + message);
             String title
                 = r.getI18NString(
                         "impl.neomedia.device.audiosystem"
