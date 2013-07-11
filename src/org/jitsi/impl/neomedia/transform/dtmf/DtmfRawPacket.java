@@ -120,6 +120,9 @@ public class DtmfRawPacket
 
          // Create the RTP data
         setDtmfPayload(code, end, duration);
+
+        // Reset the CSRC count to zero
+        setCsrcCount(0);
     }
 
     /**

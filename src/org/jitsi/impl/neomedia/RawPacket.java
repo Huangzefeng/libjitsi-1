@@ -281,7 +281,9 @@ public class RawPacket
     {
         int startOffset = this.offset + off;
         if (off < 0 || len <= 0 || startOffset + len > this.buffer.length)
+        {
             return null;
+        }
 
         byte[] region = new byte[len];
 
@@ -302,10 +304,14 @@ public class RawPacket
     {
         int startOffset = this.offset + off;
         if (off < 0 || len <= 0 || startOffset + len > this.buffer.length)
+        {
             return;
+        }
 
         if (outBuff.length < len)
+        {
             return;
+        }
 
         System.arraycopy(this.buffer, startOffset, outBuff, 0, len);
     }
@@ -362,11 +368,15 @@ public class RawPacket
     public void shrink(int len)
     {
         if (len <= 0)
+        {
             return;
+        }
 
         this.length -= len;
         if (this.length < 0)
+        {
             this.length = 0;
+        }
     }
 
     /**
@@ -433,13 +443,23 @@ public class RawPacket
                           newBuffer, payloadOffsetForNewBuff,
                           length - payloadOffsetForOldBuff);
 
-        //set the new CSRC count
-        newBuffer[offset] = (byte)((newBuffer[offset] & 0xF0)
-                                    | newCsrcCount);
-
         this.buffer = newBuffer;
         this.length = payloadOffsetForNewBuff + length
                 - payloadOffsetForOldBuff - offset;
+
+        //set the CSRC count in the new buffer
+        setCsrcCount(newCsrcCount);
+    }
+
+    /**
+     * Sets the CSRC count byte in the RTP packet.
+     *
+     * @param csrcCount the value to set the count to
+     */
+    public void setCsrcCount(int csrcCount)
+    {
+        //set the new CSRC count
+        buffer[offset] = (byte)((buffer[offset] & 0xF0) | csrcCount);
     }
 
     /**
@@ -472,9 +492,13 @@ public class RawPacket
     public int getPaddingSize()
     {
         if ((buffer[offset] & 0x20) == 0)
+        {
             return 0;
+        }
         else
+        {
             return buffer[offset + length - 1];
+        }
     }
 
     /**
@@ -485,10 +509,14 @@ public class RawPacket
     public int getHeaderLength()
     {
         if(getExtensionBit())
+        {
             return FIXED_HEADER_SIZE + 4 * getCsrcCount()
                 + EXT_HEADER_SIZE + getExtensionLength();
+        }
         else
+        {
             return FIXED_HEADER_SIZE + 4 * getCsrcCount();
+        }
     }
 
     /**
@@ -606,9 +634,13 @@ public class RawPacket
     private void setExtensionBit(boolean extBit)
     {
         if(extBit)
+        {
             buffer[offset] |= 0x10;
+        }
         else
+        {
             buffer[offset] &= 0xEF;
+        }
     }
 
     /**
@@ -619,7 +651,9 @@ public class RawPacket
     public int getExtensionLength()
     {
         if (!getExtensionBit())
+        {
             return 0;
+        }
 
         // The extension length comes after the RTP header, the CSRC list, and
         // two bytes in the extension header called "defined by profile".
@@ -654,7 +688,9 @@ public class RawPacket
             lengthToCopy += EXT_HEADER_SIZE - 2;
         }
         else
+        {
             newBuffLen += EXT_HEADER_SIZE;
+        }
 
         byte[] newBuffer = new byte[ newBuffLen ];
 
@@ -674,7 +710,9 @@ public class RawPacket
 
         //if there were no extensions previously, we need to add the hdr now
         if(extensionBit)
+        {
             bufferOffset += 4;
+        }
         else
         {
            // we will now be adding the RFC 5285 ext header which looks like
@@ -723,7 +761,9 @@ public class RawPacket
     public void removeExtension()
     {
         if(!getExtensionBit())
+        {
             return;
+        }
 
         int payloadOffset = offset + getHeaderLength();
 
@@ -755,7 +795,9 @@ public class RawPacket
         if (!getExtensionBit()
                 || (getExtensionLength() == 0)
                 || (getCsrcCount() == 0))
+        {
             return null;
+        }
 
         int csrcCount = getCsrcCount();
         /*
@@ -797,12 +839,16 @@ public class RawPacket
     private int getCsrcLevel(int index, byte csrcExtID)
     {
         if( !getExtensionBit() || getExtensionLength() == 0)
+        {
             return 0;
+        }
 
         int levelsStart = findExtension(csrcExtID);
 
         if(levelsStart == -1)
+        {
             return 0;
+        }
 
         int levelsCount = getLengthForExtension(levelsStart);
 
@@ -830,7 +876,9 @@ public class RawPacket
     private int findExtension(int extensionID)
     {
         if( !getExtensionBit() || getExtensionLength() == 0)
+        {
             return 0;
+        }
 
         int extOffset = offset + FIXED_HEADER_SIZE
                 + getCsrcCount()*4 + EXT_HEADER_SIZE;
@@ -911,9 +959,13 @@ public class RawPacket
         int hdrLen = getExtensionHeaderLength();
 
         if( hdrLen == 1 )
+        {
             return ( buffer[contentStart - 1] & 0x0F ) + 1;
+        }
         else
+        {
             return buffer[contentStart - 1];
+        }
     }
 
     /**
@@ -928,7 +980,9 @@ public class RawPacket
     private int getExtensionHeaderLength()
     {
         if (!getExtensionBit())
+        {
             return -1;
+        }
 
         //the type of the extension header comes right after the RTP header and
         //the CSRC list.
@@ -937,12 +991,16 @@ public class RawPacket
         //0xBEDE means short extension header.
         if (buffer[extLenIndex] == (byte)0xBE
             && buffer[extLenIndex + 1] == (byte)0xDE)
-                return 1;
+        {
+            return 1;
+        }
 
         //0x100 means a two-byte extension header.
         if (buffer[extLenIndex]== (byte)0x10
             && (buffer[extLenIndex + 1] >> 4)== 0)
-                return 2;
+        {
+            return 2;
+        }
 
         return -1;
     }
@@ -954,7 +1012,9 @@ public class RawPacket
     public int getHeaderExtensionType()
     {
         if (!getExtensionBit())
+        {
             return 0;
+        }
 
         return readUnsignedShortAsInt(
                     offset + FIXED_HEADER_SIZE + getCsrcCount()*4);
@@ -971,11 +1031,17 @@ public class RawPacket
     public boolean isInvalid()
     {
         if (buffer == null)
+        {
             return true;
+        }
         if (buffer.length < offset + length)
+        {
             return true;
+        }
         if (length < FIXED_HEADER_SIZE)
+        {
             return true;
+        }
 
         return false;
     }
