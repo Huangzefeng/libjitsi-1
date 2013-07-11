@@ -18,6 +18,7 @@ import javax.media.format.*;
 
 import net.sf.fmj.utility.charting.Charting;
 
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.*;
@@ -188,58 +189,6 @@ public class WASAPIRenderer
     private long writeIsMalfunctioningTimeout;
 
     /**
-     * The <tt>DiagnosticsControl</tt> implementation of this instance which
-     * allows the diagnosis of the functional health of WASAPI devices.
-     */
-    private final DiagnosticsControl diagnosticsControl
-        = new DiagnosticsControl()
-        {
-            /**
-             * {@inheritDoc}
-             *
-             * <tt>WASAPIRenderer</tt>'s <tt>DiagnosticsControl</tt>
-             * implementation does not provide its own user interface and always
-             * returns <tt>null</tt>.
-             */
-            public java.awt.Component getControlComponent()
-            {
-                return null;
-            }
-
-            /**
-             * {@inheritDoc}
-             */
-            public long getMalfunctioningSince()
-            {
-                return writeIsMalfunctioningSince;
-            }
-
-            /**
-             * {@inheritDoc}
-             *
-             * Returns the identifier of the WASAPI device written through
-             * this <tt>WASAPIRenderer</tt>.
-             */
-            @Override
-            public String toString()
-            {
-            	String name;
-            	
-            	try
-            	{
-            		CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow);
-            		name = device.getName();
-            	}
-            	catch (Exception e)
-            	{
-            		logger.error("Failed to find name for device:" + e);
-            		name = "";
-            	}
-            	return name;
-            }
-        };
-    
-    /**
      * Initializes a new <tt>WASAPIRenderer</tt> instance which is to perform
      * playback (as opposed to sound a notification).
      */
@@ -360,7 +309,7 @@ public class WASAPIRenderer
         try
         {
             MediaLocator locator = getLocator();
-            
+
             if (locator == null)
                 throw new NullPointerException("No locator/MediaLocator set.");
 
@@ -463,7 +412,7 @@ public class WASAPIRenderer
                          */
                         remainderLength = remainder.length;
 
-                        setWriteIsMalfunctioning(false);
+                        writeIsMalfunctioningSince = DiagnosticsControl.NEVER;
                         writeIsMalfunctioningTimeout
                             = 2 * Math.max(bufferDuration, devicePeriod);
 
@@ -1122,10 +1071,7 @@ public class WASAPIRenderer
         if (writeIsMalfunctioning)
         {
             if (writeIsMalfunctioningSince == DiagnosticsControl.NEVER)
-            {
                 writeIsMalfunctioningSince = System.currentTimeMillis();
-                WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
-            }
         }
         else
             writeIsMalfunctioningSince = DiagnosticsControl.NEVER;
@@ -1244,6 +1190,8 @@ public class WASAPIRenderer
                 started = false;
 
                 waitWhileEventHandleCmd();
+
+                writeIsMalfunctioningSince = DiagnosticsControl.NEVER;
             }
             catch (HResultException hre)
             {
