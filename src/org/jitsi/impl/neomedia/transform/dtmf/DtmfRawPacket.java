@@ -57,6 +57,11 @@ public class DtmfRawPacket
     private int duration;
 
     /**
+     * The volume of the current packet.
+     */
+    private int volume;
+
+    /**
      * Creates a <tt>DtmfRawPacket</tt> using the specified buffer.
      *
      * @param buffer the <tt>byte</tt> array that we should use to store packet
@@ -85,7 +90,9 @@ public class DtmfRawPacket
         int at = getHeaderLength();
 
         code = readByte(at++);
-        end = (readByte(at++) & 0x80) != 0;
+        byte b= readByte(at++);
+        end = (b & 0x80) != 0;
+        volume = b & 0x7f;
 
         duration = ((readByte(at++) & 0xFF) << 8) | (readByte(at++) & 0xFF);
     }
@@ -98,12 +105,14 @@ public class DtmfRawPacket
      * @param marker the RTP Marker flag
      * @param duration the DTMF duration
      * @param timestamp the RTP timestamp
+     * @param volume the DTMF volume
      */
     public void init(int     code,
                      boolean end,
                      boolean marker,
                      int     duration,
-                     long    timestamp)
+                     long    timestamp,
+                     int volume)
     {
         if(logger.isTraceEnabled())
         {
@@ -118,8 +127,8 @@ public class DtmfRawPacket
         // set the Timestamp
         setTimestamp(timestamp);
 
-         // Create the RTP data
-        setDtmfPayload(code, end, duration);
+        // Create the RTP data
+        setDtmfPayload(code, end, duration, volume);
 
         // Reset the CSRC count to zero
         setCsrcCount(0);
@@ -146,17 +155,19 @@ public class DtmfRawPacket
      * @param end boolean used to mark the two last packets
      * @param duration int increments for each dtmf sending
      * updates, stay unchanged at the end for the 2 last packets.
+     * @param volume describes the power level of the tone, expressed in dBm0
      */
-    private void setDtmfPayload(int code, boolean end, int duration)
+    private void setDtmfPayload(int code, boolean end, int duration, int volume)
     {
         this.code = code;
         this.end = end;
         this.duration = duration;
+        this.volume = volume;
 
         int at = getHeaderLength();
 
         writeByte(at++, (byte)code);
-        writeByte(at++, end ? (byte)0x80 : (byte)0);
+        writeByte(at++, end ? (byte)(volume | 0x80) : (byte)(volume & 0x7f));
         writeByte(at++, (byte)(duration >> 8));
         writeByte(at++, (byte)duration);
     }
@@ -186,5 +197,14 @@ public class DtmfRawPacket
     public int getDuration()
     {
         return duration;
+    }
+
+    /**
+     * The volume of the current event.
+     * @return the volume
+     */
+    public int getVolume()
+    {
+        return volume;
     }
 }
