@@ -8,138 +8,11 @@ package org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi;
 
 import org.jitsi.util.*;
 
-/**
- * Defines the native interface to Windows Audio Session API (WASAPI) and
- * related Core Audio APIs such as Multimedia Device (MMDevice) API as used by
- * <tt>WASAPISystem</tt> and its associated <tt>CaptureDevice</tt>,
- * <tt>DataSource</tt> and <tt>Renderer</tt> implementations.
- *
- * @author Lyubomir Marinov
- */
 public class WASAPI
 {
-    public static final int AUDCLNT_E_NOT_STOPPED;
-
-    public static final int AUDCLNT_SHAREMODE_SHARED = 0;
-
-    public static final int AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000;
-
-    public static final int AUDCLNT_STREAMFLAGS_NOPERSIST = 0x00080000;
-
-    public static final int CLSCTX_ALL
-        = /* CLSCTX_INPROC_SERVER */ 0x1
-            | /* CLSCTX_INPROC_HANDLER */ 0x2
-            | /* CLSCTX_LOCAL_SERVER */ 0x4
-            | /* CLSCTX_REMOTE_SERVER */ 0x10;
-
-    public static final String CLSID_MMDeviceEnumerator
-        = "{bcde0395-e52f-467c-8e3d-c4579291692e}";
-
-    public static final int COINIT_MULTITHREADED = 0x0;
-
-    public static final int DEVICE_STATE_ACTIVE = 0x1;
-
-    public static final int eAll = 2;
-
-    public static final int eCapture = 1;
-
-    public static final int eRender = 0;
-
-    private static final int FACILIY_AUDCLNT = 0x889;
-
-    public static final String IID_IAudioCaptureClient
-        = "{c8adbd64-e71e-48a0-a4de-185c395cd317}";
-
-    public static final String IID_IAudioClient
-        = "{1cb9ad4c-dbfa-4c32-b178-c2f568a703b2}";
-
-    public static final String IID_IAudioRenderClient
-        = "{f294acfc-3146-4483-a7bf-addca7c260e2}";
-
-    public static final String IID_IMMDeviceEnumerator
-        = "{a95664d2-9614-4f35-a746-de8db63617e6}";
-
-    public static final String IID_IMMEndpoint
-        = "{1be09788-6894-4089-8586-9a2a6c265ac5}";
-
-    public static final long PKEY_Device_FriendlyName;
-
-    public static final int RPC_E_CHANGED_MODE = 0x80010106;
-
-    public static final int S_FALSE = 1;
-
-    public static final int S_OK = 0;
-
-    private static final int SEVERITY_ERROR = 1;
-
-    private static final int SEVERITY_SUCCESS = 0;
-
-    public static final int STGM_READ = 0x0;
-
-    /**
-     * The return value of {@link #WaitForSingleObject(long, long)} which
-     * indicates that the specified object is a mutex that was not released by
-     * the thread that owned the mutex before the owning thread terminated.
-     * Ownership of the mutex is granted to the calling thread and the mutex
-     * state is set to non-signaled.
-     */
-    public static final int WAIT_ABANDONED = 0x00000080;
-
-    /**
-     * The return value of {@link #WaitForSingleObject(long, long)} which
-     * indicates that the function has failed. Normally, the function will throw
-     * an {@link HResultException} in the case and
-     * {@link HResultException#getHResult()} will return <tt>WAIT_FAILED</tt>.
-     */
-    public static final int WAIT_FAILED = 0xffffffff;
-
-    /**
-     * The return value of {@link #WaitForSingleObject(long, long)} which
-     * indicates that the specified object is signaled.
-     */
-    public static final int WAIT_OBJECT_0 = 0x00000000;
-
-    /**
-     * The return value of {@link #WaitForSingleObject(long, long)} which
-     * indicates that the specified time-out interval has elapsed and the state
-     * of the specified object is non-signaled.
-     */
-    public static final int WAIT_TIMEOUT = 0x00000102;
-
-    public static final char WAVE_FORMAT_PCM = 1;
-
-    static
-    {
-        System.loadLibrary("jnwasapi");
-
-        AUDCLNT_E_NOT_STOPPED
-            = MAKE_HRESULT(SEVERITY_ERROR, FACILIY_AUDCLNT, 5);
-
-        /*
-         * XXX The pointer to native memory returned by PSPropertyKeyFromString
-         * is to be freed via CoTaskMemFree.
-         */
-        try
-        {
-            PKEY_Device_FriendlyName
-                = PSPropertyKeyFromString(
-                        "{a45c254e-df1c-4efd-8020-67d146a850e0} 14");
-            if (PKEY_Device_FriendlyName == 0)
-                throw new IllegalStateException("PKEY_Device_FriendlyName");
-        }
-        catch (HResultException hre)
-        {
-            Logger logger = Logger.getLogger(WASAPI.class);
-
-            logger.error("PSPropertyKeyFromString", hre);
-
-            throw new RuntimeException(hre);
-        }
-    }
-
     public static native void CloseHandle(long hObject)
         throws HResultException;
-
+    
     public static native String CoCreateGuid()
         throws HResultException;
 
@@ -313,11 +186,6 @@ public class WASAPI
 
     public static native void IPropertyStore_Release(long thiz);
 
-    private static int MAKE_HRESULT(int sev, int fac, int code)
-    {
-        return ((sev & 0x1) << 31) | ((fac & 0x7fff) << 16) | (code & 0xffff);
-    }
-
     public static native long PSPropertyKeyFromString(String pszString)
         throws HResultException;
 
@@ -363,15 +231,15 @@ public class WASAPI
     public static native int WAVEFORMATEX_getNAvgBytesPerSec(long thiz);
 
     public static native char WAVEFORMATEX_getNBlockAlign(long thiz);
-
+//
     public static native char WAVEFORMATEX_getNChannels(long thiz);
-
+//
     public static native int WAVEFORMATEX_getNSamplesPerSec(long thiz);
-
+//
     public static native char WAVEFORMATEX_getWBitsPerSample(long thiz);
-
+//
     public static native char WAVEFORMATEX_getWFormatTag(long thiz);
-
+//
     public static native void WAVEFORMATEX_setCbSize(long thiz, char cbSize);
 
     public static native void WAVEFORMATEX_setNAvgBytesPerSec(
@@ -397,6 +265,8 @@ public class WASAPI
     public static native void WAVEFORMATEX_setWFormatTag(
             long thiz,
             char wFormatTag);
+
+    public static native int WAVEFORMATEX_sizeof();
 
     /** Prevents the initialization of <tt>WASAPI</tt> instances. */
     private WASAPI() {}

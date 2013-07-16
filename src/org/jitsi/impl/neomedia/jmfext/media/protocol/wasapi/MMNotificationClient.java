@@ -12,7 +12,7 @@ import org.jitsi.util.*;
 
 /**
  * Implements the Java counterpart of an <tt>IMMNotificationClient</tt> instance
- * statically allocated by the native counterpart of {@link WASAPI} and
+ * statically allocated by the native counterpart of {@link WASAPIWithLogging} and
  * automatically registered with all <tt>IMMDeviceEnumerator</tt> instances.
  * Invocations of methods on the <tt>IMMNotificationClient</tt> instance by
  * Windows Audio Session API (WASAPI) are forwarded by <tt>WASAPI</tt> to the

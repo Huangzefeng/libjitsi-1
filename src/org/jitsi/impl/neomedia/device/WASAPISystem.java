@@ -6,7 +6,7 @@
  */
 package org.jitsi.impl.neomedia.device;
 
-import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPI.*;
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -53,7 +53,7 @@ public class WASAPISystem
 
     /**
      * Invokes the Windows API function <tt>CoInitializeEx</tt> (by way of
-     * {@link WASAPI#CoInitializeEx(long, int)}) with arguments suitable to the
+     * {@link WASAPIWithLogging#CoInitializeEx(long, int)}) with arguments suitable to the
      * operation of <tt>WASAPIRenderer</tt>, <tt>WASAPIStream</tt> and
      * <tt>WASAPISystem</tt>.
      * <p>
@@ -74,7 +74,7 @@ public class WASAPISystem
 
         try
         {
-            hr = WASAPI.CoInitializeEx(0, COINIT_MULTITHREADED);
+            hr = WASAPIWithLogging.CoInitializeEx(0, COINIT_MULTITHREADED);
         }
         catch (HResultException hre)
         {
@@ -204,7 +204,7 @@ public class WASAPISystem
 
         char nBlockAlign = (char) ((channels * sampleSizeInBits) / 8);
 
-        WASAPI.WAVEFORMATEX_fill(
+        WASAPIWithLogging.WAVEFORMATEX_fill(
                 waveformatex,
                 WAVE_FORMAT_PCM,
                 (char) channels,
@@ -491,7 +491,7 @@ public class WASAPISystem
                     char nBlockAlign
                         = (char) ((nChannels * wBitsPerSample) / 8);
 
-                    WASAPI.WAVEFORMATEX_fill(
+                    WASAPIWithLogging.WAVEFORMATEX_fill(
                             waveformatex,
                             WAVE_FORMAT_PCM,
                             nChannels,

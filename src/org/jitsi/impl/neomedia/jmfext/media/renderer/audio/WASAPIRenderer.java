@@ -6,7 +6,7 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.renderer.audio;
 
-import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPI.*;
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
 
 import java.beans.*;
 import java.lang.reflect.*;
