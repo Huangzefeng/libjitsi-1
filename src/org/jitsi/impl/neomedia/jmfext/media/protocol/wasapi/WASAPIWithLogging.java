@@ -154,7 +154,8 @@ public class WASAPIWithLogging
             int dwClsContext, String iid) throws HResultException
     {
         logger.trace(String.format("CoCreateInstance: %s, %s, %s, %s", clsid, pUnkOuter, dwClsContext, iid));
-        long coCreateInstance = WASAPI.CoCreateInstance(clsid, pUnkOuter, dwClsContext, iid); 
+        long coCreateInstance = WASAPI.CoCreateInstance(clsid, pUnkOuter, dwClsContext, iid);
+        logger.trace(String.format("coCreateInstance returned: %s", coCreateInstance));
         return coCreateInstance;
     }
 
@@ -163,6 +164,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("CoInitializeEx: %s, %s", pvReserved, dwCoInit));
         int coInitializeEx = WASAPI.CoInitializeEx(pvReserved, dwCoInit);
+        logger.trace(String.format("coInitializeEx returned: %s", coInitializeEx));
         return coInitializeEx;
     }
 
@@ -182,6 +184,7 @@ public class WASAPIWithLogging
                 bInitialState, lpName)); 
         long createEvent = WASAPI.CreateEvent(lpEventAttributes, bManualReset,
                 bInitialState, lpName);
+        logger.trace(String.format("createEvent returned: %s", createEvent));
         return createEvent;
     }
 
@@ -204,6 +207,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioCaptureClient_GetNextPacketSize: %s", thiz));
         int iAudioCaptureClient_GetNextPacketSize = WASAPI.IAudioCaptureClient_GetNextPacketSize(thiz);
+        logger.trace(String.format("iAudioCaptureClient_GetNextPacketSize returned: %s", iAudioCaptureClient_GetNextPacketSize));
         return iAudioCaptureClient_GetNextPacketSize;
     }
 
@@ -215,6 +219,7 @@ public class WASAPIWithLogging
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels)); 
         int iAudioCaptureClient_Read = WASAPI.IAudioCaptureClient_Read(thiz, data, offset, length,
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels);
+        logger.trace(String.format("iAudioCaptureClient_Read returned: %s", iAudioCaptureClient_Read));
         return iAudioCaptureClient_Read;
     }
 
@@ -229,6 +234,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_GetBufferSize: %s", thiz));
         int iAudioClient_GetBufferSize = WASAPI.IAudioClient_GetBufferSize(thiz);
+        logger.trace(String.format("iAudioClient_GetBufferSize returned: %s", iAudioClient_GetBufferSize));
         return iAudioClient_GetBufferSize;
     }
 
@@ -237,6 +243,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_GetCurrentPadding %s", thiz));
         int iAudioClient_GetCurrentPadding = WASAPI.IAudioClient_GetCurrentPadding(thiz);
+        logger.trace(String.format("iAudioClient_GetCurrentPadding returned: %s", iAudioClient_GetCurrentPadding));
         return iAudioClient_GetCurrentPadding;
     }
 
@@ -245,6 +252,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_GetDefaultDevicePeriod: %s", thiz));
         long iAudioClient_GetDefaultDevicePeriod = WASAPI.IAudioClient_GetDefaultDevicePeriod(thiz);
+        logger.trace(String.format("iAudioClient_GetDefaultDevicePeriod returned: %s", iAudioClient_GetDefaultDevicePeriod));
         return iAudioClient_GetDefaultDevicePeriod;
     }
 
@@ -256,6 +264,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_GetService: %s, %s", thiz, iid));
         long iAudioClient_GetService = WASAPI.IAudioClient_GetService(thiz, iid);
+        logger.trace(String.format("iAudioClient_GetService returned: %s", iAudioClient_GetService));
         return iAudioClient_GetService;
     }
 
@@ -267,6 +276,7 @@ public class WASAPIWithLogging
                 hnsBufferDuration, hnsPeriodicity, pFormat, audioSessionGuid));
         int iAudioClient_Initialize = WASAPI.IAudioClient_Initialize(thiz, shareMode, streamFlags,
                 hnsBufferDuration, hnsPeriodicity, pFormat, audioSessionGuid);
+        logger.trace(String.format("iAudioClient_Initialize returned: %s", iAudioClient_Initialize));
         return iAudioClient_Initialize;
     }
 
@@ -275,6 +285,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_IsFormatSupported: %s, %s, %s", thiz, shareMode, pFormat));
         long iAudioClient_IsFormatSupported = WASAPI.IAudioClient_IsFormatSupported(thiz, shareMode, pFormat);
+        logger.trace(String.format("iAudioClient_IsFormatSupported returned: %s", iAudioClient_IsFormatSupported));
         return iAudioClient_IsFormatSupported;
     }
 
@@ -295,6 +306,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_Start: %s", thiz));
         int iAudioClient_Start = WASAPI.IAudioClient_Start(thiz);
+        logger.trace(String.format("iAudioClient_Start returned: %s", iAudioClient_Start));
         return iAudioClient_Start;
     }
 
@@ -302,6 +314,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IAudioClient_Stop: %s", thiz));
         int iAudioClient_Stop = WASAPI.IAudioClient_Stop(thiz);
+        logger.trace(String.format("iAudioClient_Stop returned: %s", iAudioClient_Stop));
         return iAudioClient_Stop;
     }
 
@@ -357,6 +370,7 @@ public class WASAPIWithLogging
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels));
         int iAudioRenderClient_Write = WASAPI.IAudioRenderClient_Write(thiz, data, offset, length,
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels);
+        logger.trace(String.format("iAudioRenderClient_Write returned: %s", iAudioRenderClient_Write));
         return iAudioRenderClient_Write;
     }
 
@@ -366,6 +380,7 @@ public class WASAPIWithLogging
         logger.trace(String.format("IMMDevice_Activate: %s, %s, %s, %s", thiz, iid, dwClsCtx, pActivationParams));
         long immDevice_Activate = WASAPI
                 .IMMDevice_Activate(thiz, iid, dwClsCtx, pActivationParams);
+        logger.trace(String.format("immDevice_Activate returned: %s", immDevice_Activate));
         return immDevice_Activate;
     }
 
@@ -385,6 +400,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IMMDevice_OpenPropertyStore: %s, %s", thiz, stgmAccess));
         long immDevice_OpenPropertyStore = WASAPI.IMMDevice_OpenPropertyStore(thiz, stgmAccess);
+        logger.trace(String.format("immDevice_OpenPropertyStore returned: %s", immDevice_OpenPropertyStore));
         return immDevice_OpenPropertyStore;
     }
 
@@ -393,6 +409,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IMMDevice_QueryInterface: %s, %s", thiz, iid));
         long immDevice_QueryInterface = WASAPI.IMMDevice_QueryInterface(thiz, iid);
+        logger.trace(String.format("immDevice_QueryInterface returned: %s", immDevice_QueryInterface));
         return immDevice_QueryInterface;
     }
 
@@ -407,6 +424,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IMMDeviceCollection_GetCount: %s", thiz));
         int immDeviceCollection_GetCount = WASAPI.IMMDeviceCollection_GetCount(thiz);
+        logger.trace(String.format("immDeviceCollection_GetCount returned: %s", immDeviceCollection_GetCount));
         return immDeviceCollection_GetCount;
     }
 
@@ -415,6 +433,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IMMDeviceCollection_Item: %s, %s", thiz, nDevice));
         long immDeviceCollection_Item = WASAPI.IMMDeviceCollection_Item(thiz, nDevice);
+        logger.trace(String.format("immDeviceCollection_Item returned: %s", immDeviceCollection_Item));
         return immDeviceCollection_Item;
     }
 
@@ -430,6 +449,7 @@ public class WASAPIWithLogging
         logger.trace(String.format("IMMDeviceEnumerator_EnumAudioEndpoints: %s, %s, %s", thiz, dataFlow, dwStateMask));
         long immDeviceEnumerator_EnumAudioEndpoints = WASAPI.IMMDeviceEnumerator_EnumAudioEndpoints(thiz, dataFlow,
                 dwStateMask);
+        logger.trace(String.format("immDeviceEnumerator_EnumAudioEndpoints returned: %s", immDeviceEnumerator_EnumAudioEndpoints));
         return immDeviceEnumerator_EnumAudioEndpoints;
     }
 
@@ -438,6 +458,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IMMDeviceEnumerator_GetDevice: %s, %s", thiz, pwstrId));
         long immDeviceEnumerator_GetDevice = WASAPI.IMMDeviceEnumerator_GetDevice(thiz, pwstrId);
+        logger.trace(String.format("immDeviceEnumerator_GetDevice returned: %s", immDeviceEnumerator_GetDevice));
         return immDeviceEnumerator_GetDevice;
     }
 
@@ -452,6 +473,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IMMEndpoint_GetDataFlow: %s", thiz));
         int immEndpoint_GetDataFlow = WASAPI.IMMEndpoint_GetDataFlow(thiz);
+        logger.trace(String.format("immEndpoint_GetDataFlow returned: %s", immEndpoint_GetDataFlow));
         return immEndpoint_GetDataFlow;
     }
 
@@ -466,6 +488,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("IPropertyStore_GetString: %s, %s", thiz, key));
         String iPropertyStore_GetString = WASAPI.IPropertyStore_GetString(thiz, key);
+        logger.trace(String.format("iPropertyStore_GetString returned: %s", iPropertyStore_GetString));
         return iPropertyStore_GetString;
     }
 
@@ -485,6 +508,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("PSPropertyKeyFromString: %s", pszString));
         long psPropertyKeyFromString = WASAPI.PSPropertyKeyFromString(pszString);
+        logger.trace(String.format("psPropertyKeyFromString returned: %s", psPropertyKeyFromString));
         return psPropertyKeyFromString;
     }
 
@@ -518,6 +542,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WaitForSingleObject: %s, %s", hHandle, dwMilliseconds));
         int waitForSingleObject = WASAPI.WaitForSingleObject(hHandle, dwMilliseconds);
+        logger.trace(String.format("waitForSingleObject returned: %s", waitForSingleObject));
         return waitForSingleObject;
     }
 
@@ -525,6 +550,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WAVEFORMATEX_alloc:"));
         long waveformatex_alloc = WASAPI.WAVEFORMATEX_alloc();
+        logger.trace(String.format("waveformatex_alloc returned: %s", waveformatex_alloc));
         return waveformatex_alloc;
     }
 
@@ -548,6 +574,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WAVEFORMATEX_getNChannels: %s", thiz));
         char waveformatex_getNChannels = WASAPI.WAVEFORMATEX_getNChannels(thiz);
+        logger.trace(String.format("waveformatex_getNChannels returned: %s", waveformatex_getNChannels));
         return waveformatex_getNChannels;
     }
 
@@ -556,6 +583,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WAVEFORMATEX_getNSamplesPerSec: %s", thiz));
         int waveformatex_getNSamplesPerSec = WASAPI.WAVEFORMATEX_getNSamplesPerSec(thiz);
+        logger.trace(String.format("waveformatex_getNSamplesPerSec returned: %s", waveformatex_getNSamplesPerSec));
         return waveformatex_getNSamplesPerSec;
     }
 
@@ -564,6 +592,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WAVEFORMATEX_getWBitsPerSample: %s", thiz));
         char waveformatex_getWBitsPerSample = WASAPI.WAVEFORMATEX_getWBitsPerSample(thiz);
+        logger.trace(String.format("waveformatex_getWBitsPerSample returned: %s", waveformatex_getWBitsPerSample));
         return waveformatex_getWBitsPerSample;
     }
 
@@ -572,6 +601,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WAVEFORMATEX_getWFormatTag: %s", thiz));
         char waveformatex_getWFormatTag = WASAPI.WAVEFORMATEX_getWFormatTag(thiz);
+        logger.trace(String.format("waveformatex_getWFormatTag returned: %s", waveformatex_getWFormatTag));
         return waveformatex_getWFormatTag;
     }
 
@@ -606,6 +636,7 @@ public class WASAPIWithLogging
     {
         logger.trace(String.format("WAVEFORMATEX_sizeof:"));
         int waveformatex_sizeof = WASAPI.WAVEFORMATEX_sizeof();
+        logger.trace(String.format("waveformatex_sizeof returned: %s", waveformatex_sizeof));
         return waveformatex_sizeof;
     }
 
