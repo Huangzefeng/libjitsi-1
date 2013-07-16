@@ -15,6 +15,7 @@ import javax.media.*;
 import javax.sound.sampled.*;
 
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.resources.*;
@@ -93,6 +94,20 @@ public abstract class AudioSystem
      * The <tt>Logger</tt> used by this instance for logging output.
      */
     private static Logger logger = Logger.getLogger(AudioSystem.class);
+
+    /**
+     * The (base) name of the <tt>ConfigurationService</tt> property which
+     * indicates whether noise suppression is to be performed for the captured
+     * audio.
+     */
+    protected static final String PNAME_DENOISE = "denoise";
+
+    /**
+     * The (base) name of the <tt>ConfigurationService</tt> property which
+     * indicates whether noise cancellation is to be performed for the captured
+     * audio.
+     */
+    protected static final String PNAME_ECHOCANCEL = "echocancel";
 
     public static AudioSystem getAudioSystem(String locatorProtocol)
     {
@@ -438,6 +453,24 @@ public abstract class AudioSystem
     }
 
     /**
+     * Gets the (full) name of the <tt>ConfigurationService</tt> property which
+     * is associated with a (base) <tt>AudioSystem</tt>-specific property name.
+     *
+     * @param basePropertyName the (base) <tt>AudioSystem</tt>-specific property
+     * name of which the associated (full) <tt>ConfigurationService</tt>
+     * property name is to be returned
+     * @return the (full) name of the <tt>ConfigurationService</tt> property
+     * which is associated with the (base) <tt>AudioSystem</tt>-specific
+     * property name
+     */
+    protected String getPropertyName(String basePropertyName)
+    {
+        return
+            DeviceConfiguration.PROP_AUDIO_SYSTEM + "." + getLocatorProtocol()
+                + "." + basePropertyName;
+    }
+
+    /**
      * Gets the selected device for a specific data flow: capture, notify or
      * playback.
      *
@@ -451,6 +484,42 @@ public abstract class AudioSystem
             devices[dataFlow.ordinal()].getSelectedDevice(
                     getLocatorProtocol(),
                     getDevices(dataFlow));
+    }
+
+    /**
+     * Gets the indicator which determines whether noise suppression is to be
+     * performed for captured audio.
+     *
+     * @return <tt>true</tt> if noise suppression is to be performed for
+     * captured audio; otherwise, <tt>false</tt>
+     */
+    public boolean isDenoise()
+    {
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+        boolean value = ((getFeatures() & FEATURE_DENOISE) == FEATURE_DENOISE);
+
+        if (cfg != null)
+            value = cfg.getBoolean(getPropertyName(PNAME_DENOISE), value);
+        return value;
+    }
+
+    /**
+     * Gets the indicator which determines whether echo cancellation is to be
+     * performed for captured audio.
+     *
+     * @return <tt>true</tt> if echo cancellation is to be performed for
+     * captured audio; otherwise, <tt>false</tt>
+     */
+    public boolean isEchoCancel()
+    {
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+        boolean value
+            = ((getFeatures() & FEATURE_ECHO_CANCELLATION)
+                    == FEATURE_ECHO_CANCELLATION);
+
+        if (cfg != null)
+            value = cfg.getBoolean(getPropertyName(PNAME_ECHOCANCEL), value);
+        return value;
     }
 
     /**
