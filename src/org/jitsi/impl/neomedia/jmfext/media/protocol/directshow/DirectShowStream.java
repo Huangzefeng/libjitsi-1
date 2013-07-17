@@ -7,6 +7,7 @@
 package org.jitsi.impl.neomedia.jmfext.media.protocol.directshow;
 
 import java.awt.*;
+import java.awt.image.*;
 import java.io.*;
 
 import javax.media.*;
@@ -472,10 +473,19 @@ public class DirectShowStream
                             String error = res.getI18NString(deviceReadErrorProp);
                             String errorTitle = res.getI18NString(errorTitleProp);
 
-                            JOptionPane.showMessageDialog(null,
-                                                    error,
-                                                    errorTitle,
+                            JOptionPane msgFrame = new JOptionPane(error,
                                                     JOptionPane.ERROR_MESSAGE);
+
+                            JDialog msgDialog = msgFrame.createDialog(
+                                                                    errorTitle);
+                            msgDialog.setAlwaysOnTop(true);
+                            msgDialog.setModal(true);
+                            msgDialog.setDefaultCloseOperation(
+                                                      JDialog.DISPOSE_ON_CLOSE);
+                            msgDialog.setIconImage(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE));
+                            msgDialog.setVisible(true);
+
+
                             try
                             {
                                 stop();
