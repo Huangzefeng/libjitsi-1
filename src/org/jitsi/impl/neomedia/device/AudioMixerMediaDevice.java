@@ -1235,13 +1235,13 @@ public class AudioMixerMediaDevice
          */
         @Override
         public void setStreamAudioLevelListener(
-                SimpleAudioLevelListener listener)
+                SimpleAudioLevelListener listener, List<ReceiveStream> streams)
         {
             synchronized(streamAudioLevelListenerLock)
             {
                 streamAudioLevelListener = listener;
 
-                for (ReceiveStream receiveStream : getReceiveStreams())
+                for (ReceiveStream receiveStream : streams)
                 {
                     /*
                      * If we already have a ReceiveStream, register the listener

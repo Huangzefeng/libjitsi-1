@@ -6,9 +6,12 @@
  */
 package org.jitsi.impl.neomedia.device;
 
+import java.util.*;
+
 import javax.media.*;
 import javax.media.control.*;
 import javax.media.format.*;
+import javax.media.rtp.*;
 
 import org.jitsi.impl.neomedia.audiolevel.*;
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
@@ -77,9 +80,9 @@ public class AudioMediaDeviceSession
     public void copyPlayback(MediaDeviceSession deviceSession)
     {
         AudioMediaDeviceSession amds = (AudioMediaDeviceSession) deviceSession;
-
+        
         setStreamAudioLevelListener(
-                amds.streamAudioLevelEffect.getAudioLevelListener());
+                amds.streamAudioLevelEffect.getAudioLevelListener(), getReceiveStreams());
         setLocalUserAudioLevelListener(
                 amds.localUserAudioLevelEffect.getAudioLevelListener());
     }
@@ -302,7 +305,7 @@ public class AudioMediaDeviceSession
      * @param listener the <tt>SimpleAudioLevelListener</tt> that we want
      * notified for audio level changes in the remote participant's media.
      */
-    public void setStreamAudioLevelListener(SimpleAudioLevelListener listener)
+    public void setStreamAudioLevelListener(SimpleAudioLevelListener listener, List<ReceiveStream> streams)
     {
         streamAudioLevelEffect.setAudioLevelListener(listener);
     }
