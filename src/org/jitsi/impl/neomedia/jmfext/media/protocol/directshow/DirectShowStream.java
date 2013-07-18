@@ -482,9 +482,9 @@ public class DirectShowStream
                             msgDialog.setModal(true);
                             msgDialog.setDefaultCloseOperation(
                                                       JDialog.DISPOSE_ON_CLOSE);
-                            msgDialog.setIconImage(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB_PRE));
+                            msgDialog.setIconImage(new BufferedImage(
+                                        1, 1, BufferedImage.TYPE_INT_ARGB_PRE));
                             msgDialog.setVisible(true);
-
 
                             try
                             {
