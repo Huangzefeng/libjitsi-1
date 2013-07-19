@@ -329,7 +329,9 @@ public class AudioMediaStreamImpl
                 if (localUserAudioLevelListener != null)
                     deviceSession.setLocalUserAudioLevelListener(null);
                 if (streamAudioLevelListener != null)
-                    deviceSession.setStreamAudioLevelListener(null, null);
+                {
+                    deviceSession.setStreamAudioLevelListener(null, deviceSession.getReceiveStreams());
+                }
             }
             if (newValue != null)
             {
