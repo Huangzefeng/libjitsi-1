@@ -121,6 +121,15 @@ public class WASAPIRenderer
     private long iAudioRenderClient;
 
     /**
+     * The indicator which determines whether the value of the <tt>locator</tt>
+     * property of this instance was equal to null when this <tt>Renderer</tt>
+     * was opened. Indicates that this <tt>Renderer</tt> should successfully
+     * process media data without actually rendering to any render endpoint
+     * device.
+     */
+    private boolean locatorIsNull;
+
+    /**
      * The maximum capacity in frames of the endpoint buffer.
      */
     private int numBufferFrames;
@@ -255,6 +264,8 @@ public class WASAPIRenderer
                 eventHandle = 0;
             }
 
+            dstFormat = null;
+            locatorIsNull = false;
             remainder = null;
             remainderLength = 0;
             started = false;
@@ -302,10 +313,17 @@ public class WASAPIRenderer
 
         try
         {
-            MediaLocator locator = getLocator();
-
-            if (locator == null)
-                throw new NullPointerException("No locator/MediaLocator set.");
+            locator = getLocator();
+            if (locatorIsNull = (locator == null))
+            {
+                /*
+                 * We actually want to allow the user to switch the playback
+                 * and/or notify device to none mid-stream in order to disable
+                 * the playback.
+                 */
+            }
+            else
+            {
 
             // Assert that inputFormat is set.
             AudioFormat[] formats = getFormatsToInitializeIAudioClient();
@@ -434,6 +452,8 @@ public class WASAPIRenderer
                 if (eventHandle != 0)
                     CloseHandle(eventHandle);
             }
+
+            } // The locator of this Renderer is not null.
         }
         catch (Throwable t)
         {
@@ -475,7 +495,9 @@ public class WASAPIRenderer
 
         waitWhileBusy();
 
-        boolean open = ((iAudioClient != 0) && (iAudioRenderClient != 0));
+        boolean open
+            = ((iAudioClient != 0) && (iAudioRenderClient != 0))
+                || locatorIsNull;
 
         if (open)
         {
@@ -542,7 +564,19 @@ public class WASAPIRenderer
 
         synchronized (this)
         {
-            if ((iAudioClient == 0) || (iAudioRenderClient == 0) || !started)
+            if ((iAudioClient == 0) || (iAudioRenderClient == 0))
+            {
+                /*
+                 * We actually want to allow the user to switch the playback
+                 * and/or notify device to none mid-stream in order to disable
+                 * the playback.
+                 */
+                return
+                    locatorIsNull
+                        ? BUFFER_PROCESSED_OK
+                        : BUFFER_PROCESSED_FAILED;
+            }
+            else if (!started)
                 return BUFFER_PROCESSED_FAILED;
             else
             {
@@ -1076,7 +1110,17 @@ public class WASAPIRenderer
      */
     public synchronized void start()
     {
-        if (iAudioClient != 0)
+        if (iAudioClient == 0)
+        {
+            /*
+             * We actually want to allow the user to switch the playback and/or
+             * notify device to none mid-stream in order to disable the
+             * playback.
+             */
+            if (locatorIsNull)
+                started = true;
+        }
+        else
         {
             waitWhileBusy();
             waitWhileEventHandleCmd();
@@ -1169,7 +1213,17 @@ public class WASAPIRenderer
      */
     public synchronized void stop()
     {
-        if (iAudioClient != 0)
+        if (iAudioClient == 0)
+        {
+            /*
+             * We actually want to allow the user to switch the playback and/or
+             * notify device to none mid-stream in order to disable the
+             * playback.
+             */
+            if (locatorIsNull)
+                started = false;
+        }
+        else
         {
             waitWhileBusy();
 
