@@ -58,12 +58,19 @@ public class WASAPIStream
     private static final int RENDER_INPUT_STREAM_INDEX = 1;
 
     /**
+     * The maximum time to wait for processing to complete when trying to stop
+     * a stream.  If this time elapses, we should stop waiting because we're
+     * effectively deadlocked and it's better to unblock processing.
+     */
+    private static final int MAX_WAIT_TIME = 1000;
+
+    /**
      * Finds an <tt>AudioFormat</tt> in a specific list of <tt>Format</tt>s
      * which is as similar to a specific <tt>AudioFormat</tt> as possible.
      *
      * @param formats the list of <tt>Format</tt>s into which an
      * <tt>AudioFormat</tt> as similar to the specified <tt>format</tt> as
-     * possible is to be found 
+     * possible is to be found
      * @param format the <tt>AudioFormat</tt> for which a similar
      * <tt>AudioFormat</tt> is to be found in <tt>formats</tt>
      * @return an <tt>AudioFormat</tt> which is an element of <tt>formats</tt>
@@ -1894,21 +1901,18 @@ public class WASAPIStream
      */
     private synchronized void waitWhileCaptureIsBusy()
     {
-        boolean interrupted = false;
+        long waitStartTime = System.currentTimeMillis();
 
         while (captureIsBusy)
         {
-            try
+            if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
-                wait(devicePeriod);
+                logger.error("Wait is deadlocked - continue");
+                break;
             }
-            catch (InterruptedException ie)
-            {
-                interrupted = true;
-            }
+
+            yield();
         }
-        if (interrupted)
-            Thread.currentThread().interrupt();
     }
 
     /**
@@ -1917,8 +1921,18 @@ public class WASAPIStream
      */
     private synchronized void waitWhileProcessThread()
     {
+        long waitStartTime = System.currentTimeMillis();
+
         while (processThread != null)
+        {
+            if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
+            {
+                logger.error("Wait is deadlocked - continue");
+                break;
+            }
+
             yield();
+        }
     }
 
     /**
@@ -1927,21 +1941,18 @@ public class WASAPIStream
      */
     private synchronized void waitWhileRenderIsBusy()
     {
-        boolean interrupted = false;
+        long waitStartTime = System.currentTimeMillis();
 
         while (renderIsBusy)
         {
-            try
+            if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
-                wait(devicePeriod);
+                logger.error("Wait is deadlocked - continue");
+                break;
             }
-            catch (InterruptedException ie)
-            {
-                interrupted = true;
-            }
+
+            yield();
         }
-        if (interrupted)
-            Thread.currentThread().interrupt();
     }
 
     /**
