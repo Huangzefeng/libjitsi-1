@@ -23,6 +23,7 @@ import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.*;
 
 /**
@@ -302,6 +303,218 @@ public class WASAPIRenderer
     }
 
     /**
+     * {@inheritDoc}
+     *
+     * Overrides the super implementation to handle the case in which the user
+     * has selected "none" for the playback/notify device.
+     */
+    @Override
+    public Format[] getSupportedInputFormats()
+    {
+        if (getLocator() == null)
+        {
+            /*
+             * XXX We toyed with the idea of calculating a list of common
+             * Formats supported by all devices (of the dataFlow of this
+             * AbstractAudioRenderer, of course) but that turned out to be
+             * monstrous in code, inefficient at least in terms of garbage
+             * collection and with questionable suitability. The following
+             * approach will likely have a comparable suitability with better
+             * efficiency achieved code that is easier to understand.
+             */
+
+            /*
+             * The maximums supported by the WASAPI integration at the time of
+             * this writing.
+             */
+            double sampleRate = MediaUtils.MAX_AUDIO_SAMPLE_RATE;
+            int sampleSizeInBits = 16;
+            int channels = 2;
+
+            if ((sampleRate == Format.NOT_SPECIFIED)
+                    && (Constants.AUDIO_SAMPLE_RATES.length != 0))
+                sampleRate = Constants.AUDIO_SAMPLE_RATES[0];
+            return
+                WASAPISystem.getFormatsToInitializeIAudioClient(
+                        new AudioFormat(
+                                AudioFormat.LINEAR,
+                                sampleRate,
+                                sampleSizeInBits,
+                                channels,
+                                AudioFormat.LITTLE_ENDIAN,
+                                AudioFormat.SIGNED,
+                                /* frameSizeInBits */ Format.NOT_SPECIFIED,
+                                /* frameRate */ Format.NOT_SPECIFIED,
+                                Format.byteArray));
+        }
+        else
+            return super.getSupportedInputFormats();
+    }
+
+    /**
+     * Closes {@link #resampler} if it is non-<tt>null</tt>.
+     */
+    private void maybeCloseResampler()
+    {
+        Codec resampler = this.resampler;
+
+        if (resampler != null)
+        {
+            this.resampler = null;
+            resamplerInBuffer = null;
+            resamplerOutBuffer = null;
+
+            try
+            {
+                resampler.close();
+            }
+            catch (Throwable t)
+            {
+                if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+                else
+                    logger.error("Failed to close resampler.", t);
+            }
+        }
+    }
+
+    /**
+     * Invokes <tt>WASAPI.IAudioRenderClient_Write</tt> on
+     * {@link #iAudioRenderClient} and logs and swallows any
+     * <tt>HResultException</tt>.
+     *
+     * @param data the bytes of the audio samples to be written into the render
+     * endpoint buffer
+     * @param offset the offset in <tt>data</tt> at which the bytes of the audio
+     * samples to be written into the render endpoint buffer begin
+     * @param length the number of the bytes in <tt>data</tt> beginning at
+     * <tt>offset</tt> of the audio samples to be written into the render
+     * endpoint buffer
+     * @param srcSampleSize the size in bytes of an audio sample in
+     * <tt>data</tt>
+     * @param srcChannels the number of channels of the audio signal provided in
+     * <tt>data</tt>
+     * @return the number of bytes from <tt>data</tt> (starting at
+     * <tt>offset</tt>) which have been written into the render endpoint buffer
+     * or <tt>0</tt> upon <tt>HResultException</tt>
+     */
+    private int maybeIAudioRenderClientWrite(
+            byte[] data, int offset, int length,
+            int srcSampleSize, int srcChannels)
+    {
+        int written;
+
+        try
+        {
+            written
+                = IAudioRenderClient_Write(
+                        iAudioRenderClient,
+                        data, offset, length,
+                        srcSampleSize, srcChannels,
+                        dstSampleSize, dstChannels);
+        }
+        catch (HResultException hre)
+        {
+            written = 0;
+            logger.error("IAudioRenderClient_Write", hre);
+        }
+        return written;
+    }
+
+    /**
+     * Initializes and opens a new instance of {@link #resampler} if the
+     * <tt>Format</tt>-related state of this instance deems its existence
+     * necessary.
+     */
+    private void maybeOpenResampler()
+    {
+        AudioFormat inFormat = this.inputFormat;
+        AudioFormat outFormat = dstFormat;
+
+        // We are able to translate between mono and stereo.
+        if ((inFormat.getSampleRate() == outFormat.getSampleRate())
+                && (inFormat.getSampleSizeInBits()
+                        == outFormat.getSampleSizeInBits()))
+            return;
+
+        // The resamplers are not expected to convert between mono and stereo.
+        int channels = inFormat.getChannels();
+
+        if (outFormat.getChannels() != channels)
+        {
+            outFormat
+                = new AudioFormat(
+                        outFormat.getEncoding(),
+                        outFormat.getSampleRate(),
+                        outFormat.getSampleSizeInBits(),
+                        channels,
+                        outFormat.getEndian(),
+                        outFormat.getSigned(),
+                        /* frameSizeInBits */ Format.NOT_SPECIFIED,
+                        /* frameRate */ Format.NOT_SPECIFIED,
+                        outFormat.getDataType());
+        }
+
+        @SuppressWarnings("unchecked")
+        List<String> classNames
+            = PlugInManager.getPlugInList(
+                    inFormat,
+                    outFormat,
+                    PlugInManager.CODEC);
+        Codec resampler = null;
+
+        if (classNames != null)
+        {
+            for (String className : classNames)
+            {
+                try
+                {
+                    Codec codec
+                        = (Codec) Class.forName(className).newInstance();
+                    Format setInput = codec.setInputFormat(inFormat);
+
+                    if ((setInput != null) && inFormat.matches(setInput))
+                    {
+                        Format setOutput = codec.setOutputFormat(outFormat);
+
+                        if ((setOutput != null) && outFormat.matches(setOutput))
+                        {
+                            codec.open();
+                            resampler = codec;
+                            break;
+                        }
+                    }
+                }
+                catch (Throwable t)
+                {
+                    if (t instanceof ThreadDeath)
+                        throw (ThreadDeath) t;
+                    else
+                    {
+                        logger.warn(
+                                "Failed to open resampler " + className,
+                                t);
+                    }
+                }
+            }
+        }
+        if (resampler == null)
+        {
+            throw new IllegalStateException(
+                    "Failed to open a codec to resample [" + inFormat
+                        + "] into [" + outFormat + "].");
+        }
+        else
+        {
+            this.resampler = resampler;
+            resamplerChannels = outFormat.getChannels();
+            resamplerSampleSize = WASAPISystem.getSampleSizeInBytes(outFormat);
+            resamplerFrameSize = resamplerChannels * resamplerSampleSize;
+        }
+    }
+
+    /**
+>>>>>>> bd3f1b6... Fixes issues with the Renderer implementation using Windows Audio Session API (WASAPI) related to the playback and/or notify device selections being set to 'none'.
      * {@inheritDoc}
      */
     @Override
