@@ -514,7 +514,6 @@ public class WASAPIRenderer
     }
 
     /**
->>>>>>> bd3f1b6... Fixes issues with the Renderer implementation using Windows Audio Session API (WASAPI) related to the playback and/or notify device selections being set to 'none'.
      * {@inheritDoc}
      */
     @Override
