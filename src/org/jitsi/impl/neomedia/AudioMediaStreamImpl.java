@@ -329,7 +329,9 @@ public class AudioMediaStreamImpl
                 if (localUserAudioLevelListener != null)
                     deviceSession.setLocalUserAudioLevelListener(null);
                 if (streamAudioLevelListener != null)
-                    deviceSession.setStreamAudioLevelListener(null);
+                {
+                    deviceSession.setStreamAudioLevelListener(null, deviceSession.getReceiveStreams());
+                }
             }
             if (newValue != null)
             {
@@ -344,7 +346,7 @@ public class AudioMediaStreamImpl
                 if (streamAudioLevelListener != null)
                 {
                     deviceSession.setStreamAudioLevelListener(
-                            streamAudioLevelListener);
+                            streamAudioLevelListener, deviceSession.getReceiveStreams());
                 }
 
                 /*
@@ -578,7 +580,7 @@ public class AudioMediaStreamImpl
             if (deviceSession != null)
             {
                 deviceSession.setStreamAudioLevelListener(
-                        streamAudioLevelListener);
+                        streamAudioLevelListener, deviceSession.getReceiveStreams());
             }
         }
     }

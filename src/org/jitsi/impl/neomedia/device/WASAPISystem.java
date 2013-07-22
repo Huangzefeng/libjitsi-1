@@ -7,9 +7,9 @@
 package org.jitsi.impl.neomedia.device;
 
 import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.VoiceCaptureDSP.*;
 
 import java.util.*;
-import java.util.regex.Pattern;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -32,6 +32,15 @@ public class WASAPISystem
      * A GUID which identifies the audio session that streams belong to.
      */
     private static String audioSessionGuid;
+
+    /**
+     * The default duration of audio data in milliseconds to be read from
+     * <tt>WASAPIStream</tt> in an invocation of
+     * {@link WASAPIStream#read(Buffer)} or to be processed by
+     * <tt>WASAPIRenderer</tt> in an invocation of
+     * {@link WASAPIRenderer#process(Buffer)}.
+     */
+    public static final long DEFAULT_BUFFER_DURATION = 20;
 
     /**
      * The default interval in milliseconds between periodic processing passes
@@ -216,6 +225,20 @@ public class WASAPISystem
     }
 
     /**
+     * The pointer to the native <tt>IMediaObject</tt> interface instance of the
+     * voice capture DMO that supports/implements the acoustic echo cancellation
+     * (AEC) feature.
+     */
+    private long aecIMediaObject;
+
+    /**
+     * The <tt>List</tt> of <tt>AudioFormat</tt>s supported by the voice capture
+     * DMO that supports/implements the acoustic echo cancellation (AEC) feature
+     * i.e. {@link #aecIMediaObject}.
+     */
+    private List<AudioFormat> aecSupportedFormats;
+
+    /**
      * The pointer to the native <tt>IMMDeviceEnumerator</tt> interface instance
      * which this <tt>WASAPISystem</tt> uses to enumerate the audio endpoint
      * devices.
@@ -306,35 +329,52 @@ public class WASAPISystem
 
             captureDevices = new ArrayList<CaptureDeviceInfo2>(count);
             playbackDevices = new ArrayList<CaptureDeviceInfo2>(count);
-            for (int i = 0; i < count; i++)
-            {
-                long iMMDevice
-                    = IMMDeviceCollection_Item(iMMDeviceCollection, i);
 
-                if (iMMDevice == 0)
-                    throw new RuntimeException("IMMDeviceCollection_Item");
+            if (count > 0)
+            {
+                // The acoustic echo cancellation (AEC) feature is optional.
+                maybeInitializeAEC();
                 try
                 {
-                    doInitializeIMMDevice(
-                            iMMDevice,
-                            captureDevices, playbackDevices);
-                }
-                catch (Throwable t)
-                {
-                    if (t instanceof ThreadDeath)
-                        throw (ThreadDeath) t;
-                    /*
-                     * We do not want the initialization of one IMMDevice to
-                     * prevent the initialization of other IMMDevices.
-                     */
-                    logger.error(
-                            "Failed to doInitialize for IMMDevice at index "
-                                + i,
-                            t);
+                    for (int i = 0; i < count; i++)
+                    {
+                        long iMMDevice
+                            = IMMDeviceCollection_Item(iMMDeviceCollection, i);
+
+                        if (iMMDevice == 0)
+                        {
+                            throw new RuntimeException(
+                                    "IMMDeviceCollection_Item");
+                        }
+                        try
+                        {
+                            doInitializeIMMDevice(
+                                    iMMDevice,
+                                    captureDevices, playbackDevices);
+                        }
+                        catch (Throwable t)
+                        {
+                            if (t instanceof ThreadDeath)
+                                throw (ThreadDeath) t;
+                            /*
+                             * We do not want the initialization of one
+                             * IMMDevice to prevent the initialization of other
+                             * IMMDevices.
+                             */
+                            logger.error(
+                                    "Failed to doInitialize for IMMDevice"
+                                        + " at index " + i,
+                                    t);
+                        }
+                        finally
+                        {
+                            IMMDevice_Release(iMMDevice);
+                        }
+                    }
                 }
                 finally
                 {
-                    IMMDevice_Release(iMMDevice);
+                    maybeUninitializeAEC();
                 }
             }
         }
@@ -413,27 +453,49 @@ public class WASAPISystem
                 name = id;
 
             int dataFlow = getIMMDeviceDataFlow(iMMDevice);
-            CaptureDeviceInfo2 cdi2
-                = new CaptureDeviceInfo2(
-                        name,
-                        new MediaLocator(LOCATOR_PROTOCOL + ":" + id),
-                        formats.toArray(new Format[formats.size()]),
-                        id,
-                        /* transportType */ null,
-                        /* modelIdentifier */ null);
+            List<CaptureDeviceInfo2> devices;
 
             switch (dataFlow)
             {
             case eCapture:
-                captureDevices.add(cdi2);
+                /*
+                 * If acoustic echo cancellation (AEC) is used later on, the
+                 * CaptureDevice/DataSource implementation will support its
+                 * formats.
+                 */
+                List<AudioFormat> aecSupportedFormats
+                    = getAECSupportedFormats();
+
+                if (!aecSupportedFormats.isEmpty())
+                {
+                    for (AudioFormat format : aecSupportedFormats)
+                        if (!formats.contains(format))
+                            formats.add(format);
+                }
+
+                devices = captureDevices;
                 break;
             case eRender:
-                playbackDevices.add(cdi2);
+                devices = playbackDevices;
                 break;
             default:
+                devices = null;
                 logger.error(
                         "Failed to retrieve dataFlow from IMMEndpoint " + id);
                 break;
+            }
+            if (devices != null)
+            {
+                CaptureDeviceInfo2 cdi2
+                    = new CaptureDeviceInfo2(
+                            name,
+                            new MediaLocator(LOCATOR_PROTOCOL + ":" + id),
+                            formats.toArray(new Format[formats.size()]),
+                            id,
+                            /* transportType */ null,
+                            /* modelIdentifier */ null);
+
+                devices.add(cdi2);
             }
         }
     }
@@ -457,6 +519,35 @@ public class WASAPISystem
         {
             super.finalize();
         }
+    }
+
+    /**
+     * Gets the <tt>List</tt> of <tt>AudioFormat</tt>s supported by the voice
+     * capture DMO that supports/implements the acoustic echo cancellation (AEC)
+     * feature.
+     * <p>
+     * If an <tt>AudioFormat</tt> instance contained in the returned
+     * <tt>List</tt> is one of the <tt>formats</tt> of a
+     * <tt>CaptureDeviceInfo2</tt> or the <tt>supportedFormats</tt> of a
+     * <tt>FormatControl</tt> associated with a WASAPI
+     * <tt>CaptureDevice</tt>/<tt>DataSource</tt> or <tt>SourceStream</tt>, it
+     * signals that the <tt>AudioFormat</tt> in question has been included in
+     * that <tt>formats</tt> or <tt>supportedFormat</tt>s only because it is
+     * supported by the voice capture DMO supporting/implementing the acoustic
+     * echo cancellation (AEC) feature. 
+     * </p>
+     *
+     * @return the <tt>List</tt> of <tt>AudioFormat</tt>s supported by the voice
+     * capture DMO that supports/implements the acoustic echo cancellation (AEC)
+     * feature
+     */
+    public List<AudioFormat> getAECSupportedFormats()
+    {
+        List<AudioFormat> aecSupportedFormats = this.aecSupportedFormats;
+
+        if (aecSupportedFormats == null)
+            aecSupportedFormats = Collections.emptyList();
+        return aecSupportedFormats;
     }
 
     /**
@@ -583,6 +674,128 @@ public class WASAPISystem
     }
 
     /**
+     * Gets a <tt>List</tt> of the <tt>AudioFormat</tt>s supported by a specific
+     * <tt>IMediaObject</tt>.
+     *
+     * @param iMediaObject the <tt>IMediaObject</tt> to get the <tt>List</tt> of
+     * supported <tt>AudioFormat</tt>s of
+     * @return a <tt>List</tt> of the <tt>AudioFormat</tt>s supported by the
+     * specified <tt>iMediaObject</tt>
+     * @throws HResultException if an error occurs while retrieving the
+     * <tt>List</tt> of <tt>AudioFormat</tt>s supported by the specified
+     * <tt>iMediaObject</tt> in a native WASAPI function which returns an
+     * <tt>HRESULT</tt> value
+     */
+    private List<AudioFormat> getIMediaObjectSupportedFormats(long iMediaObject)
+        throws HResultException
+    {
+        List<AudioFormat> supportedFormats = new ArrayList<AudioFormat>();
+        long pmt = MoCreateMediaType(/* cbFormat */ 0);
+
+        if (pmt == 0)
+            throw new OutOfMemoryError("MoCreateMediaType");
+        try
+        {
+            char cbSize = 0;
+            int cbFormat = WAVEFORMATEX_sizeof() + cbSize;
+            int hresult
+                = DMO_MEDIA_TYPE_fill(
+                        pmt,
+                        /* majortype */ MEDIATYPE_Audio,
+                        /* subtype */ MEDIASUBTYPE_PCM,
+                        /* bFixedSizeSamples */ true,
+                        /* bTemporalCompression */ false,
+                        /* lSampleSize */ 0,
+                        /* formattype */ FORMAT_WaveFormatEx,
+                        /* pUnk */ 0,
+                        cbFormat,
+                        waveformatex);
+
+            if (FAILED(hresult))
+                throw new HResultException(hresult, "DMO_MEDIA_TYPE_fill");
+
+            for (char nChannels = 1; nChannels <= 2; nChannels++)
+            {
+                for (int i = 0; i < Constants.AUDIO_SAMPLE_RATES.length; i++)
+                {
+                    int nSamplesPerSec = (int) Constants.AUDIO_SAMPLE_RATES[i];
+
+                    for (char wBitsPerSample = 16;
+                            wBitsPerSample > 0;
+                            wBitsPerSample -= 8)
+                    {
+                        char nBlockAlign
+                            = (char) ((nChannels * wBitsPerSample) / 8);
+
+                        WASAPI.WAVEFORMATEX_fill(
+                                waveformatex,
+                                WAVE_FORMAT_PCM,
+                                nChannels,
+                                nSamplesPerSec,
+                                nSamplesPerSec * nBlockAlign,
+                                nBlockAlign,
+                                wBitsPerSample,
+                                cbSize);
+                        DMO_MEDIA_TYPE_setLSampleSize(pmt, wBitsPerSample / 8);
+
+                        try
+                        {
+                            hresult
+                                = IMediaObject_SetOutputType(
+                                        iMediaObject,
+                                        /* dwOutputStreamIndex */ 0,
+                                        pmt,
+                                        /* dwFlags */ DMO_SET_TYPEF_TEST_ONLY);
+                        }
+                        catch (HResultException hre)
+                        {
+                            /*
+                             * If the specified media type is not acceptable,
+                             * IMediaObject::SetOutputType should return
+                             * S_FALSE. Anyway, continue testing the other media
+                             * types.
+                             */
+                            hresult = hre.getHResult();
+                        }
+                        if (S_OK == hresult)
+                        {
+                            AudioFormat supportedFormat
+                                = new AudioFormat(
+                                        AudioFormat.LINEAR,
+                                        nSamplesPerSec,
+                                        wBitsPerSample,
+                                        nChannels,
+                                        AudioFormat.LITTLE_ENDIAN,
+                                        AudioFormat.SIGNED,
+                                        /* frameSizeInBits */
+                                            Format.NOT_SPECIFIED,
+                                        /* frameRate */ Format.NOT_SPECIFIED,
+                                        Format.byteArray);
+
+                            if (!supportedFormats.contains(supportedFormat))
+                                supportedFormats.add(supportedFormat);
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            /*
+             * XXX MoDeleteMediaType is documented to internally call
+             * MoFreeMediaType to free the format block but the format block has
+             * not been internally allocated by MoInitMediaType.
+             */
+            DMO_MEDIA_TYPE_setCbFormat(pmt, 0);
+            DMO_MEDIA_TYPE_setFormattype(pmt, FORMAT_None);
+            DMO_MEDIA_TYPE_setPbFormat(pmt, 0);
+            MoDeleteMediaType(pmt);
+        }
+
+        return supportedFormats;
+    }
+
+    /**
      * Gets an audio endpoint device that is identified by a specific endpoint
      * ID string.
      *
@@ -700,6 +913,72 @@ public class WASAPISystem
     }
 
     /**
+     * Initializes a new <tt>IMediaObject</tt> instance which represents a Voice
+     * Capture DSP implementing acoustic echo cancellation (AEC).
+     *
+     * @return a new <tt>IMediaObject</tt> instance which represents a Voice
+     * Capture DSP implementing acoustic echo cancellation (AEC)
+     * @throws Exception if initializing the new instance fails
+     */
+    public long initializeAEC()
+        throws Exception
+    {
+        long iMediaObject = 0;
+        long iPropertyStore = 0;
+        long aecIMediaObject = 0;
+
+        try
+        {
+            iMediaObject
+                = CoCreateInstance(
+                        CLSID_CWMAudioAEC,
+                        /* pUnkOuter */ 0,
+                        CLSCTX_ALL,
+                        IID_IMediaObject);
+            if (iMediaObject == 0)
+                throw new RuntimeException("CoCreateInstance");
+            else
+            {
+                iPropertyStore
+                    = IMediaObject_QueryInterface(
+                            iMediaObject,
+                            IID_IPropertyStore);
+                if (iPropertyStore == 0)
+                    throw new RuntimeException("IMediaObject_QueryInterface");
+                else
+                {
+                    int hresult
+                        = IPropertyStore_SetValue(
+                                iPropertyStore,
+                                MFPKEY_WMAAECMA_SYSTEM_MODE,
+                                SINGLE_CHANNEL_AEC);
+
+                    if (FAILED(hresult))
+                    {
+                        throw new HResultException(
+                                hresult,
+                                "IPropertyStore_SetValue"
+                                    + " MFPKEY_WMAAECMA_SYSTEM_MODE");
+                    }
+                    else
+                    {
+                        aecIMediaObject = iMediaObject;
+                        iMediaObject = 0;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (iPropertyStore != 0)
+                IPropertyStore_Release(iPropertyStore);
+            if (iMediaObject != 0)
+                IMediaObject_Release(iMediaObject);
+        }
+        return aecIMediaObject;
+    }
+
+    /**
      * Initializes a new <tt>IAudioClient</tt> instance for an audio endpoint
      * device identified by a specific <tt>MediaLocator</tt>. The initialization
      * is performed to an extent suitable for the operation of
@@ -709,8 +988,12 @@ public class WASAPISystem
      * endpoint device to initialize a new <tt>IAudioClient</tt> instance for
      * @param dataFlow the flow of media data to be supported by the audio
      * endpoint device identified by the specified <tt>locator</tt>
+     * @param streamFlags
      * @param eventHandle
-     * @param hnsBufferDuration
+     * @param hnsBufferDuration the base of the duration in milliseconds of the
+     * buffer that the audio application will share with the audio engine. If
+     * {@link Format#NOT_SPECIFIED}, the method uses the default interval
+     * between periodic passes by the audio engine.
      * @param formats an array of alternative <tt>AudioFormat</tt>s with which
      * initialization of a new <tt>IAudioClient</tt> instance is to be
      * attempted. The first element of the <tt>formats</tt> array which is
@@ -729,6 +1012,7 @@ public class WASAPISystem
     public long initializeIAudioClient(
             MediaLocator locator,
             DataFlow dataFlow,
+            int streamFlags,
             long eventHandle,
             long hnsBufferDuration,
             AudioFormat[] formats)
@@ -841,17 +1125,28 @@ public class WASAPISystem
                     if (!waveformatexIsInitialized)
                         throw new IllegalArgumentException("formats");
 
-                    int streamFlags = AUDCLNT_STREAMFLAGS_NOPERSIST;
-
+                    streamFlags |= AUDCLNT_STREAMFLAGS_NOPERSIST;
                     if (eventHandle != 0)
-                        eventHandle |= AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+                        streamFlags |= AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+
+                    if (hnsBufferDuration == Format.NOT_SPECIFIED)
+                    {
+                        hnsBufferDuration
+                            = IAudioClient_GetDefaultDevicePeriod(iAudioClient)
+                                / 10000;
+                        if (hnsBufferDuration <= 1)
+                        {
+                            hnsBufferDuration
+                                = WASAPISystem.DEFAULT_DEVICE_PERIOD;
+                        }
+                    }
 
                     int hresult
                         = IAudioClient_Initialize(
                                 iAudioClient,
                                 shareMode,
                                 streamFlags,
-                                hnsBufferDuration,
+                                3 * hnsBufferDuration * 10000,
                                 /* hnsPeriodicity */ 0,
                                 waveformatex,
                                 audioSessionGuid);
@@ -892,6 +1187,81 @@ public class WASAPISystem
                 IMMDevice_Release(iMMDevice);
         }
         return ret;
+    }
+
+    /**
+     * Initializes the acoustic echo cancellation (AEC) feature if possible and
+     * if it has not been initialized yet. The method swallows any exceptions
+     * because the feature in question is optional.
+     */
+    private void maybeInitializeAEC()
+    {
+        if ((aecIMediaObject != 0) || (aecSupportedFormats != null))
+            return;
+
+        try
+        {
+            long iMediaObject = initializeAEC();
+
+            try
+            {
+                List<AudioFormat> supportedFormats
+                    = getIMediaObjectSupportedFormats(iMediaObject);
+
+                if (!supportedFormats.isEmpty())
+                {
+                    aecIMediaObject = iMediaObject;
+                    iMediaObject = 0;
+                    aecSupportedFormats
+                        = Collections.unmodifiableList(
+                                supportedFormats);
+                }
+            }
+            finally
+            {
+                if (iMediaObject != 0)
+                    IMediaObject_Release(iMediaObject);
+            }
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+            else
+            {
+                logger.error(
+                        "Failed to initialize acoustic echo cancellation (AEC)",
+                        t);
+            }
+        }
+    }
+
+    /**
+     * Uninitializes the acoustic echo cancellation (AEC) feature if it has been
+     * initialized. The method swallows any exceptions because the feature in
+     * question is optional.
+     */
+    private void maybeUninitializeAEC()
+    {
+        try
+        {
+            if (aecIMediaObject != 0)
+            {
+                IMediaObject_Release(aecIMediaObject);
+                aecIMediaObject = 0;
+            }
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+            else
+            {
+                logger.error(
+                        "Failed to uninitialize acoustic echo cancellation (AEC)",
+                        t);
+            }
+        }
     }
 
     /**
