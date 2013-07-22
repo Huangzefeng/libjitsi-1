@@ -6,7 +6,7 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi;
 
-import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPI.*;
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
 
 import java.io.*;
 import java.util.concurrent.*;
