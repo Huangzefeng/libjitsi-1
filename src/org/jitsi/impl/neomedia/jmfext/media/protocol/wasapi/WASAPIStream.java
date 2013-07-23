@@ -73,16 +73,19 @@ public class WASAPIStream
      * possible is to be found
      * @param format the <tt>AudioFormat</tt> for which a similar
      * <tt>AudioFormat</tt> is to be found in <tt>formats</tt>
+     * @param clazz the runtime type of the matches to be considered or
+     * <tt>null</tt> if the runtime type is to not be limited
      * @return an <tt>AudioFormat</tt> which is an element of <tt>formats</tt>
      * and is as similar to the specified <tt>format</tt> as possible or
      * <tt>null</tt> if no similarity could be established
      */
     private static AudioFormat findClosestMatch(
             Format[] formats,
-            AudioFormat format)
+            AudioFormat format,
+            Class<? extends AudioFormat> clazz)
     {
         // Try to find the very specified format.
-        AudioFormat match = findFirstMatch(formats, format);
+        AudioFormat match = findFirstMatch(formats, format, clazz);
 
         if (match == null)
         {
@@ -102,7 +105,8 @@ public class WASAPIStream
                                 format.getSigned(),
                                 /* frameSizeInBits */ Format.NOT_SPECIFIED,
                                 /* frameRate */ Format.NOT_SPECIFIED,
-                                format.getDataType()));
+                                format.getDataType()),
+                        clazz);
             if (match == null)
             {
                 /*
@@ -122,7 +126,8 @@ public class WASAPIStream
                                     format.getSigned(),
                                     /* frameSizeInBits */ Format.NOT_SPECIFIED,
                                     /* frameRate */ Format.NOT_SPECIFIED,
-                                    format.getDataType()));
+                                    format.getDataType()),
+                            clazz);
             }
         }
         return match;
@@ -136,16 +141,24 @@ public class WASAPIStream
      * @param formats the array of <tt>Format</tt>s which si to be searched
      * @param format the <tt>AudioFormat</tt> for which a match is to be found
      * in the specified <tt>formats</tt>
+     * @param clazz the runtime type of the matches to be considered or
+     * <tt>null</tt> if the runtime type is to not be limited
      * @return the first element of <tt>formats</tt> which matches the specified
      * <tt>format</tt> or <tt>null</tt> if no match could be found
      */
     private static AudioFormat findFirstMatch(
             Format[] formats,
-            AudioFormat format)
+            AudioFormat format,
+            Class<? extends AudioFormat> clazz)
     {
         for (Format aFormat : formats)
-            if (aFormat.matches(format))
+        {
+            if (aFormat.matches(format)
+                    && ((clazz == null) || clazz.isInstance(aFormat)))
+            {
                 return (AudioFormat) aFormat.intersects(format);
+            }
+        }
         return null;
     }
 
@@ -739,15 +752,6 @@ public class WASAPIStream
             throw new NullPointerException("No format set.");
         if (dataSource.aec)
         {
-            CaptureDeviceInfo2 renderDeviceInfo
-                = dataSource.audioSystem.getSelectedDevice(
-                        AudioSystem.DataFlow.PLAYBACK);
-
-            if (renderDeviceInfo == null)
-                throw new NullPointerException("No playback device set.");
-
-            MediaLocator renderLocator = renderDeviceInfo.getLocator();
-
             /*
              * This SourceStream will output in an AudioFormat supported by the
              * voice capture DMO which implements the acoustic echo cancellation
@@ -765,16 +769,49 @@ public class WASAPIStream
                             + locator + " based on AudioFormat " + thisFormat);
             }
 
-            AudioFormat renderFormat
-                = findClosestMatch(renderDeviceInfo.getFormats(), thisFormat);
 
-            if (renderFormat == null)
+            CaptureDeviceInfo2 renderDeviceInfo
+                = dataSource.audioSystem.getSelectedDevice(
+                        AudioSystem.DataFlow.PLAYBACK);
+            MediaLocator renderLocator;
+            AudioFormat renderFormat;
+
+            if (renderDeviceInfo == null)
             {
-                throw new IllegalStateException(
-                        "Failed to determine an AudioFormat with which to"
-                            + " initialize IAudioClient for MediaLocator "
-                            + renderLocator + " based on AudioFormat "
-                            + thisFormat);
+                /*
+                 * We explicitly want to support the case in which the user has
+                 * selected "none" for the playback/render endpoint device.
+                 */
+                renderLocator = null;
+                renderFormat = captureFormat;
+            }
+            else
+            {
+                renderLocator = renderDeviceInfo.getLocator();
+                if (renderLocator == null)
+                {
+                    throw new IllegalStateException(
+                            "A CaptureDeviceInfo2 instance which describes a"
+                                + " Windows Audio Session API (WASAPI) render"
+                                + " endpoint device and which does not have an"
+                                + " actual locator/MediaLocator is illegal.");
+                }
+                else
+                {
+                    renderFormat
+                        = findClosestMatch(
+                                renderDeviceInfo.getFormats(),
+                                thisFormat,
+                                NativelySupportedAudioFormat.class);
+                    if (renderFormat == null)
+                    {
+                        throw new IllegalStateException(
+                                "Failed to determine an AudioFormat with which"
+                                    + " to initialize IAudioClient for"
+                                    + " MediaLocator " + renderLocator
+                                    + " based on AudioFormat " + thisFormat);
+                    }
+                }
             }
 
             boolean uninitialize = true;
@@ -782,7 +819,8 @@ public class WASAPIStream
             initializeCapture(locator, captureFormat);
             try
             {
-                initializeRender(renderLocator, renderFormat);
+                if (renderLocator != null)
+                    initializeRender(renderLocator, renderFormat);
                 try
                 {
                     initializeAEC(captureFormat, renderFormat, thisFormat);
@@ -821,7 +859,8 @@ public class WASAPIStream
         return
             findClosestMatch(
                     dataSource.getIAudioClientSupportedFormats(),
-                    format);
+                    format,
+                    NativelySupportedAudioFormat.class);
     }
 
     /**
@@ -943,8 +982,15 @@ public class WASAPIStream
                     throw new OutOfMemoryError("MediaBuffer_alloc");
                 try
                 {
+                    /*
+                     * We explicitly want to support the case in which the user
+                     * has selected "none" for the playback/render endpoint
+                     * device.
+                     */
                     long renderIMediaBuffer
-                        = MediaBuffer_alloc(render.bufferSize);
+                        = MediaBuffer_alloc(
+                                ((render == null) ? capture : render)
+                                    .bufferSize);
 
                     if (renderIMediaBuffer == 0)
                         throw new OutOfMemoryError("MediaBuffer_alloc");
@@ -1029,7 +1075,14 @@ public class WASAPIStream
                                  * encoded in the outFormat of render.
                                  */
                                 {
-                                    AudioFormat af = render.outFormat;
+                                    /*
+                                     * We explicitly want to support the case in
+                                     * which the user has selected "none" for
+                                     * the playback/render endpoint device.
+                                     */
+                                    AudioFormat af
+                                        = ((render == null) ? capture : render)
+                                            .outFormat;
                                     double sampleRate = af.getSampleRate();
                                     int sampleSizeInBits
                                         = af.getSampleSizeInBits();
@@ -1132,7 +1185,7 @@ public class WASAPIStream
      * from the specified render endpoint into this instance for the purposes of
      * acoustic echo cancellation (AEC) fails
      */
-    private void initializeRender(final MediaLocator locator, AudioFormat format)
+    private void initializeRender(MediaLocator locator, AudioFormat format)
         throws Exception
     {
         /*
@@ -1245,16 +1298,26 @@ public class WASAPIStream
                  */
                 int toRead = Format.NOT_SPECIFIED;
 
-                if ((dwInputStreamIndex == RENDER_INPUT_STREAM_INDEX)
-                        && replenishRender)
+                if (dwInputStreamIndex == RENDER_INPUT_STREAM_INDEX)
                 {
-                    int replenishThreshold = (3 * renderBufferMaxLength / 2);
-
-                    if (audioCaptureClient.getAvailableLength()
-                            < replenishThreshold)
+                    /*
+                     * We explicitly want to support the case in which the user
+                     * has selected "none" for the playback/render endpoint
+                     * device.
+                     */
+                    if (audioCaptureClient == null)
                         toRead = 0;
-                    else
-                        replenishRender = false;
+                    else if (replenishRender)
+                    {
+                        int replenishThreshold
+                            = (3 * renderBufferMaxLength / 2);
+
+                        if (audioCaptureClient.getAvailableLength()
+                                < replenishThreshold)
+                            toRead = 0;
+                        else
+                            replenishRender = false;
+                    }
                 }
                 if (toRead == Format.NOT_SPECIFIED)
                 {
@@ -1445,7 +1508,13 @@ public class WASAPIStream
 
             synchronized (this)
             {
-                if ((capture == null) || (dataSource.aec && (render == null)))
+                /*
+                 * We explicitly want to support the case in which the user has
+                 * selected "none" for the playback/render endpoint device.
+                 * Otherwise, we could have added a check
+                 * (dataSource.aec && (render == null)). 
+                 */
+                if (capture == null)
                     message = getClass().getName() + " is disconnected.";
                 else
                 {
@@ -1472,7 +1541,12 @@ public class WASAPIStream
             {
                 int toRead = capacity - length;
 
-                if (render == null)
+                /*
+                 * We explicitly want to support the case in which the user has
+                 * selected "none" for the playback/render endpoint device.
+                 * Otherwise, we could have used a check (render == null).
+                 */
+                if (!dataSource.aec)
                     read = capture.read(data, length, toRead);
                 else
                 {
@@ -1662,7 +1736,13 @@ public class WASAPIStream
                 {
                     if (!processThread.equals(this.processThread))
                         break;
-                    if ((capture == null) || (render == null) || !started)
+                    /*
+                     * We explicitly want to support the case in which the user
+                     * has selected "none" for the playback/render endpoint
+                     * device. Otherwise, we could have added a check
+                     * (render == null).
+                     */
+                    if ((capture == null) || !started)
                         break;
 
                     waitWhileCaptureIsBusy();
@@ -1768,7 +1848,12 @@ public class WASAPIStream
             render.start();
         }
         started = true;
-        if ((capture != null) && (render != null) && (processThread == null))
+        /*
+         * We explicitly want to support the case in which the user has selected
+         * "none" for the playback/render endpoint device. Otherwise, we could
+         * have replaced the dataSource.aec check with (render != null).
+         */
+        if (dataSource.aec && (capture != null) && (processThread == null))
         {
             processThread
                 = new Thread(WASAPIStream.class + ".processThread")
