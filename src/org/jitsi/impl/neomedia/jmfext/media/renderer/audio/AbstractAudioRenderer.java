@@ -62,6 +62,7 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
     private final PropertyChangeListener propertyChangeListener
         = new PropertyChangeListener()
         {
+            @Override
             public void propertyChange(PropertyChangeEvent ev)
             {
                 AbstractAudioRenderer.this.propertyChange(ev);
@@ -109,7 +110,9 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
     {
         if ((dataFlow != AudioSystem.DataFlow.NOTIFY)
                 && (dataFlow != AudioSystem.DataFlow.PLAYBACK))
+        {
             throw new IllegalArgumentException("dataFlow");
+        }
 
         this.audioSystem = audioSystem;
         this.dataFlow = dataFlow;
@@ -132,7 +135,9 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
                     : (GainControl) mediaServiceImpl.getOutputVolumeControl();
         }
         else
+        {
             gainControl = null;
+        }
     }
 
     /**
@@ -180,10 +185,13 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
     /**
      * {@inheritDoc}
      */
+    @Override
     public void close()
     {
         if (audioSystem != null)
+        {
             audioSystem.removePropertyChangeListener(propertyChangeListener);
+        }
     }
 
     /**
@@ -218,7 +226,9 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
         GainControl gainControl = this.gainControl;
 
         if (volumeControl instanceof GainControl)
+        {
             gainControl = (GainControl) volumeControl;
+        }
 
         return gainControl;
     }
@@ -239,7 +249,9 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
             CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow);
 
             if (device != null)
+            {
                 locator = device.getLocator();
+            }
         }
         return locator;
     }
@@ -247,6 +259,7 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
     /**
      * {@inheritDoc}
      */
+    @Override
     public Format[] getSupportedInputFormats()
     {
         /*
@@ -254,12 +267,20 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
          * and its instances) fails to initialize, the following may throw a
          * NullPointerException. Such a throw should be considered appropriate.
          */
-        return audioSystem.getDevice(dataFlow, getLocator()).getFormats();
+        CaptureDeviceInfo2 device = audioSystem.getDevice(
+            dataFlow, getLocator());
+        if (device == null)
+        {
+            return new Format[0];
+        }
+
+        return device.getFormats();
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public void open()
         throws ResourceUnavailableException
     {
@@ -321,7 +342,9 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
             return;
         }
         if (propertyName.equals(ev.getPropertyName()))
+        {
             playbackDevicePropertyChange(ev);
+        }
     }
 
     /**
@@ -336,10 +359,14 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
         if (this.locator == null)
         {
             if (locator == null)
+            {
                 return;
+            }
         }
         else if (this.locator.equals(locator))
+        {
             return;
+        }
 
         this.locator = locator;
     }
