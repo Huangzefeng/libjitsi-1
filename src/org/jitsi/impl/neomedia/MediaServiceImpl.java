@@ -1479,9 +1479,9 @@ public class MediaServiceImpl
      */
     private static void postInitializeOnce(MediaServiceImpl mediaServiceImpl)
     {
-        new ZrtpFortunaEntropyGatherer(
-                mediaServiceImpl.getDeviceConfiguration())
-            .setEntropy();
+//        new ZrtpFortunaEntropyGatherer(
+//                mediaServiceImpl.getDeviceConfiguration())
+//            .setEntropy();
     }
 
     /**
