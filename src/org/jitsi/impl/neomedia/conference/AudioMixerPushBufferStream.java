@@ -152,7 +152,9 @@ class AudioMixerPushBufferStream
         public void setTimeStamp(long timeStamp)
         {
             if (this.timeStamp == Buffer.TIME_UNKNOWN)
+            {
                 this.timeStamp = timeStamp;
+            }
             else
             {
                 /*
@@ -247,6 +249,7 @@ class AudioMixerPushBufferStream
                      */
                     private final Buffer buffer = new Buffer();
 
+                    @Override
                     public void transferData(PushBufferStream stream)
                     {
                         buffer.setLength(0);
@@ -289,25 +292,38 @@ class AudioMixerPushBufferStream
         throws IOException
     {
         if (outStream == null)
+        {
             throw new IllegalArgumentException("outStream");
+        }
 
+        boolean started = true;
         synchronized (outStreams)
         {
             if (!outStreams.contains(outStream)
                     && outStreams.add(outStream)
                     && (outStreams.size() == 1))
             {
-                boolean started = false;
+                // Don't start the mixer inside the synchronized block or we
+                // might hit a deadlock.
+                started = false;
+            }
+        }
 
-                try
+        if (!started)
+        {
+            try
+            {
+                audioMixer.start(this);
+                started = true;
+            }
+            finally
+            {
+                if (!started)
                 {
-                    audioMixer.start(this);
-                    started = true;
-                }
-                finally
-                {
-                    if (!started)
+                    synchronized (outStreams)
+                    {
                         outStreams.remove(outStream);
+                    }
                 }
             }
         }
@@ -320,14 +336,21 @@ class AudioMixerPushBufferStream
      * @return <tt>true</tt> if all input <tt>SourceStream</tt>s of this
      * instance have reached the end of their content; <tt>false</tt>, otherwise
      */
+    @Override
     public boolean endOfStream()
     {
         synchronized (inStreamsSyncRoot)
         {
             if (inStreams != null)
+            {
                 for (InStreamDesc inStreamDesc : inStreams)
+                {
                     if (!inStreamDesc.getInStream().endOfStream())
+                    {
                         return false;
+                    }
+                }
+            }
         }
         return true;
     }
@@ -342,7 +365,9 @@ class AudioMixerPushBufferStream
         synchronized (inStreamsSyncRoot)
         {
             if ((inStreams == null) || (inStreams.length < 1))
+            {
                 return;
+            }
 
             /*
              * The first inStream is expected to be from the CaptureDevice
@@ -361,7 +386,9 @@ class AudioMixerPushBufferStream
                     = getBufferControl(inStreams[i]);
 
                 if (inStreamBufferControl != null)
+                {
                     inStreamBufferControl.setBufferLength(bufferLength);
+                }
             }
         }
     }
@@ -397,7 +424,9 @@ class AudioMixerPushBufferStream
                     effectiveInDataSource.getControl(bufferControlType);
 
             if (bufferControl != null)
+            {
                 return bufferControl;
+            }
         }
 
         /*
@@ -414,7 +443,9 @@ class AudioMixerPushBufferStream
                 = (BufferControl) inDataSource.getControl(bufferControlType);
 
             if (bufferControl != null)
+            {
                 return bufferControl;
+            }
         }
 
         // If everything else has failed, try the very inStream.
@@ -431,6 +462,7 @@ class AudioMixerPushBufferStream
      * @return a <tt>ContentDescriptor</tt> which describes the content type of
      * this instance
      */
+    @Override
     public ContentDescriptor getContentDescriptor()
     {
         return new ContentDescriptor(audioMixer.getContentType());
@@ -444,6 +476,7 @@ class AudioMixerPushBufferStream
      * is the maximum length of the contents made available by its input
      * <tt>StreamSource</tt>s
      */
+    @Override
     public long getContentLength()
     {
         long contentLength = 0;
@@ -451,16 +484,22 @@ class AudioMixerPushBufferStream
         synchronized (inStreamsSyncRoot)
         {
             if (inStreams != null)
+            {
                 for (InStreamDesc inStreamDesc : inStreams)
                 {
                     long inContentLength
                         = inStreamDesc.getInStream().getContentLength();
 
                     if (LENGTH_UNKNOWN == inContentLength)
+                    {
                         return LENGTH_UNKNOWN;
+                    }
                     if (contentLength < inContentLength)
+                    {
                         contentLength = inContentLength;
+                    }
                 }
+            }
         }
         return contentLength;
     }
@@ -473,6 +512,7 @@ class AudioMixerPushBufferStream
      * @return the <tt>AudioFormat</tt> in which this instance was configured to
      * output its data
      */
+    @Override
     public AudioFormat getFormat()
     {
         return outFormat;
@@ -505,6 +545,7 @@ class AudioMixerPushBufferStream
      * @throws IOException if any of the input <tt>SourceStream</tt>s throws
      * such an exception while reading from them or anything else goes wrong
      */
+    @Override
     public void read(Buffer buffer)
         throws IOException
     {
@@ -517,13 +558,17 @@ class AudioMixerPushBufferStream
             InStreamDesc[] inStreams = this.inStreams;
 
             if ((inStreams == null) || (inStreams.length == 0))
+            {
                 return;
+            }
             else
             {
                 inSampleDesc = (InSampleDesc) buffer.getData();
                 // format
                 if ((inSampleDesc != null) && inSampleDesc.format != format)
+                {
                     inSampleDesc = null;
+                }
                 // inStreams
                 inStreamCount = inStreams.length;
                 if (inSampleDesc != null)
@@ -534,14 +579,18 @@ class AudioMixerPushBufferStream
                     if (inSampleDescInStreams.length == inStreamCount)
                     {
                         for (int i = 0; i < inStreamCount; i++)
+                        {
                             if (inSampleDescInStreams[i] != inStreams[i])
                             {
                                 inSampleDesc = null;
                                 break;
                             }
+                        }
                     }
                     else
+                    {
                         inSampleDesc = null;
+                    }
                 }
                 if (inSampleDesc == null)
                 {
@@ -586,7 +635,9 @@ class AudioMixerPushBufferStream
         long timeStamp = inSampleDesc.getTimeStamp();
 
         if (timeStamp != Buffer.TIME_UNKNOWN)
+        {
             buffer.setTimeStamp(timeStamp);
+        }
     }
 
     /**
@@ -620,11 +671,15 @@ class AudioMixerPushBufferStream
         int maxInSampleCount = 0;
 
         for (InStreamDesc inStream : inStreams)
+        {
             if (inStream.getInStream() instanceof PullBufferStream)
+            {
                 throw new UnsupportedOperationException(
                         AudioMixerPushBufferStream.class.getSimpleName()
                             + ".readInPullBufferStreams"
                             + "(AudioFormat,int,InSampleDesc)");
+            }
+        }
         return maxInSampleCount;
     }
 
@@ -673,7 +728,9 @@ class AudioMixerPushBufferStream
 
                 if (!(data instanceof byte[])
                         || (((byte[]) data).length != length))
+                {
                     inBuffer.setData(new byte[length]);
+                }
                 inBuffer.setLength(0);
                 inBuffer.setOffset(0);
             }
@@ -711,12 +768,16 @@ class AudioMixerPushBufferStream
         AudioFormat inFormat = (AudioFormat) inBuffer.getFormat();
 
         if (inFormat == null)
+        {
             inFormat = inStreamFormat;
+        }
 
         if (logger.isTraceEnabled())
         {
             if (lastReadInFormat == null)
+            {
                 lastReadInFormat = inFormat;
+            }
             else if (!lastReadInFormat.matches(inFormat))
             {
                 lastReadInFormat = inFormat;
@@ -963,12 +1024,16 @@ class AudioMixerPushBufferStream
                      * the elements in question may contain stale samples.
                      */
                     if (samples.length > sampleCount)
+                    {
                         Arrays.fill(samples, sampleCount, samples.length, 0);
+                    }
 
                     inSamples[i] = samples;
 
                     if (maxInSampleCount < samples.length)
+                    {
                         maxInSampleCount = samples.length;
+                    }
 
                     /*
                      * Convey the timeStamp so that it can be set to the Buffers
@@ -978,7 +1043,9 @@ class AudioMixerPushBufferStream
                      * now.
                      */
                     if (inSampleDesc.getTimeStamp() == Buffer.TIME_UNKNOWN)
+                    {
                         inSampleDesc.setTimeStamp(buffer.getTimeStamp());
+                    }
 
                     continue;
                 }
@@ -1004,12 +1071,22 @@ class AudioMixerPushBufferStream
     void removeOutStream(AudioMixingPushBufferStream outStream)
         throws IOException
     {
+        boolean stopMixer = false;
         synchronized (outStreams)
         {
             if ((outStream != null)
                     && outStreams.remove(outStream)
                     && outStreams.isEmpty())
-                audioMixer.stop(this);
+            {
+                // Don't stop the mixer inside the synchronized block or we
+                // might hit a deadlock.
+                stopMixer = true;
+            }
+        }
+
+        if (stopMixer)
+        {
+            audioMixer.stop(this);
         }
     }
 
@@ -1067,7 +1144,9 @@ class AudioMixerPushBufferStream
 
                 inSamples[i] = nextToneSignal;
                 if (maxInSampleCount < nextToneSignal.length)
+                {
                     maxInSampleCount = nextToneSignal.length;
+                }
             }
             else if (outDataSource.equals(inStreamDesc.getOutDataSource())
                     || (outDataSourceIsMute && (inDataSource == captureDevice)))
@@ -1134,10 +1213,14 @@ class AudioMixerPushBufferStream
         if (valueIsChanged)
         {
             if (oldValue != null)
+            {
                 setTransferHandler(oldValue, null);
+            }
 
             if (newValue == null)
+            {
                 return;
+            }
 
             boolean skippedForTransferHandler = false;
 
@@ -1167,12 +1250,14 @@ class AudioMixerPushBufferStream
 
                     inStreamDesc.setInStream(cachingInStream); //TODO is this safe?
                     if (logger.isTraceEnabled())
+                    {
                         logger.trace(
                                 "Created CachingPushBufferStream"
                                     + " with hashCode "
                                     + cachingInStream.hashCode()
                                     + " for inStream with hashCode "
                                     + inStream.hashCode());
+                    }
                 }
             }
 
@@ -1186,15 +1271,19 @@ class AudioMixerPushBufferStream
                 int difference = newValueLength - oldValueLength;
 
                 if (difference > 0)
+                {
                     logger.trace(
                             "Added " + difference
                                 + " inStream(s) and the total is "
                                 + newValueLength);
+                }
                 else if (difference < 0)
+                {
                     logger.trace(
                             "Removed " + difference
                                 + " inStream(s) and the total is "
                                 + newValueLength);
+                }
             }
         }
     }
@@ -1210,6 +1299,7 @@ class AudioMixerPushBufferStream
      * @param transferHandler the <tt>BufferTransferHandler</tt> to be notified
      * by this <tt>PushBufferStream</tt> when media is available for reading
      */
+    @Override
     public void setTransferHandler(BufferTransferHandler transferHandler)
     {
         throw new UnsupportedOperationException(
@@ -1233,7 +1323,9 @@ class AudioMixerPushBufferStream
             BufferTransferHandler transferHandler)
     {
         if ((inStreams == null) || (inStreams.length <= 0))
+        {
             return;
+        }
 
         boolean transferHandlerIsSet = false;
 
@@ -1248,11 +1340,14 @@ class AudioMixerPushBufferStream
                     = (PushBufferStream) inStream;
 
                 if (transferHandler == null)
+                {
                     inStreamTransferHandler = null;
+                }
                 else if (transferHandlerIsSet)
                 {
                     inStreamTransferHandler = new BufferTransferHandler()
                     {
+                        @Override
                         public void transferData(PushBufferStream stream)
                         {
                             /*
@@ -1304,7 +1399,7 @@ class AudioMixerPushBufferStream
                 inStreamsString += aInStream.getInStream().hashCode() + " ";
             }
             inStreamsString += "]";
-            
+
             logger.error("AudioMixerPushBufferStream " + this.hashCode() +
                          " hit error reading a buffer from an InputStream " + inStreamsString);
             throw new UndeclaredThrowableException(ex);
@@ -1317,7 +1412,9 @@ class AudioMixerPushBufferStream
         if ((inSamples == null)
                 || (inSamples.length == 0)
                 || (maxInSampleCount <= 0))
+        {
             return;
+        }
 
         AudioMixingPushBufferStream[] outStreams;
 
@@ -1329,7 +1426,9 @@ class AudioMixerPushBufferStream
                                 this.outStreams.size()]);
         }
         for (AudioMixingPushBufferStream outStream : outStreams)
+        {
             setInSamples(outStream, inSampleDesc, maxInSampleCount);
+        }
 
         /*
          * The input samples have already been delivered to the output streams

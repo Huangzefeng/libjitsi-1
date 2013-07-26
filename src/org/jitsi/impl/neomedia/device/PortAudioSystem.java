@@ -19,6 +19,7 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
 import org.jitsi.impl.neomedia.portaudio.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.resources.*;
 import org.jitsi.util.*;
@@ -119,6 +120,13 @@ public class PortAudioSystem
      */
     private static final Object paUpdateAvailableDeviceListSyncRoot
         = new Object();
+
+    /**
+     * The property name used for specifying whether to show a popup when an
+     * audio device is detected as malfunctioning.
+     */
+    private static final String REPORT_MALFUNCTIONING_DEVICES_PROPERTY
+        = "net.java.sip.communicator.impl.neomedia.portAudio.REPORT_MALFUNCTIONING_DEVICES";
 
     /**
      * Adds a listener which is to be notified before and after PortAudio's
@@ -1155,7 +1163,16 @@ public class PortAudioSystem
                 if (keyCount == 0)
                     break;
 
-                if ((malfunctioning != null) && !malfunctioning.isEmpty())
+                ConfigurationService cfgService =
+                                             LibJitsi.getConfigurationService();
+
+                boolean reportMalfunctioningDevices =
+                   cfgService.getBoolean(REPORT_MALFUNCTIONING_DEVICES_PROPERTY,
+                                                                         false);
+
+                if ((malfunctioning != null) &&
+                    !malfunctioning.isEmpty() &&
+                    reportMalfunctioningDevices)
                 {
                     reportMalfunctioning(malfunctioning);
                     /*

@@ -41,37 +41,6 @@ public class AudioCaptureClient
         = Logger.getLogger(AudioCaptureClient.class);
 
     /**
-     * Invokes {@link WASAPI#IAudioCaptureClient_GetNextPacketSize(long)} on a
-     * specific <tt>IAudioCaptureClient</tt> and logs and swallows any
-     * <tt>HResultException</tt>.
-     *
-     * @param iAudioCaptureClient the <tt>IAudioCaptureClient</tt> of which to
-     * retrieve the number of frames in the next data packet
-     * @return the number of frames in the next data packet in the capture
-     * endpoint buffer associated with the specified
-     * <tt>iAudioCaptureClient</tt>. If the function/method
-     * <tt>IAudioCaptureClient_GetNextPacketSize</tt> throws an
-     * <tt>HResultException</tt>, return <tt>0</tt>.
-     */
-    private static int maybeIAudioCaptureClientGetNextPacketSize(
-            long iAudioCaptureClient)
-    {
-        int numFramesInNextPacket;
-
-        try
-        {
-            numFramesInNextPacket
-                = IAudioCaptureClient_GetNextPacketSize(iAudioCaptureClient);
-        }
-        catch (HResultException hre)
-        {
-            numFramesInNextPacket = 0; // Silence the compiler.
-            logger.error("IAudioCaptureClient_GetNextPacketSize", hre);
-        }
-        return numFramesInNextPacket;
-    }
-
-    /**
      * The internal buffer of this instance in which audio data is read from the
      * associated <tt>IAudioCaptureClient</tt> by the instance and awaits to be
      * read out of this instance via {@link #read(byte[], int, int)}.
@@ -600,13 +569,14 @@ public class AudioCaptureClient
      * audio data; otherwise, <tt>null</tt>
      */
     private BufferTransferHandler readInEventHandleCmd()
+        throws HResultException
     {
         /*
          * Determine the size in bytes of the next data packet in the capture
          * endpoint buffer.
          */
-        int numFramesInNextPacket
-            = maybeIAudioCaptureClientGetNextPacketSize(iAudioCaptureClient);
+        int numFramesInNextPacket =
+            IAudioCaptureClient_GetNextPacketSize(iAudioCaptureClient);
 
         if (numFramesInNextPacket != 0)
         {
@@ -697,9 +667,14 @@ public class AudioCaptureClient
                      * if any, has been given a chance to read (from) the
                      * available samples.
                      */
-                    numFramesInNextPacket
-                        = maybeIAudioCaptureClientGetNextPacketSize(
-                                iAudioCaptureClient);
+                    numFramesInNextPacket =
+                        IAudioCaptureClient_GetNextPacketSize(iAudioCaptureClient);
+                }
+                catch (HResultException hre)
+                {
+                    logger.error("Hit HResultException", hre);
+                    numFramesInNextPacket = 0;
+                    transferHandler = null;
                 }
                 finally
                 {
