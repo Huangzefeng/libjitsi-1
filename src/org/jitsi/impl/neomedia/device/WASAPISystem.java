@@ -432,6 +432,13 @@ public class WASAPISystem
         {
             IAudioClient_Release(iAudioClient);
         }
+        
+        logger.info(String.format(
+                "Got formats for %s for type %s\n%s",
+                getIMMDeviceFriendlyName(iMMDevice),
+                getIMMDeviceDataFlow(iMMDevice),
+                convertFormatsToString(formats)));
+        
         if ((formats != null) && !formats.isEmpty())
         {
             String name = null;
@@ -449,6 +456,7 @@ public class WASAPISystem
                             + " of IMMDevice " + id,
                         t);
             }
+            
             if ((name == null) || (name.length() == 0))
                 name = id;
 
@@ -470,7 +478,14 @@ public class WASAPISystem
                 {
                     for (AudioFormat format : aecSupportedFormats)
                         if (!formats.contains(format))
+                        {
+                            logger.info(String.format(
+                                    "For %s AEC adds format %s",
+                                    name,
+                                    format));
+                                    
                             formats.add(format);
+                        }
                 }
 
                 devices = captureDevices;
@@ -498,6 +513,24 @@ public class WASAPISystem
                 devices.add(cdi2);
             }
         }
+        else
+        {
+            logger.error(String.format(
+                    "Didn't get any formats for %s for type %s",
+                    getIMMDeviceFriendlyName(iMMDevice),
+                    getIMMDeviceDataFlow(iMMDevice)));
+        }
+    }
+
+    private String convertFormatsToString(List<AudioFormat> formats)
+    {
+StringBuffer result = new StringBuffer();
+
+for (AudioFormat aFormat:formats)
+{
+    result.append(aFormat.toString() + "\n");
+}
+        return result.toString();
     }
 
     /**
@@ -569,7 +602,7 @@ public class WASAPISystem
         char cbSize = 0;
         List<AudioFormat> supportedFormats = new ArrayList<AudioFormat>();
 
-        for (char nChannels = 1; nChannels <= 2; nChannels++)
+        for (char nChannels = 1; nChannels <= 2; nChannels++) //should go up to 2
         {
             for (int i = 0; i < Constants.AUDIO_SAMPLE_RATES.length; i++)
             {
@@ -608,7 +641,7 @@ public class WASAPISystem
                          */
                         if (pClosestMatch != waveformatex)
                         {
-                            // We support AutioFormat.LINEAR only.
+                            // We support AudioFormat.LINEAR only.
                             if (WAVEFORMATEX_getWFormatTag(pClosestMatch)
                                     != WAVE_FORMAT_PCM)
                                 continue;

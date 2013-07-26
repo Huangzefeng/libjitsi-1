@@ -215,6 +215,8 @@ public class AudioCaptureClient
      */
     private final BufferTransferHandler transferHandler;
 
+    
+    
     /**
      * Initializes a new <tt>AudioCaptureClient</tt> instance.
      *
@@ -245,6 +247,61 @@ public class AudioCaptureClient
      * {@link #read(byte[], int, int)}
      * @throws Exception if the initialization of the new instance fails
      */
+    public AudioCaptureClient(AudioFormat outFormat){
+                long devicePeriod
+                    = IAudioClient_GetDefaultDevicePeriod(iAudioClient)
+                        / 10000L;
+
+                int numBufferFrames
+                    = IAudioClient_GetBufferSize(iAudioClient);
+                int sampleRate = (int) inFormat.getSampleRate();
+                long bufferDuration
+                    = numBufferFrames * 1000 / sampleRate;
+
+                /*
+                 * We will very likely be inefficient if we fail to
+                 * synchronize with the scheduling period of the audio
+                 * engine but we have to make do with what we have.
+                 */
+                if (devicePeriod <= 1)
+                {
+                    devicePeriod = bufferDuration / 2;
+                    if ((devicePeriod
+                                > WASAPISystem.DEFAULT_DEVICE_PERIOD)
+                            || (devicePeriod <= 1))
+                        devicePeriod
+                            = WASAPISystem.DEFAULT_DEVICE_PERIOD;
+                }
+                this.devicePeriod = devicePeriod;
+                if (hnsBufferDuration == Format.NOT_SPECIFIED)
+                    hnsBufferDuration = devicePeriod;
+
+                srcChannels = inFormat.getChannels();
+                srcSampleSize
+                    = WASAPISystem.getSampleSizeInBytes(inFormat);
+
+                dstChannels = outFormat.getChannels();
+                dstSampleSize
+                    = WASAPISystem.getSampleSizeInBytes(outFormat);
+
+                dstFrameSize = dstSampleSize * dstChannels;
+                bufferFrames
+                    = (int) (hnsBufferDuration * sampleRate / 1000);
+                bufferSize = dstFrameSize * bufferFrames;
+
+                available = new byte[numBufferFrames * dstFrameSize];
+                availableLength = 0;
+
+                this.eventHandle = eventHandle;
+                eventHandle = 0;
+                this.iAudioClient = iAudioClient;
+                iAudioClient = 0;
+                this.iAudioCaptureClient = iAudioCaptureClient;
+                iAudioCaptureClient = 0;
+
+                this.outFormat = outFormat;
+                this.transferHandler = transferHandler;
+    };
     public AudioCaptureClient(
             WASAPISystem audioSystem,
             MediaLocator locator,

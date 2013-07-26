@@ -848,6 +848,11 @@ public class WASAPIStream
             AudioFormat outFormat)
         throws Exception
     {
+
+        logger.debug("AEC: Mic in format " + inFormat0.toString());
+        logger.debug("AEC: Spk in format " + inFormat1.toString());
+        logger.debug("AEC: Output format " + outFormat.toString());
+        
         long iMediaObject = dataSource.audioSystem.initializeAEC();
 
         if (iMediaObject == 0)
@@ -1143,7 +1148,7 @@ public class WASAPIStream
                     };
 
         render
-            = new AudioCaptureClient(
+            = new DummyAudioCaptureClient(
                     dataSource.audioSystem,
                     locator,
                     AudioSystem.DataFlow.PLAYBACK,

@@ -18,6 +18,8 @@ import org.jitsi.util.*;
  */
 public class WASAPIWithLogging
 {
+    private static boolean logging = false;
+    
     private static final Logger logger = Logger.getLogger(WASAPIWithLogging.class);
     
     public static int AUDCLNT_E_NOT_STOPPED;
@@ -140,15 +142,15 @@ public class WASAPIWithLogging
     
     public static void CloseHandle(long hObject) throws HResultException
     {
-        logger.trace(String.format("CloseHandle: %d", hObject));
+        if (logging) logger.trace(String.format("CloseHandle: %d", hObject));
         WASAPI.CloseHandle(hObject);
     }
 
     public static String CoCreateGuid() throws HResultException
     {
-        logger.trace("CoCreateGuid");
+        if (logging) logger.trace("CoCreateGuid");
         String coCreateGuid = WASAPI.CoCreateGuid();
-        logger.trace(String.format("CoCreateGuid returned: %s", coCreateGuid));
+        if (logging) logger.trace(String.format("CoCreateGuid returned: %s", coCreateGuid));
         
         return coCreateGuid;
     }
@@ -156,24 +158,24 @@ public class WASAPIWithLogging
     public static long CoCreateInstance(String clsid, long pUnkOuter,
             int dwClsContext, String iid) throws HResultException
     {
-        logger.trace(String.format("CoCreateInstance: %s, %d, %d, %s", clsid, pUnkOuter, dwClsContext, iid));
+        if (logging) logger.trace(String.format("CoCreateInstance: %s, %d, %d, %s", clsid, pUnkOuter, dwClsContext, iid));
         long coCreateInstance = WASAPI.CoCreateInstance(clsid, pUnkOuter, dwClsContext, iid);
-        logger.trace(String.format("coCreateInstance returned: %d", coCreateInstance));
+        if (logging) logger.trace(String.format("coCreateInstance returned: %d", coCreateInstance));
         return coCreateInstance;
     }
 
     public static int CoInitializeEx(long pvReserved, int dwCoInit)
             throws HResultException
     {
-        logger.trace(String.format("CoInitializeEx: %d, %d", pvReserved, dwCoInit));
+        if (logging) logger.trace(String.format("CoInitializeEx: %d, %d", pvReserved, dwCoInit));
         int coInitializeEx = WASAPI.CoInitializeEx(pvReserved, dwCoInit);
-        logger.trace(String.format("coInitializeEx returned: %d", coInitializeEx));
+        if (logging) logger.trace(String.format("coInitializeEx returned: %d", coInitializeEx));
         return coInitializeEx;
     }
 
     public static void CoTaskMemFree(long pv)
     {
-        logger.trace(String.format("CoTaskMemFree: %d", pv));
+        if (logging) logger.trace(String.format("CoTaskMemFree: %d", pv));
         WASAPI.CoTaskMemFree(pv);
     }
 
@@ -183,11 +185,11 @@ public class WASAPIWithLogging
             boolean bManualReset, boolean bInitialState, String lpName)
             throws HResultException
     {
-        logger.trace(String.format("CreateEvent: %d, %b, %b, %s", lpEventAttributes, bManualReset,
+        if (logging) logger.trace(String.format("CreateEvent: %d, %b, %b, %s", lpEventAttributes, bManualReset,
                 bInitialState, lpName)); 
         long createEvent = WASAPI.CreateEvent(lpEventAttributes, bManualReset,
                 bInitialState, lpName);
-        logger.trace(String.format("createEvent returned: %d", createEvent));
+        if (logging) logger.trace(String.format("createEvent returned: %d", createEvent));
         return createEvent;
     }
 
@@ -208,9 +210,9 @@ public class WASAPIWithLogging
     public static int IAudioCaptureClient_GetNextPacketSize(long thiz)
             throws HResultException
     {
-        logger.trace(String.format("IAudioCaptureClient_GetNextPacketSize: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioCaptureClient_GetNextPacketSize: %d", thiz));
         int iAudioCaptureClient_GetNextPacketSize = WASAPI.IAudioCaptureClient_GetNextPacketSize(thiz);
-        logger.trace(String.format("iAudioCaptureClient_GetNextPacketSize returned: %d", iAudioCaptureClient_GetNextPacketSize));
+        if (logging) logger.trace(String.format("iAudioCaptureClient_GetNextPacketSize returned: %d", iAudioCaptureClient_GetNextPacketSize));
         return iAudioCaptureClient_GetNextPacketSize;
     }
 
@@ -218,44 +220,44 @@ public class WASAPIWithLogging
             int offset, int length, int srcSampleSize, int srcChannels,
             int dstSampleSize, int dstChannels) throws HResultException
     {
-        logger.trace(String.format("IAudioCaptureClient_Read: %d, %s, %d, %d, %d, %d, %d, %d", thiz, data, offset, length,
+        if (logging) logger.trace(String.format("IAudioCaptureClient_Read: %d, %s, %d, %d, %d, %d, %d, %d", thiz, data, offset, length,
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels)); 
         int iAudioCaptureClient_Read = WASAPI.IAudioCaptureClient_Read(thiz, data, offset, length,
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels);
-        logger.trace(String.format("iAudioCaptureClient_Read returned: %d", iAudioCaptureClient_Read));
+        if (logging) logger.trace(String.format("iAudioCaptureClient_Read returned: %d", iAudioCaptureClient_Read));
         return iAudioCaptureClient_Read;
     }
 
     public static void IAudioCaptureClient_Release(long thiz)
     {
-        logger.trace(String.format("IAudioCaptureClient_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioCaptureClient_Release: %d", thiz));
         WASAPI.IAudioCaptureClient_Release(thiz);
     }
 
     public static int IAudioClient_GetBufferSize(long thiz)
             throws HResultException
     {
-        logger.trace(String.format("IAudioClient_GetBufferSize: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioClient_GetBufferSize: %d", thiz));
         int iAudioClient_GetBufferSize = WASAPI.IAudioClient_GetBufferSize(thiz);
-        logger.trace(String.format("iAudioClient_GetBufferSize returned: %d", iAudioClient_GetBufferSize));
+        if (logging) logger.trace(String.format("iAudioClient_GetBufferSize returned: %d", iAudioClient_GetBufferSize));
         return iAudioClient_GetBufferSize;
     }
 
     public static int IAudioClient_GetCurrentPadding(long thiz)
             throws HResultException
     {
-        logger.trace(String.format("IAudioClient_GetCurrentPadding %d", thiz));
+        if (logging) logger.trace(String.format("IAudioClient_GetCurrentPadding %d", thiz));
         int iAudioClient_GetCurrentPadding = WASAPI.IAudioClient_GetCurrentPadding(thiz);
-        logger.trace(String.format("iAudioClient_GetCurrentPadding returned: %d", iAudioClient_GetCurrentPadding));
+        if (logging) logger.trace(String.format("iAudioClient_GetCurrentPadding returned: %d", iAudioClient_GetCurrentPadding));
         return iAudioClient_GetCurrentPadding;
     }
 
     public static long IAudioClient_GetDefaultDevicePeriod(long thiz)
             throws HResultException
     {
-        logger.trace(String.format("IAudioClient_GetDefaultDevicePeriod: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioClient_GetDefaultDevicePeriod: %d", thiz));
         long iAudioClient_GetDefaultDevicePeriod = WASAPI.IAudioClient_GetDefaultDevicePeriod(thiz);
-        logger.trace(String.format("iAudioClient_GetDefaultDevicePeriod returned: %d", iAudioClient_GetDefaultDevicePeriod));
+        if (logging) logger.trace(String.format("iAudioClient_GetDefaultDevicePeriod returned: %d", iAudioClient_GetDefaultDevicePeriod));
         return iAudioClient_GetDefaultDevicePeriod;
     }
 
@@ -265,9 +267,9 @@ public class WASAPIWithLogging
     public static long IAudioClient_GetService(long thiz, String iid)
             throws HResultException
     {
-        logger.trace(String.format("IAudioClient_GetService: %d, %s", thiz, iid));
+        if (logging) logger.trace(String.format("IAudioClient_GetService: %d, %s", thiz, iid));
         long iAudioClient_GetService = WASAPI.IAudioClient_GetService(thiz, iid);
-        logger.trace(String.format("iAudioClient_GetService returned: %d", iAudioClient_GetService));
+        if (logging) logger.trace(String.format("iAudioClient_GetService returned: %d", iAudioClient_GetService));
         return iAudioClient_GetService;
     }
 
@@ -275,55 +277,55 @@ public class WASAPIWithLogging
             int streamFlags, long hnsBufferDuration, long hnsPeriodicity,
             long pFormat, String audioSessionGuid) throws HResultException
     {
-        logger.trace(String.format("IAudioClient_Initialize: %d, %d, %d, %d, %d, %d, %s", thiz, shareMode, streamFlags,
+        if (logging) logger.trace(String.format("IAudioClient_Initialize: %d, %d, %d, %d, %d, %d, %s", thiz, shareMode, streamFlags,
                 hnsBufferDuration, hnsPeriodicity, pFormat, audioSessionGuid));
         int iAudioClient_Initialize = WASAPI.IAudioClient_Initialize(thiz, shareMode, streamFlags,
                 hnsBufferDuration, hnsPeriodicity, pFormat, audioSessionGuid);
-        logger.trace(String.format("iAudioClient_Initialize returned: %d", iAudioClient_Initialize));
+        if (logging) logger.trace(String.format("iAudioClient_Initialize returned: %d", iAudioClient_Initialize));
         return iAudioClient_Initialize;
     }
 
     public static long IAudioClient_IsFormatSupported(long thiz, int shareMode,
             long pFormat) throws HResultException
     {
-        logger.trace(String.format("IAudioClient_IsFormatSupported: %d, %d, %d", thiz, shareMode, pFormat));
+        if (logging) logger.trace(String.format("IAudioClient_IsFormatSupported: %d, %d, %d", thiz, shareMode, pFormat));
         long iAudioClient_IsFormatSupported = WASAPI.IAudioClient_IsFormatSupported(thiz, shareMode, pFormat);
-        logger.trace(String.format("iAudioClient_IsFormatSupported returned: %d", iAudioClient_IsFormatSupported));
+        if (logging) logger.trace(String.format("iAudioClient_IsFormatSupported returned: %d", iAudioClient_IsFormatSupported));
         return iAudioClient_IsFormatSupported;
     }
 
     public static void IAudioClient_Release(long thiz)
     {
-        logger.trace(String.format("IAudioClient_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioClient_Release: %d", thiz));
         WASAPI.IAudioClient_Release(thiz);
     }
 
     public static void IAudioClient_SetEventHandle(long thiz, long eventHandle)
             throws HResultException
     {
-        logger.trace(String.format("IAudioClient_SetEventHandle: %d, %d", thiz, eventHandle));
+        if (logging) logger.trace(String.format("IAudioClient_SetEventHandle: %d, %d", thiz, eventHandle));
         WASAPI.IAudioClient_SetEventHandle(thiz, eventHandle);
     }
 
     public static int IAudioClient_Start(long thiz) throws HResultException
     {
-        logger.trace(String.format("IAudioClient_Start: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioClient_Start: %d", thiz));
         int iAudioClient_Start = WASAPI.IAudioClient_Start(thiz);
-        logger.trace(String.format("iAudioClient_Start returned: %d", iAudioClient_Start));
+        if (logging) logger.trace(String.format("iAudioClient_Start returned: %d", iAudioClient_Start));
         return iAudioClient_Start;
     }
 
     public static int IAudioClient_Stop(long thiz) throws HResultException
     {
-        logger.trace(String.format("IAudioClient_Stop: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioClient_Stop: %d", thiz));
         int iAudioClient_Stop = WASAPI.IAudioClient_Stop(thiz);
-        logger.trace(String.format("iAudioClient_Stop returned: %d", iAudioClient_Stop));
+        if (logging) logger.trace(String.format("iAudioClient_Stop returned: %d", iAudioClient_Stop));
         return iAudioClient_Stop;
     }
 
     public static void IAudioRenderClient_Release(long thiz)
     {
-        logger.trace(String.format("IAudioRenderClient_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IAudioRenderClient_Release: %d", thiz));
         WASAPI.IAudioRenderClient_Release(thiz);
     }
     
@@ -382,27 +384,27 @@ public class WASAPIWithLogging
             int offset, int length, int srcSampleSize, int srcChannels,
             int dstSampleSize, int dstChannels) throws HResultException
     {
-        logger.trace(String.format("IAudioRenderClient_Write: %d, %s, %d, %d, %d, %d, %d, %d", thiz, data, offset, length,
+        if (logging) logger.trace(String.format("IAudioRenderClient_Write: %d, %s, %d, %d, %d, %d, %d, %d", thiz, data, offset, length,
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels));
         int iAudioRenderClient_Write = WASAPI.IAudioRenderClient_Write(thiz, data, offset, length,
                 srcSampleSize, srcChannels, dstSampleSize, dstChannels);
-        logger.trace(String.format("iAudioRenderClient_Write returned: %d", iAudioRenderClient_Write));
+        if (logging) logger.trace(String.format("iAudioRenderClient_Write returned: %d", iAudioRenderClient_Write));
         return iAudioRenderClient_Write;
     }
 
     public static long IMMDevice_Activate(long thiz, String iid, int dwClsCtx,
             long pActivationParams) throws HResultException
     {
-        logger.trace(String.format("IMMDevice_Activate: %d, %s, %d, %d", thiz, iid, dwClsCtx, pActivationParams));
+        if (logging) logger.trace(String.format("IMMDevice_Activate: %d, %s, %d, %d", thiz, iid, dwClsCtx, pActivationParams));
         long immDevice_Activate = WASAPI
                 .IMMDevice_Activate(thiz, iid, dwClsCtx, pActivationParams);
-        logger.trace(String.format("immDevice_Activate returned: %d", immDevice_Activate));
+        if (logging) logger.trace(String.format("immDevice_Activate returned: %d", immDevice_Activate));
         return immDevice_Activate;
     }
 
     public static String IMMDevice_GetId(long thiz) throws HResultException
     {
-        logger.trace(String.format("IMMDevice_GetId: %d", thiz));
+        if (logging) logger.trace(String.format("IMMDevice_GetId: %d", thiz));
         String immDevice_GetId = WASAPI.IMMDevice_GetId(thiz);
         return immDevice_GetId;
     }
@@ -414,103 +416,103 @@ public class WASAPIWithLogging
     public static long IMMDevice_OpenPropertyStore(long thiz, int stgmAccess)
             throws HResultException
     {
-        logger.trace(String.format("IMMDevice_OpenPropertyStore: %d, %d", thiz, stgmAccess));
+        if (logging) logger.trace(String.format("IMMDevice_OpenPropertyStore: %d, %d", thiz, stgmAccess));
         long immDevice_OpenPropertyStore = WASAPI.IMMDevice_OpenPropertyStore(thiz, stgmAccess);
-        logger.trace(String.format("immDevice_OpenPropertyStore returned: %d", immDevice_OpenPropertyStore));
+        if (logging) logger.trace(String.format("immDevice_OpenPropertyStore returned: %d", immDevice_OpenPropertyStore));
         return immDevice_OpenPropertyStore;
     }
 
     public static long IMMDevice_QueryInterface(long thiz, String iid)
             throws HResultException
     {
-        logger.trace(String.format("IMMDevice_QueryInterface: %d, %s", thiz, iid));
+        if (logging) logger.trace(String.format("IMMDevice_QueryInterface: %d, %s", thiz, iid));
         long immDevice_QueryInterface = WASAPI.IMMDevice_QueryInterface(thiz, iid);
-        logger.trace(String.format("immDevice_QueryInterface returned: %d", immDevice_QueryInterface));
+        if (logging) logger.trace(String.format("immDevice_QueryInterface returned: %d", immDevice_QueryInterface));
         return immDevice_QueryInterface;
     }
 
     public static void IMMDevice_Release(long thiz)
     {
-        logger.trace(String.format("IMMDevice_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IMMDevice_Release: %d", thiz));
         WASAPI.IMMDevice_Release(thiz);
     }
 
     public static int IMMDeviceCollection_GetCount(long thiz)
             throws HResultException
     {
-        logger.trace(String.format("IMMDeviceCollection_GetCount: %d", thiz));
+        if (logging) logger.trace(String.format("IMMDeviceCollection_GetCount: %d", thiz));
         int immDeviceCollection_GetCount = WASAPI.IMMDeviceCollection_GetCount(thiz);
-        logger.trace(String.format("immDeviceCollection_GetCount returned: %d", immDeviceCollection_GetCount));
+        if (logging) logger.trace(String.format("immDeviceCollection_GetCount returned: %d", immDeviceCollection_GetCount));
         return immDeviceCollection_GetCount;
     }
 
     public static long IMMDeviceCollection_Item(long thiz, int nDevice)
             throws HResultException
     {
-        logger.trace(String.format("IMMDeviceCollection_Item: %d, %d", thiz, nDevice));
+        if (logging) logger.trace(String.format("IMMDeviceCollection_Item: %d, %d", thiz, nDevice));
         long immDeviceCollection_Item = WASAPI.IMMDeviceCollection_Item(thiz, nDevice);
-        logger.trace(String.format("immDeviceCollection_Item returned: %d", immDeviceCollection_Item));
+        if (logging) logger.trace(String.format("immDeviceCollection_Item returned: %d", immDeviceCollection_Item));
         return immDeviceCollection_Item;
     }
 
     public static void IMMDeviceCollection_Release(long thiz)
     {
-        logger.trace(String.format("IMMDeviceCollection_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IMMDeviceCollection_Release: %d", thiz));
         WASAPI.IMMDeviceCollection_Release(thiz);
     }
 
     public static long IMMDeviceEnumerator_EnumAudioEndpoints(long thiz,
             int dataFlow, int dwStateMask) throws HResultException
     {
-        logger.trace(String.format("IMMDeviceEnumerator_EnumAudioEndpoints: %d, %d, %d", thiz, dataFlow, dwStateMask));
+        if (logging) logger.trace(String.format("IMMDeviceEnumerator_EnumAudioEndpoints: %d, %d, %d", thiz, dataFlow, dwStateMask));
         long immDeviceEnumerator_EnumAudioEndpoints = WASAPI.IMMDeviceEnumerator_EnumAudioEndpoints(thiz, dataFlow,
                 dwStateMask);
-        logger.trace(String.format("immDeviceEnumerator_EnumAudioEndpoints returned: %d", immDeviceEnumerator_EnumAudioEndpoints));
+        if (logging) logger.trace(String.format("immDeviceEnumerator_EnumAudioEndpoints returned: %d", immDeviceEnumerator_EnumAudioEndpoints));
         return immDeviceEnumerator_EnumAudioEndpoints;
     }
 
     public static long IMMDeviceEnumerator_GetDevice(long thiz, String pwstrId)
             throws HResultException
     {
-        logger.trace(String.format("IMMDeviceEnumerator_GetDevice: %d, %s", thiz, pwstrId));
+        if (logging) logger.trace(String.format("IMMDeviceEnumerator_GetDevice: %d, %s", thiz, pwstrId));
         long immDeviceEnumerator_GetDevice = WASAPI.IMMDeviceEnumerator_GetDevice(thiz, pwstrId);
-        logger.trace(String.format("immDeviceEnumerator_GetDevice returned: %d", immDeviceEnumerator_GetDevice));
+        if (logging) logger.trace(String.format("immDeviceEnumerator_GetDevice returned: %d", immDeviceEnumerator_GetDevice));
         return immDeviceEnumerator_GetDevice;
     }
 
     public static void IMMDeviceEnumerator_Release(long thiz)
     {
-        logger.trace(String.format("IMMDeviceEnumerator_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IMMDeviceEnumerator_Release: %d", thiz));
         WASAPI.IMMDeviceEnumerator_Release(thiz);
     }
 
     public static int IMMEndpoint_GetDataFlow(long thiz)
             throws HResultException
     {
-        logger.trace(String.format("IMMEndpoint_GetDataFlow: %d", thiz));
+        if (logging) logger.trace(String.format("IMMEndpoint_GetDataFlow: %d", thiz));
         int immEndpoint_GetDataFlow = WASAPI.IMMEndpoint_GetDataFlow(thiz);
-        logger.trace(String.format("immEndpoint_GetDataFlow returned: %d", immEndpoint_GetDataFlow));
+        if (logging) logger.trace(String.format("immEndpoint_GetDataFlow returned: %d", immEndpoint_GetDataFlow));
         return immEndpoint_GetDataFlow;
     }
 
     public static void IMMEndpoint_Release(long thiz)
     {
-        logger.trace(String.format("IMMEndpoint_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IMMEndpoint_Release: %d", thiz));
         WASAPI.IMMEndpoint_Release(thiz);
     }
 
     public static String IPropertyStore_GetString(long thiz, long key)
             throws HResultException
     {
-        logger.trace(String.format("IPropertyStore_GetString: %d, %d", thiz, key));
+        if (logging) logger.trace(String.format("IPropertyStore_GetString: %d, %d", thiz, key));
         String iPropertyStore_GetString = WASAPI.IPropertyStore_GetString(thiz, key);
-        logger.trace(String.format("iPropertyStore_GetString returned: %s", iPropertyStore_GetString));
+        if (logging) logger.trace(String.format("iPropertyStore_GetString returned: %s", iPropertyStore_GetString));
         return iPropertyStore_GetString;
     }
 
     public static void IPropertyStore_Release(long thiz)
     {
-        logger.trace(String.format("IPropertyStore_Release: %d", thiz));
+        if (logging) logger.trace(String.format("IPropertyStore_Release: %d", thiz));
         WASAPI.IPropertyStore_Release(thiz);
     }
 
@@ -522,9 +524,9 @@ public class WASAPIWithLogging
     public static long PSPropertyKeyFromString(String pszString)
             throws HResultException
     {
-        logger.trace(String.format("PSPropertyKeyFromString: %s", pszString));
+        if (logging) logger.trace(String.format("PSPropertyKeyFromString: %s", pszString));
         long psPropertyKeyFromString = WASAPI.PSPropertyKeyFromString(pszString);
-        logger.trace(String.format("psPropertyKeyFromString returned: %d", psPropertyKeyFromString));
+        if (logging) logger.trace(String.format("psPropertyKeyFromString returned: %d", psPropertyKeyFromString));
         return psPropertyKeyFromString;
     }
 
@@ -556,17 +558,17 @@ public class WASAPIWithLogging
     public static int WaitForSingleObject(long hHandle, long dwMilliseconds)
             throws HResultException
     {
-        logger.trace(String.format("WaitForSingleObject: %d, %d", hHandle, dwMilliseconds));
+        if (logging) logger.trace(String.format("WaitForSingleObject: %d, %d", hHandle, dwMilliseconds));
         int waitForSingleObject = WASAPI.WaitForSingleObject(hHandle, dwMilliseconds);
-        logger.trace(String.format("waitForSingleObject returned: %d", waitForSingleObject));
+        if (logging) logger.trace(String.format("waitForSingleObject returned: %d", waitForSingleObject));
         return waitForSingleObject;
     }
 
     public static long WAVEFORMATEX_alloc()
     {
-        logger.trace(String.format("WAVEFORMATEX_alloc:"));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_alloc:"));
         long waveformatex_alloc = WASAPI.WAVEFORMATEX_alloc();
-        logger.trace(String.format("waveformatex_alloc returned: %d", waveformatex_alloc));
+        if (logging) logger.trace(String.format("waveformatex_alloc returned: %d", waveformatex_alloc));
         return waveformatex_alloc;
     }
 
@@ -574,8 +576,8 @@ public class WASAPIWithLogging
             char nChannels, int nSamplesPerSec, int nAvgBytesPerSec,
             char nBlockAlign, char wBitsPerSample, char cbSize)
     {
-        logger.trace(String.format("WAVEFORMATEX_fill: %d, %d, %d, %d, %d, %d, %d, %d", thiz, wFormatTag, nChannels, nSamplesPerSec,
-                nAvgBytesPerSec, nBlockAlign, wBitsPerSample, cbSize));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_fill: %d, %d, %d, %d, %d, %d, %d, %d", thiz, (int)wFormatTag, (int)nChannels, nSamplesPerSec,
+                nAvgBytesPerSec, (int)nBlockAlign, (int)wBitsPerSample, (int)cbSize));
         WASAPI.WAVEFORMATEX_fill(thiz, wFormatTag, nChannels, nSamplesPerSec,
                 nAvgBytesPerSec, nBlockAlign, wBitsPerSample, cbSize);
     }
@@ -588,36 +590,36 @@ public class WASAPIWithLogging
     //
     public static char WAVEFORMATEX_getNChannels(long thiz)
     {
-        logger.trace(String.format("WAVEFORMATEX_getNChannels: %d", thiz));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_getNChannels: %d", thiz));
         char waveformatex_getNChannels = WASAPI.WAVEFORMATEX_getNChannels(thiz);
-        logger.trace(String.format("waveformatex_getNChannels returned: %d", waveformatex_getNChannels));
+        if (logging) logger.trace(String.format("waveformatex_getNChannels returned: %d", (int)waveformatex_getNChannels));
         return waveformatex_getNChannels;
     }
 
     //
     public static int WAVEFORMATEX_getNSamplesPerSec(long thiz)
     {
-        logger.trace(String.format("WAVEFORMATEX_getNSamplesPerSec: %d", thiz));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_getNSamplesPerSec: %d", thiz));
         int waveformatex_getNSamplesPerSec = WASAPI.WAVEFORMATEX_getNSamplesPerSec(thiz);
-        logger.trace(String.format("waveformatex_getNSamplesPerSec returned: %d", waveformatex_getNSamplesPerSec));
+        if (logging) logger.trace(String.format("waveformatex_getNSamplesPerSec returned: %d", waveformatex_getNSamplesPerSec));
         return waveformatex_getNSamplesPerSec;
     }
 
     //
     public static char WAVEFORMATEX_getWBitsPerSample(long thiz)
     {
-        logger.trace(String.format("WAVEFORMATEX_getWBitsPerSample: %d", thiz));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_getWBitsPerSample: %d", thiz));
         char waveformatex_getWBitsPerSample = WASAPI.WAVEFORMATEX_getWBitsPerSample(thiz);
-        logger.trace(String.format("waveformatex_getWBitsPerSample returned: %d", waveformatex_getWBitsPerSample));
+        if (logging) logger.trace(String.format("waveformatex_getWBitsPerSample returned: %d", (int)waveformatex_getWBitsPerSample));
         return waveformatex_getWBitsPerSample;
     }
 
     //
     public static char WAVEFORMATEX_getWFormatTag(long thiz)
     {
-        logger.trace(String.format("WAVEFORMATEX_getWFormatTag: %d", thiz));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_getWFormatTag: %d", thiz));
         char waveformatex_getWFormatTag = WASAPI.WAVEFORMATEX_getWFormatTag(thiz);
-        logger.trace(String.format("waveformatex_getWFormatTag returned: %d", waveformatex_getWFormatTag));
+        if (logging) logger.trace(String.format("waveformatex_getWFormatTag returned: %d", (int)waveformatex_getWFormatTag));
         return waveformatex_getWFormatTag;
     }
 
@@ -650,9 +652,9 @@ public class WASAPIWithLogging
 
     public static int WAVEFORMATEX_sizeof()
     {
-        logger.trace(String.format("WAVEFORMATEX_sizeof:"));
+        if (logging) logger.trace(String.format("WAVEFORMATEX_sizeof:"));
         int waveformatex_sizeof = WASAPI.WAVEFORMATEX_sizeof();
-        logger.trace(String.format("waveformatex_sizeof returned: %d", waveformatex_sizeof));
+        if (logging) logger.trace(String.format("waveformatex_sizeof returned: %d", waveformatex_sizeof));
         return waveformatex_sizeof;
     }
 
