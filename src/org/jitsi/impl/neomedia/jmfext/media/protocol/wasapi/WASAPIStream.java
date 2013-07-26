@@ -1148,7 +1148,7 @@ public class WASAPIStream
                     };
 
         render
-            = new DummyAudioCaptureClient(
+            = new AudioCaptureClient(
                     dataSource.audioSystem,
                     locator,
                     AudioSystem.DataFlow.PLAYBACK,
