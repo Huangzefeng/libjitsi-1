@@ -6,8 +6,8 @@
  */
 package org.jitsi.impl.neomedia.device;
 
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.VoiceCaptureDSPWithLogging.*;
 import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
-import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.VoiceCaptureDSP.*;
 
 import java.util.*;
 
@@ -285,7 +285,7 @@ public class WASAPISystem
      * <tt>IAudioClient</tt>. Allows this instance to add and/or remove
      * <tt>AudioFormat</tt>s that it will and/or will not support in addition to
      * the support of the very <tt>IAudioClient</tt>.
-     * 
+     *
      * @param dataFlow the flow of the media supported by the associated
      * <tt>IAudioClient</tt>
      * @param formats the <tt>List</tt> of <tt>AudioFormat</tt>s supported by
@@ -329,7 +329,7 @@ public class WASAPISystem
                 AudioFormat outFormat = formats.get(i);
                 /*
                  * The resamplers are not expected to convert between mono and
-                 * stereo. 
+                 * stereo.
                  */
                 AudioFormat inFormat
                     = new AudioFormat(
@@ -425,7 +425,7 @@ public class WASAPISystem
          * more than once at a time, it may be concurrently invoked along with
          * other methods. We do not want the methods setCaptureDevices and
          * setPlaybackDevices in the synchronized block because they may fire
-         * events which may in turn lead to deadlocks. 
+         * events which may in turn lead to deadlocks.
          */
         synchronized (this)
         {
@@ -580,13 +580,13 @@ public class WASAPISystem
         {
             IAudioClient_Release(iAudioClient);
         }
-        
+
         logger.info(String.format(
                 "Got formats for %s for type %s\n%s",
                 getIMMDeviceFriendlyName(iMMDevice),
                 getIMMDeviceDataFlow(iMMDevice),
                 convertFormatsToString(formats)));
-        
+
         if ((formats != null) && !formats.isEmpty())
         {
             String name = null;
@@ -604,7 +604,7 @@ public class WASAPISystem
                             + " of IMMDevice " + id,
                         t);
             }
-            
+
             if ((name == null) || (name.length() == 0))
                 name = id;
 
@@ -631,7 +631,7 @@ public class WASAPISystem
                                     "For %s AEC adds format %s",
                                     name,
                                     format));
-                                    
+
                             formats.add(format);
                         }
                 }
@@ -722,7 +722,7 @@ for (AudioFormat aFormat:formats)
      * signals that the <tt>AudioFormat</tt> in question has been included in
      * that <tt>formats</tt> or <tt>supportedFormat</tt>s only because it is
      * supported by the voice capture DMO supporting/implementing the acoustic
-     * echo cancellation (AEC) feature. 
+     * echo cancellation (AEC) feature.
      * </p>
      *
      * @return the <tt>List</tt> of <tt>AudioFormat</tt>s supported by the voice
@@ -1072,13 +1072,13 @@ for (AudioFormat aFormat:formats)
                 = IPropertyStore_GetString(
                         iPropertyStore,
                         PKEY_Device_FriendlyName);
-            
+
             // The device name returned by WASAPI is sometimes bogus - namely
             // that if this is a USB device the USB port number may be
             // prepended to the device name (i.e. the bit inside the braces).
             // We remove any such port numbers here to ensure that the same
             // device is treated as the same when plugged into a different USB
-            // port. 
+            // port.
             String pattern = "\\([0-9]+- ";
             deviceFriendlyName = deviceFriendlyName.replaceAll(pattern, "(");
         }
@@ -1086,7 +1086,7 @@ for (AudioFormat aFormat:formats)
         {
             IPropertyStore_Release(iPropertyStore);
         }
-        
+
         return deviceFriendlyName;
     }
 
@@ -1663,7 +1663,7 @@ for (AudioFormat aFormat:formats)
                             String pwstrDeviceId,
                             int dwNewState)
                     {
-                        logger.info("Device (" + pwstrDeviceId + 
+                        logger.info("Device (" + pwstrDeviceId +
                                     ") state changed to " + dwNewState);
                         reinitialize(pwstrDeviceId);
                     }

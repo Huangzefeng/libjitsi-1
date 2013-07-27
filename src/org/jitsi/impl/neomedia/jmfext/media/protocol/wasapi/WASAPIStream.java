@@ -6,7 +6,7 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi;
 
-import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.VoiceCaptureDSP.*;
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.VoiceCaptureDSPWithLogging.*;
 import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
 
 import java.beans.*;
@@ -1393,9 +1393,9 @@ public class WASAPIStream
             AudioFormat outFormat)
         throws Exception
     {
-        logger.debug("AEC: Mic in format " + captureFormat.toString());
-        logger.debug("AEC: Spk in format " + renderFormat.toString());
-        logger.debug("AEC: Output format " + outFormat.toString());
+//        logger.debug("AEC: Mic in format " + captureFormat.toString());
+//        logger.debug("AEC: Spk in format " + renderFormat.toString());
+//        logger.debug("AEC: Output format " + outFormat.toString());
 
         WASAPISystem audioSystem = dataSource.audioSystem;
         AudioFormat aecOutFormat
