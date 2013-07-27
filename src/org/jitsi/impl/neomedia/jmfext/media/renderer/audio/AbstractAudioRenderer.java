@@ -321,7 +321,7 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
     /**
      * Notifies this instance about a specific <tt>PropertyChangeEvent</tt>.
      * <tt>AbstractAudioRenderer</tt> listens to changes in the values of the
-     * properties of {@link #audioSystem}
+     * properties of {@link #audioSystem}.
      *
      * @param ev the <tt>PropertyChangeEvent</tt> to notify this instance about
      */
