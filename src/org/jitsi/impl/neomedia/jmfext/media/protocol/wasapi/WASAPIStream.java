@@ -6,9 +6,10 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi;
 
-import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
 import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.VoiceCaptureDSP.*;
+import static org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.WASAPIWithLogging.*;
 
+import java.beans.*;
 import java.io.*;
 import java.util.*;
 
@@ -33,8 +34,6 @@ import org.jitsi.util.*;
 public class WASAPIStream
     extends AbstractPushBufferStream<DataSource>
 {
-    private static final int LOG_INTERVAL = 1000;
-
     /**
      * The zero-based index of the input stream of the <tt>IMediaObject</tt>
      * that represents the Voice Capture DSP implementing the acoustic echo
@@ -42,6 +41,13 @@ public class WASAPIStream
      * microphone.
      */
     private static final int CAPTURE_INPUT_STREAM_INDEX = 0;
+
+    /**
+     * The default value of the property
+     * <tt>MFPKEY_WMAAECMA_DMO_SOURCE_MODE</tt> to be set on the Voice Capture
+     * DSP.
+     */
+    private static final boolean DEFAULT_SOURCE_MODE = true;
 
     /**
      * The <tt>Logger</tt> used by the <tt>WASAPIStream</tt> class and its
@@ -134,6 +140,33 @@ public class WASAPIStream
     }
 
     /**
+     * Finds an <tt>AudioFormat</tt> in a specific list of <tt>AudioFormat</tt>s
+     * which is as similar to a specific <tt>AudioFormat</tt> as possible.
+     *
+     * @param formats the list of <tt>AudioFormat</tt>s into which an
+     * <tt>AudioFormat</tt> as similar to the specified <tt>format</tt> as
+     * possible is to be found
+     * @param format the <tt>AudioFormat</tt> for which a similar
+     * <tt>AudioFormat</tt> is to be found in <tt>formats</tt>
+     * @param clazz the runtime type of the matches to be considered or
+     * <tt>null</tt> if the runtime type is to not be limited
+     * @return an <tt>AudioFormat</tt> which is an element of <tt>formats</tt>
+     * and is as similar to the specified <tt>format</tt> as possible or
+     * <tt>null</tt> if no similarity could be established
+     */
+    private static AudioFormat findClosestMatch(
+            List<AudioFormat> formats,
+            AudioFormat format,
+            Class<? extends AudioFormat> clazz)
+    {
+        return
+            findClosestMatch(
+                    formats.toArray(new Format[formats.size()]),
+                    format,
+                    clazz);
+    }
+
+    /**
      * Finds the first element of a specific array of <tt>Format</tt>s which
      * matches in the sense of {@link Format#matches(Format)} a specific
      * <tt>AudioFormat</tt>.
@@ -165,7 +198,7 @@ public class WASAPIStream
     /**
      * Sets the media type of an input or output stream of a specific
      * <tt>IMediaObject</tt>.
-     * 
+     *
      * @param iMediaObject the <tt>IMediaObject</tt> to set the media type of
      * @param inOrOut <tt>true</tt> if the media type of an input stream of the
      * specified <tt>iMediaObject</tt> is to be set or <tt>false</tt> if the
@@ -183,7 +216,7 @@ public class WASAPIStream
      * <tt>audioFormat</tt> is acceptable and/or whether it has been set
      * successfully
      * @throws HResultException if setting the media type of the specified
-     * stream of the specified <tt>iMediaObject</tt> fails 
+     * stream of the specified <tt>iMediaObject</tt> fails
      */
     private static int IMediaObject_SetXXXputType(
             long iMediaObject,
@@ -355,7 +388,7 @@ public class WASAPIStream
      * @param length the number of bytes in <tt>buffer</tt> starting at
      * <tt>offset</tt> to be pushed/written into the specified <tt>pBuffer</tt>
      * @return the number of bytes from the specified <tt>buffer</tt>
-     * pushed/written into the specified <tt>pBuffer</tt>  
+     * pushed/written into the specified <tt>pBuffer</tt>
      */
     private static int maybeMediaBufferPush(
             long pBuffer,
@@ -406,6 +439,12 @@ public class WASAPIStream
     }
 
     /**
+     * The indicator which determines whether this <tt>SourceStream</tt> has
+     * been connected with acoustic echo cancellation (AEC) enabled.
+     */
+    private boolean aec;
+
+    /**
      * The maximum capacity/number of bytes of {@link #iMediaBuffer}.
      */
     private int bufferMaxLength;
@@ -444,7 +483,7 @@ public class WASAPIStream
     private boolean captureIsBusy;
 
     /**
-     * The number of nonseconds of audio encoded in the <tt>outFormat</tt> of
+     * The number of nonoseconds of audio encoded in the <tt>outFormat</tt> of
      * {@link #capture} represented by a <tt>byte</tt>.
      */
     private double captureNanosPerByte;
@@ -461,6 +500,14 @@ public class WASAPIStream
      * {@link VoiceCaptureDSP#IMediaObject_ProcessOutput(long, int, int, long)}.
      */
     private long dmoOutputDataBuffer;
+
+    /**
+     * The <tt>AudioFormat</tt> of the {@link #capture} or
+     * {@link #iMediaObject}. If it does not match (in the FMJ sense of the
+     * <tt>Format</tt> class), {@link #resampler} will be used to resample from
+     * it into {@link #format}.
+     */
+    private AudioFormat effectiveFormat;
 
     /**
      * The <tt>AudioFormat</tt> of this <tt>SourceStream</tt>.
@@ -499,7 +546,7 @@ public class WASAPIStream
 
     /**
      * An array of <tt>byte</tt>s utilized by {@link #processInput(int, int)}
-     * and cached in order to reduce the effects of the garbage collector. 
+     * and cached in order to reduce the effects of the garbage collector.
      */
     private byte[] processInputBuffer;
 
@@ -511,9 +558,44 @@ public class WASAPIStream
      * i.e. delivers audio samples from the capture and render endpoint devices
      * into the voice capture DMO, invokes the acoustic echo cancellation and
      * stores the result/output in {@link #processed} so that it may later be
-     * read out of this instance via {@link #read(Buffer)}.  
+     * read out of this instance via {@link #read(Buffer)}.
      */
     private Thread processThread;
+
+    /**
+     * The <tt>PropertyChangeListener</tt> which listens to changes in the
+     * values of the properties of the associate <tt>AudioSystem</tt>.
+     */
+    private final PropertyChangeListener propertyChangeListener
+        = new PropertyChangeListener()
+        {
+            public void propertyChange(PropertyChangeEvent ev)
+            {
+                try
+                {
+                    WASAPIStream.this.propertyChange(ev);
+                }
+                catch (Exception e)
+                {
+                    StringBuilder msg = new StringBuilder();
+
+                    msg.append(
+                            "Failed to handle a change to the value of the"
+                                + " property ");
+                    msg.append(ev.getPropertyName());
+
+                    Object source = ev.getSource();
+
+                    if (source != null)
+                    {
+                        msg.append(" of a ");
+                        msg.append(source.getClass());
+                    }
+                    msg.append('.');
+                    logger.error(msg, e);
+                }
+            }
+        };
 
     /**
      * The abstraction which delivers audio samples from the render endpoint
@@ -550,10 +632,49 @@ public class WASAPIStream
     private boolean renderIsBusy;
 
     /**
+     * The <tt>MediaLocator</tt> of the rendering endpoint device used by this
+     * instance if any.
+     */
+    private MediaLocator renderDevice;
+
+    /**
+     * The zero-based index in an <tt>IMMDeviceConnection</tt> interface of
+     * {@link #renderDevice} if any.
+     */
+    private int renderDeviceIndex;
+
+    /**
+     * The <tt>WASAPIRenderer</tt> which maintains an active stream on the
+     * rendering device selected in the Voice Capture DSP implementing acoustic
+     * echo cancellation (AEC) in order to ensure that the DSP can produce
+     * output.
+     */
+    private Renderer renderer;
+
+    /**
      * The indicator which determines whether no reading from {@link #render} is
-     * to be performed until it reaches a certain threshold of availability. 
+     * to be performed until it reaches a certain threshold of availability.
      */
     private boolean replenishRender;
+
+    /**
+     * The <tt>Codec</tt> which is to resample the <tt>Format</tt> of
+     * {@link #capture} or {@link #processed} into {@link #format} if necessary.
+     */
+    private Codec resampler;
+
+    /**
+     * The internal/intermediate <tt>Buffer</tt> instance utilized by
+     * {@link #resampler}. Cached in order to reduce the effects of the garbage
+     * collector.
+     */
+    private Buffer resamplerBuffer;
+
+    /**
+     * The indicator which determined whether {@link #iMediaObject} has been
+     * initialized to operate in source (as opposed to filter) mode.
+     */
+    private boolean sourceMode;
 
     /**
      * The indicator which determines whether this <tt>SourceStream</tt> is
@@ -623,7 +744,7 @@ public class WASAPIStream
          * For example, use the IPropertyStore_SetValue methods of the
          * VoiceCaptureDSP class to set the MFPKEY_WMAAECMA_FEATURE_MODE
          * property to true and override the default settings on the
-         * MFPKEY_WMAAECMA_FEATR_XXX properties of the Voice Capture DSP. 
+         * MFPKEY_WMAAECMA_FEATR_XXX properties of the Voice Capture DSP.
          */
         try
         {
@@ -632,17 +753,42 @@ public class WASAPIStream
                 IPropertyStore_SetValue(
                         iPropertyStore,
                         MFPKEY_WMAAECMA_FEATURE_MODE, true);
+
+                AudioSystem audioSystem = dataSource.audioSystem;
+
+                /*
+                 * Perform acoustic echo suppression (AEC) on the residual
+                 * signal a maximum number of times.
+                 */
                 if (MFPKEY_WMAAECMA_FEATR_AES != 0)
                 {
                     IPropertyStore_SetValue(
                             iPropertyStore,
-                            MFPKEY_WMAAECMA_FEATR_AES, 2);
+                            MFPKEY_WMAAECMA_FEATR_AES,
+                            audioSystem.isEchoCancel() ? 2 : 0);
+                }
+                // Perform automatic gain control (AGC).
+                if (MFPKEY_WMAAECMA_FEATR_AGC != 0)
+                {
+                    IPropertyStore_SetValue(
+                            iPropertyStore,
+                            MFPKEY_WMAAECMA_FEATR_AGC,
+                            true);
+                }
+                // Perform noise suppression (NS).
+                if (MFPKEY_WMAAECMA_FEATR_NS != 0)
+                {
+                    IPropertyStore_SetValue(
+                            iPropertyStore,
+                            MFPKEY_WMAAECMA_FEATR_NS,
+                            audioSystem.isDenoise() ? 1 : 0);
                 }
                 if (MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH != 0)
                 {
                     IPropertyStore_SetValue(
                             iPropertyStore,
-                            MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH, 256);
+                            MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH,
+                            256);
                 }
             }
         }
@@ -664,7 +810,7 @@ public class WASAPIStream
      * fails to connect to the audio endpoint device identified by
      * <tt>locator</tt>
      */
-    private void connect()
+    private synchronized void connect()
         throws IOException
     {
         if (capture != null)
@@ -705,7 +851,7 @@ public class WASAPIStream
      * <tt>SourceStream</tt> disconnects from the audio endpoint device it has
      * previously connected to during the execution of <tt>connect()</tt>
      */
-    private void disconnect()
+    private synchronized void disconnect()
         throws IOException
     {
         try
@@ -717,6 +863,7 @@ public class WASAPIStream
             uninitializeAEC();
             uninitializeRender();
             uninitializeCapture();
+            maybeCloseResampler();
 
             /*
              * Make sure this AbstractPullBufferStream asks its DataSource for
@@ -724,7 +871,12 @@ public class WASAPIStream
              * time it is connected instead of using its Format from a previous
              * connect.
              */
+            effectiveFormat = null;
             format = null;
+            sourceMode = false;
+
+            dataSource.audioSystem.removePropertyChangeListener(
+                    propertyChangeListener);
         }
     }
 
@@ -734,7 +886,7 @@ public class WASAPIStream
      * endpoint device has been passed i.e. it is certain that this instance is
      * disconnected.
      *
-     * @throws Exception if the <tt>SourceStream</tt> fails to connect to the
+     * @throws Exception if this <tt>SourceStream</tt> fails to connect to the
      * associated audio endpoint device. The <tt>Exception</tt> is logged by the
      * <tt>connect()</tt> method.
      */
@@ -746,102 +898,276 @@ public class WASAPIStream
         if (locator == null)
             throw new NullPointerException("No locator set.");
 
-        AudioFormat thisFormat = (AudioFormat) getFormat();
+        AudioFormat format = (AudioFormat) getFormat();
 
-        if (thisFormat == null)
+        if (format == null)
             throw new NullPointerException("No format set.");
+
+        WASAPISystem audioSystem = dataSource.audioSystem;
+        AudioFormat effectiveFormat = null;
+
         if (dataSource.aec)
         {
-            /*
-             * This SourceStream will output in an AudioFormat supported by the
-             * voice capture DMO which implements the acoustic echo cancellation
-             * (AEC) feature. The IAudioClients will be initialized with
-             * AudioFormats based on thisFormat
-             */
-            AudioFormat captureFormat
-                = findClosestMatchCaptureSupportedFormat(thisFormat);
-
-            if (captureFormat == null)
+            aec = true;
+            try
             {
-                throw new IllegalStateException(
-                        "Failed to determine an AudioFormat with which to"
-                            + " initialize IAudioClient for MediaLocator "
-                            + locator + " based on AudioFormat " + thisFormat);
-            }
+                CaptureDeviceInfo2 captureDevice
+                    = audioSystem.getDevice(
+                            AudioSystem.DataFlow.CAPTURE,
+                            locator);
 
-
-            CaptureDeviceInfo2 renderDeviceInfo
-                = dataSource.audioSystem.getSelectedDevice(
-                        AudioSystem.DataFlow.PLAYBACK);
-            MediaLocator renderLocator;
-            AudioFormat renderFormat;
-
-            if (renderDeviceInfo == null)
-            {
                 /*
-                 * We explicitly want to support the case in which the user has
-                 * selected "none" for the playback/render endpoint device.
+                 * If the information about the capture device cannot be found,
+                 * acoustic echo cancellation (AEC) cannot be enabled. That
+                 * should not happen because the locator/MediaLocator is sure to
+                 * be set. Anyway, leave the error detection to the non-AEC
+                 * branch.
                  */
-                renderLocator = null;
-                renderFormat = captureFormat;
-            }
-            else
-            {
-                renderLocator = renderDeviceInfo.getLocator();
-                if (renderLocator == null)
+                if (captureDevice != null)
                 {
-                    throw new IllegalStateException(
-                            "A CaptureDeviceInfo2 instance which describes a"
-                                + " Windows Audio Session API (WASAPI) render"
-                                + " endpoint device and which does not have an"
-                                + " actual locator/MediaLocator is illegal.");
-                }
-                else
-                {
-                    renderFormat
-                        = findClosestMatch(
-                                renderDeviceInfo.getFormats(),
-                                thisFormat,
-                                NativelySupportedAudioFormat.class);
-                    if (renderFormat == null)
+                    /*
+                     * If the information about the render endpoint device
+                     * cannot be found, AEC cannot be enabled. Period.
+                     */
+                    CaptureDeviceInfo2 renderDevice
+                        = audioSystem.getSelectedDevice(
+                                AudioSystem.DataFlow.PLAYBACK);
+
+                    if (renderDevice != null)
                     {
-                        throw new IllegalStateException(
-                                "Failed to determine an AudioFormat with which"
-                                    + " to initialize IAudioClient for"
-                                    + " MediaLocator " + renderLocator
-                                    + " based on AudioFormat " + thisFormat);
+                        boolean sourceMode = DEFAULT_SOURCE_MODE;
+
+                        if (sourceMode)
+                        {
+                            effectiveFormat
+                                = doConnectInSourceMode(
+                                        captureDevice,
+                                        renderDevice,
+                                        format);
+                        }
+                        else
+                        {
+                            effectiveFormat
+                                = doConnectInFilterMode(
+                                    captureDevice,
+                                    renderDevice,
+                                    format);
+                        }
+
+                        this.sourceMode = sourceMode;
                     }
                 }
             }
+            catch (Throwable t)
+            {
+                if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+                else
+                {
+                    logger.error(
+                            "Failed to enable acoustic echo cancellation (AEC)."
+                                + " Will try without it.",
+                            t);
+                }
+            }
+        }
+        if (iMediaObject == 0)
+        {
+            aec = false;
+            renderDevice = null;
+            renderDeviceIndex = -1;
+            initializeCapture(locator, format);
+            effectiveFormat = capture.outFormat;
+        }
 
-            boolean uninitialize = true;
+        this.effectiveFormat = effectiveFormat;
+        this.format = format;
 
-            initializeCapture(locator, captureFormat);
+        /*
+         * If we have to open a resampler and the opening fails, make sure that
+         * the state of this instance is reverted to disconnected because the
+         * connecting has just failed.
+         */
+        boolean disconnect = true;
+
+        try
+        {
+            maybeOpenResampler();
+            if (resampler != null)
+                resamplerBuffer = new Buffer();
+
+            /*
+             * If a rendering endpoint device is used by this instance (for the
+             * purposes of acoustic echo cancellation), make sure that this
+             * instance will be notified when its state changes in order to be
+             * able to switch the state of this instance to the up-to-date state
+             * of the currently-selected rendering endpint device.
+             */
+            if (dataSource.aec)
+            {
+                audioSystem.addPropertyChangeListener(propertyChangeListener);
+            }
+            else
+            {
+                audioSystem.removePropertyChangeListener(
+                        propertyChangeListener);
+            }
+
+            disconnect = false;
+        }
+        finally
+        {
+            if (disconnect)
+                disconnect();
+        }
+    }
+
+    /**
+     * Invoked by {@link #doConnect()} after it has been determined that
+     * acoustic echo cancellation (AEC) is to be utilized and the implementing
+     * Voice Capture DSP is to be initialized in filter mode.
+     *
+     * @param captureDevice a <tt>CaptureDeviceInfo2</tt> which identifies the
+     * capture endpoint device to be used
+     * @param renderDevice a <tt>CaptureDeviceInfo2</tt> which identifies the
+     * render endpoint device to be used
+     * @param outFormat the <tt>Format</tt> of the media data in which the Voice
+     * Capture DSP is to output
+     * @return the <tt>AudioFormat</tt> in which the Voice Capture DSP will
+     * actually output media data
+     * @throws Exception if this <tt>SourceStream</tt> fails to connect to the
+     * associated audio endpoint device. The <tt>Exception</tt> is logged by the
+     * <tt>connect()</tt> method.
+     */
+    private AudioFormat doConnectInFilterMode(
+            CaptureDeviceInfo2 captureDevice,
+            CaptureDeviceInfo2 renderDevice,
+            AudioFormat outFormat)
+        throws Exception
+    {
+        /*
+         * This SourceStream will output in an AudioFormat supported by the
+         * voice capture DMO which implements the acoustic echo cancellation
+         * (AEC) feature. The IAudioClients will be initialized with
+         * AudioFormats based on outFormat.
+         */
+        AudioFormat captureFormat
+            = findClosestMatchCaptureSupportedFormat(outFormat);
+
+        if (captureFormat == null)
+        {
+            throw new IllegalStateException(
+                    "Failed to determine an AudioFormat with which to"
+                        + " initialize IAudioClient for MediaLocator " + locator
+                        + " based on AudioFormat " + outFormat);
+        }
+
+        MediaLocator renderLocator;
+        AudioFormat renderFormat;
+
+        if (renderDevice == null)
+        {
+            /*
+             * We explicitly want to support the case in which the user has
+             * selected "none" for the playback/render endpoint device.
+             */
+            renderLocator = null;
+            renderFormat = captureFormat;
+        }
+        else
+        {
+            renderLocator = renderDevice.getLocator();
+            if (renderLocator == null)
+            {
+                throw new IllegalStateException(
+                        "A CaptureDeviceInfo2 instance which describes a"
+                            + " Windows Audio Session API (WASAPI) render"
+                            + " endpoint device and which does not have an"
+                            + " actual locator/MediaLocator is illegal.");
+            }
+            else
+            {
+                renderFormat
+                    = findClosestMatch(
+                            renderDevice.getFormats(),
+                            outFormat,
+                            NativelySupportedAudioFormat.class);
+                if (renderFormat == null)
+                {
+                    throw new IllegalStateException(
+                            "Failed to determine an AudioFormat with which to"
+                                + " initialize IAudioClient for MediaLocator "
+                                + renderLocator + " based on AudioFormat "
+                                + outFormat);
+                }
+            }
+        }
+
+        boolean uninitialize = true;
+        AudioFormat aecOutFormat;
+
+        initializeCapture(locator, captureFormat);
+        try
+        {
+            if (renderLocator != null)
+                initializeRender(renderLocator, renderFormat);
             try
             {
-                if (renderLocator != null)
-                    initializeRender(renderLocator, renderFormat);
-                try
-                {
-                    initializeAEC(captureFormat, renderFormat, thisFormat);
-                    uninitialize = false;
-                }
-                finally
-                {
-                    if (uninitialize)
-                        uninitializeRender();
-                }
+                aecOutFormat
+                    = initializeAEC(
+                            /* sourceMode */ false,
+                            captureDevice,
+                            captureFormat,
+                            renderDevice,
+                            renderFormat,
+                            outFormat);
+                uninitialize = false;
             }
             finally
             {
                 if (uninitialize)
-                    uninitializeCapture();
+                    uninitializeRender();
             }
         }
-        else
-            initializeCapture(locator, thisFormat);
+        finally
+        {
+            if (uninitialize)
+                uninitializeCapture();
+        }
+        return aecOutFormat;
+    }
 
-        this.format = thisFormat;
+    /**
+     * Invoked by {@link #doConnect()} after it has been determined that
+     * acoustic echo cancellation (AEC) is to be utilized and the implementing
+     * Voice Capture DSP is to be initialized in filter mode.
+     *
+     * @param captureDevice a <tt>CaptureDeviceInfo2</tt> which identifies the
+     * capture endpoint device to be used
+     * @param renderDevice a <tt>CaptureDeviceInfo2</tt> which identifies the
+     * render endpoint device to be used
+     * @param outFormat the <tt>Format</tt> of the media data in which the Voice
+     * Capture DSP is to output
+     * @return the <tt>AudioFormat</tt> in which the Voice Capture DSP will
+     * actually output media data
+     * @throws Exception if this <tt>SourceStream</tt> fails to connect to the
+     * associated audio endpoint device. The <tt>Exception</tt> is logged by the
+     * <tt>connect()</tt> method.
+     */
+    private AudioFormat doConnectInSourceMode(
+            CaptureDeviceInfo2 captureDevice,
+            CaptureDeviceInfo2 renderDevice,
+            AudioFormat outFormat)
+        throws Exception
+    {
+        return
+            initializeAEC(
+                    /* sourceMode */ true,
+                    captureDevice,
+                    /* captureFormat */ null,
+                    renderDevice,
+                    /* renderFormat */ null,
+                    outFormat);
     }
 
     /**
@@ -853,6 +1179,166 @@ public class WASAPIStream
         return (format == null) ? super.doGetFormat() : format;
     }
 
+    /**
+     * Reads media data from {@link #capture} or {@link #processed} into a
+     * specific <tt>Buffer</tt>.
+     *
+     * @param buffer the <tt>Buffer</tt> into which the media data read from
+     * <tt>capture</tt> or <tt>processed</tt> is to be written
+     * @throws IOException if an error occurs during the reading or writing
+     */
+    private void doRead(Buffer buffer)
+        throws IOException
+    {
+        // Reduce relocations as much as possible.
+        int capacity = aec ? bufferMaxLength : bufferSize;
+        byte[] data
+            = AbstractCodec2.validateByteArraySize(buffer, capacity, false);
+        int length = 0;
+
+        buffer.setLength(0);
+        buffer.setOffset(0);
+
+        do
+        {
+            String message;
+
+            synchronized (this)
+            {
+                /*
+                 * We explicitly want to support the case in which the user has
+                 * selected "none" for the playback/render endpoint device.
+                 * Otherwise, we could have added a check
+                 * (dataSource.aec && (render == null)).
+                 */
+                boolean connected = (capture != null) || sourceMode;
+
+                if (connected)
+                {
+                    message = null;
+                    captureIsBusy = true;
+                    renderIsBusy = true;
+                }
+                else
+                    message = getClass().getName() + " is disconnected.";
+            }
+            /*
+             * The caller shouldn't call #read(Buffer) if this instance is
+             * disconnected or stopped. Additionally, if she does, she may be
+             * persistent. If we do not slow her down, she may hog the CPU.
+             */
+            if (message != null)
+            {
+                yield();
+                throw new IOException(message);
+            }
+
+            int read;
+            Throwable cause;
+
+            try
+            {
+                int toRead = capacity - length;
+
+                /*
+                 * We explicitly want to support the case in which the user has
+                 * selected "none" for the playback/render endpoint device.
+                 * Otherwise, we could have used a check (render == null).
+                 */
+                boolean aec = (iMediaObject != 0);
+
+                if (aec)
+                {
+                    toRead = Math.min(toRead, processedLength);
+                    if (toRead == 0)
+                        read = 0;
+                    else
+                    {
+                        System.arraycopy(processed, 0, data, length, toRead);
+                        popFromProcessed(toRead);
+                        read = toRead;
+                    }
+                }
+                else
+                    read = capture.read(data, length, toRead);
+                cause = null;
+            }
+            catch (Throwable t)
+            {
+                /*
+                 * The exception will be rethrown after we exit the busy block
+                 * of this Renderer.
+                 */
+                read = 0;
+                cause = t;
+            }
+            finally
+            {
+                synchronized (this)
+                {
+                    captureIsBusy = false;
+                    renderIsBusy = false;
+                    notifyAll();
+                }
+            }
+            if (cause == null)
+            {
+                if (length == 0)
+                {
+                    long timeStamp = System.nanoTime();
+
+                    buffer.setFlags(Buffer.FLAG_SYSTEM_TIME);
+                    buffer.setTimeStamp(timeStamp);
+                }
+                length += read;
+                if ((length >= capacity) || (read == 0))
+                {
+                    if (effectiveFormat != null)
+                        buffer.setFormat(effectiveFormat);
+                    buffer.setLength(length);
+                    break;
+                }
+                else
+                {
+                    /*
+                     * TODO The implementation of PushBufferStream.read(Buffer)
+                     * should not block, it should return with whatever is
+                     * available.
+                     */
+                    yield();
+                }
+            }
+            else
+            {
+                if (cause instanceof ThreadDeath)
+                    throw (ThreadDeath) cause;
+                else if (cause instanceof IOException)
+                    throw (IOException) cause;
+                else
+                {
+                    IOException ioe = new IOException();
+
+                    ioe.initCause(cause);
+                    throw ioe;
+                }
+            }
+        }
+        while (true);
+    }
+
+    /**
+     * Finds an <tt>AudioFormat</tt> in the list of supported <tt>Format</tt>s
+     * of the associated capture endpoint device which is as similar to a
+     * specific <tt>AudioFormat</tt> as possible.
+     *
+     * @param format the <tt>AudioFormat</tt> for which a similar
+     * <tt>AudioFormat</tt> is to be found in the list of supported formats of
+     * the associated capture endpoint device
+     * @return an <tt>AudioFormat</tt> which is an element of the list of
+     * supported formats of the associated capture endpoint device and is as
+     * similar to the specified <tt>format</tt> as possible or <tt>null</tt> if
+     * no similarity could be established
+     */
     private AudioFormat findClosestMatchCaptureSupportedFormat(
             AudioFormat format)
     {
@@ -879,27 +1365,55 @@ public class WASAPIStream
      * Initializes the <tt>IMediaObject</tt> which is to perform acoustic echo
      * cancellation.
      *
-     * @param inFormat0 the <tt>AudioFormat</tt> of the media which will be
+     * @param sourceMode <tt>true</tt> if the Voice Capture DSP is to be
+     * initialized in source mode or <tt>false</tt> if the Voice Capture DSP is
+     * to be initialized in filter mode
+     * @param captureDevice a <tt>CaptureDeviceInfo2</tt> which identifies the
+     * capture endpoint device to be used
+     * @param captureFormat the <tt>AudioFormat</tt> of the media which will be
      * delivered to the input stream representing the audio from the microphone
-     * @param inFormat1 the <tt>AudioFormat</tt> of the media which will be
+     * @param renderDevice  <tt>CaptureDeviceInfo2</tt> which identifies the
+     * render endpoint device to be used
+     * @param renderFormat the <tt>AudioFormat</tt> of the media which will be
      * delivered to the input stream representing the audio from the speaker
      * (line)
      * @param outFormat the <tt>AudioFormat</tt> of the media which is to be
-     * output by the <tt>IMediaObject</tt>/acoustic echo cancellation
+     * output by the <tt>IMediaObject</tt>/acoustic echo cancellation (AEC)
+     * @return the <tt>AudioFormat</tt> in which the Voice Capture DSP will
+     * actually output media data
      * @throws Exception if the initialization of the <tt>IMediaObject</tt>
      * implementing acoustic echo cancellation fails
      */
-    private void initializeAEC(
-            AudioFormat inFormat0, AudioFormat inFormat1,
+    private AudioFormat initializeAEC(
+            boolean sourceMode,
+            CaptureDeviceInfo2 captureDevice,
+            AudioFormat captureFormat,
+            CaptureDeviceInfo2 renderDevice,
+            AudioFormat renderFormat,
             AudioFormat outFormat)
         throws Exception
     {
-
-        logger.debug("AEC: Mic in format " + inFormat0.toString());
-        logger.debug("AEC: Spk in format " + inFormat1.toString());
+        logger.debug("AEC: Mic in format " + captureFormat.toString());
+        logger.debug("AEC: Spk in format " + renderFormat.toString());
         logger.debug("AEC: Output format " + outFormat.toString());
-        
-        long iMediaObject = dataSource.audioSystem.initializeAEC();
+
+        WASAPISystem audioSystem = dataSource.audioSystem;
+        AudioFormat aecOutFormat
+            = findClosestMatch(
+                    audioSystem.getAECSupportedFormats(),
+                    outFormat,
+                    /* clazz */ null);
+
+        if (aecOutFormat == null)
+        {
+            throw new IllegalStateException(
+                    "Failed to determine an AudioFormat with which to"
+                        + " initialize Voice Capture DSP/acoustic echo"
+                        + " cancellation (AEC) based on AudioFormat "
+                        + outFormat);
+        }
+
+        long iMediaObject = audioSystem.initializeAEC();
 
         if (iMediaObject == 0)
         {
@@ -909,55 +1423,8 @@ public class WASAPIStream
         }
         try
         {
-            int dwInputStreamIndex = CAPTURE_INPUT_STREAM_INDEX;
-            int hresult
-                = IMediaObject_SetXXXputType(
-                        iMediaObject,
-                        /* IMediaObject_SetInputType */ true,
-                        dwInputStreamIndex,
-                        inFormat0,
-                        /* dwFlags */ 0);
-
-            if (FAILED(hresult))
-            {
-                throw new HResultException(
-                        hresult,
-                        "IMediaObject_SetInputType, dwInputStreamIndex "
-                            + dwInputStreamIndex + ", " + inFormat0);
-            }
-            dwInputStreamIndex = RENDER_INPUT_STREAM_INDEX;
-            hresult
-                = IMediaObject_SetXXXputType(
-                        iMediaObject,
-                        /* IMediaObject_SetInputType */ true,
-                        dwInputStreamIndex,
-                        inFormat1,
-                        /* dwFlags */ 0);
-            if (FAILED(hresult))
-            {
-                throw new HResultException(
-                        hresult,
-                        "IMediaObject_SetInputType, dwInputStreamIndex "
-                            + dwInputStreamIndex + ", " + inFormat1);
-            }
-            hresult
-                = IMediaObject_SetXXXputType(
-                        iMediaObject,
-                        /* IMediaObject_SetOutputType */ false,
-                        /* dwOutputStreamIndex */ 0,
-                        outFormat,
-                        /* dwFlags */ 0);
-            if (FAILED(hresult))
-            {
-                throw new HResultException(
-                        hresult,
-                        "IMediaObject_SetOutputType, " + outFormat);
-            }
-
             long iPropertyStore
-                = IMediaObject_QueryInterface(
-                        iMediaObject,
-                        IID_IPropertyStore);
+                = IMediaObject_QueryInterface(iMediaObject, IID_IPropertyStore);
 
             if (iPropertyStore == 0)
             {
@@ -966,11 +1433,12 @@ public class WASAPIStream
             }
             try
             {
-                hresult
+                int hresult
                     = IPropertyStore_SetValue(
                             iPropertyStore,
                             MFPKEY_WMAAECMA_DMO_SOURCE_MODE,
-                            false);
+                            sourceMode);
+
                 if (FAILED(hresult))
                 {
                     throw new HResultException(
@@ -980,148 +1448,90 @@ public class WASAPIStream
                 }
                 configureAEC(iPropertyStore);
 
-                long captureIMediaBuffer
-                    = MediaBuffer_alloc(capture.bufferSize);
+                hresult
+                    = IMediaObject_SetXXXputType(
+                            iMediaObject,
+                            /* IMediaObject_SetOutputType */ false,
+                            /* dwOutputStreamIndex */ 0,
+                            aecOutFormat,
+                            /* dwFlags */ 0);
+                if (FAILED(hresult))
+                {
+                    throw new HResultException(
+                            hresult,
+                            "IMediaObject_SetOutputType, " + aecOutFormat);
+                }
 
-                if (captureIMediaBuffer == 0)
+                int outFrameSize
+                    = WASAPISystem.getSampleSizeInBytes(aecOutFormat)
+                        * aecOutFormat.getChannels();
+                int outFrames
+                    = (int)
+                        (WASAPISystem.DEFAULT_BUFFER_DURATION
+                            * ((int) aecOutFormat.getSampleRate()) / 1000);
+                long iMediaBuffer = MediaBuffer_alloc(outFrameSize * outFrames);
+
+                if (iMediaBuffer == 0)
                     throw new OutOfMemoryError("MediaBuffer_alloc");
                 try
                 {
-                    /*
-                     * We explicitly want to support the case in which the user
-                     * has selected "none" for the playback/render endpoint
-                     * device.
-                     */
-                    long renderIMediaBuffer
-                        = MediaBuffer_alloc(
-                                ((render == null) ? capture : render)
-                                    .bufferSize);
+                    long dmoOutputDataBuffer
+                        = DMO_OUTPUT_DATA_BUFFER_alloc(
+                                iMediaBuffer,
+                                /* dwStatus */ 0,
+                                /* rtTimestamp */ 0,
+                                /* rtTimelength */ 0);
 
-                    if (renderIMediaBuffer == 0)
-                        throw new OutOfMemoryError("MediaBuffer_alloc");
+                    if (dmoOutputDataBuffer == 0)
+                    {
+                        throw new OutOfMemoryError(
+                                "DMO_OUTPUT_DATA_BUFFER_alloc");
+                    }
                     try
                     {
-                        int outFrameSize
-                            = WASAPISystem.getSampleSizeInBytes(outFormat)
-                                * outFormat.getChannels();
-                        int outFrames
-                            = (int)
-                                (WASAPISystem.DEFAULT_BUFFER_DURATION
-                                    * ((int) outFormat.getSampleRate()) / 1000);
-                        long iMediaBuffer
-                            = MediaBuffer_alloc(outFrameSize * outFrames);
+                        bufferMaxLength
+                            = IMediaBuffer_GetMaxLength(iMediaBuffer);
 
-                        if (iMediaBuffer == 0)
-                            throw new OutOfMemoryError("MediaBuffer_alloc");
-                        try
+                        processed = new byte[bufferMaxLength * 3];
+                        processedLength = 0;
+
+                        this.renderDevice
+                            = (renderDevice == null)
+                                ? null
+                                : renderDevice.getLocator();
+                        this.renderDeviceIndex = -1;
+                        if (sourceMode)
                         {
-                            long dmoOutputDataBuffer
-                                = DMO_OUTPUT_DATA_BUFFER_alloc(
-                                        iMediaBuffer,
-                                        /* dwStatus */ 0,
-                                        /* rtTimestamp */ 0,
-                                        /* rtTimelength */ 0);
-
-                            if (dmoOutputDataBuffer == 0)
-                            {
-                                throw new OutOfMemoryError(
-                                        "DMO_OUTPUT_DATA_BUFFER_alloc");
-                            }
-                            try
-                            {
-                                bufferMaxLength
-                                    = IMediaBuffer_GetMaxLength(iMediaBuffer);
-                                captureBufferMaxLength
-                                    = IMediaBuffer_GetMaxLength(
-                                            captureIMediaBuffer);
-                                renderBufferMaxLength
-                                    = IMediaBuffer_GetMaxLength(
-                                            renderIMediaBuffer);
-
-                                processed = new byte[bufferMaxLength * 3];
-                                processedLength = 0;
-
-                                this.captureIMediaBuffer
-                                    = new PtrMediaBuffer(captureIMediaBuffer);
-                                captureIMediaBuffer = 0;
-                                this.dmoOutputDataBuffer = dmoOutputDataBuffer;
-                                dmoOutputDataBuffer = 0;
-                                this.iMediaBuffer = iMediaBuffer;
-                                iMediaBuffer = 0;
-                                this.iMediaObject = iMediaObject;
-                                iMediaObject = 0;
-                                this.renderIMediaBuffer
-                                    = new PtrMediaBuffer(renderIMediaBuffer);
-                                renderIMediaBuffer = 0;
-
-                                /*
-                                 * Prepare to be ready to compute/determine the
-                                 * duration in nanoseconds of a specific number
-                                 * of bytes representing audio samples encoded
-                                 * in the outFormat of capture.
-                                 */
-                                {
-                                    AudioFormat af = capture.outFormat;
-                                    double sampleRate = af.getSampleRate();
-                                    int sampleSizeInBits
-                                        = af.getSampleSizeInBits();
-                                    int channels = af.getChannels();
-
-                                    captureNanosPerByte
-                                        = (8d * 1000d * 1000d * 1000d)
-                                            / (sampleRate
-                                                    * sampleSizeInBits
-                                                    * channels);
-                                }
-                                /*
-                                 * Prepare to be ready to compute/determine the
-                                 * number of bytes representing a specific
-                                 * duration in nanoseconds of audio samples
-                                 * encoded in the outFormat of render.
-                                 */
-                                {
-                                    /*
-                                     * We explicitly want to support the case in
-                                     * which the user has selected "none" for
-                                     * the playback/render endpoint device.
-                                     */
-                                    AudioFormat af
-                                        = ((render == null) ? capture : render)
-                                            .outFormat;
-                                    double sampleRate = af.getSampleRate();
-                                    int sampleSizeInBits
-                                        = af.getSampleSizeInBits();
-                                    int channels = af.getChannels();
-
-                                    renderBytesPerNano
-                                        = (sampleRate
-                                                * sampleSizeInBits
-                                                * channels)
-                                            / (8d * 1000d * 1000d * 1000d);
-                                }
-                            }
-                            finally
-                            {
-                                if (dmoOutputDataBuffer != 0)
-                                    CoTaskMemFree(dmoOutputDataBuffer);
-                            }
+                            initializeAECInSourceMode(
+                                    iPropertyStore,
+                                    captureDevice,
+                                    renderDevice);
                         }
-                        finally
+                        else
                         {
-                            if (iMediaBuffer != 0)
-                                IMediaBuffer_Release(iMediaBuffer);
+                            initializeAECInFilterMode(
+                                    iMediaObject,
+                                    captureFormat,
+                                    renderFormat);
                         }
+
+                        this.dmoOutputDataBuffer = dmoOutputDataBuffer;
+                        dmoOutputDataBuffer = 0;
+                        this.iMediaBuffer = iMediaBuffer;
+                        iMediaBuffer = 0;
+                        this.iMediaObject = iMediaObject;
+                        iMediaObject = 0;
                     }
                     finally
                     {
-                        if (renderIMediaBuffer != 0)
-                            IMediaBuffer_Release(renderIMediaBuffer);
+                        if (dmoOutputDataBuffer != 0)
+                            CoTaskMemFree(dmoOutputDataBuffer);
                     }
                 }
                 finally
                 {
-                    if (captureIMediaBuffer != 0)
-                        IMediaBuffer_Release(captureIMediaBuffer);
+                    if (iMediaBuffer != 0)
+                        IMediaBuffer_Release(iMediaBuffer);
                 }
             }
             finally
@@ -1135,6 +1545,223 @@ public class WASAPIStream
             if (iMediaObject != 0)
                 IMediaObject_Release(iMediaObject);
         }
+        return aecOutFormat;
+    }
+
+    /**
+     * Initializes the Voice Capture DSP which is to perform acoustic echo
+     * cancellation. The method is invoked in case the Voice Capture DSP is to
+     * be used in filter mode.
+     *
+     * @param iMediaObject the <tt>IMediaObject</tt> interface to the Voice
+     * Capture DSP to be initialized in filter mode
+     * @param inFormat0 the <tt>AudioFormat</tt> of the media which will be
+     * delivered to the input stream representing the audio from the microphone
+     * @param inFormat1 the <tt>AudioFormat</tt> of the media which will be
+     * delivered to the input stream representing the audio from the speaker
+     * (line)
+     * @throws Exception if the initialization of the <tt>IMediaObject</tt>
+     * implementing acoustic echo cancellation fails
+     */
+    private void initializeAECInFilterMode(
+            long iMediaObject,
+            AudioFormat inFormat0, AudioFormat inFormat1)
+        throws Exception
+    {
+        int dwInputStreamIndex = CAPTURE_INPUT_STREAM_INDEX;
+        int hresult
+            = IMediaObject_SetXXXputType(
+                    iMediaObject,
+                    /* IMediaObject_SetInputType */ true,
+                    dwInputStreamIndex,
+                    inFormat0,
+                    /* dwFlags */ 0);
+
+        if (FAILED(hresult))
+        {
+            throw new HResultException(
+                    hresult,
+                    "IMediaObject_SetInputType, dwInputStreamIndex "
+                        + dwInputStreamIndex + ", " + inFormat0);
+        }
+        dwInputStreamIndex = RENDER_INPUT_STREAM_INDEX;
+        hresult
+            = IMediaObject_SetXXXputType(
+                    iMediaObject,
+                    /* IMediaObject_SetInputType */ true,
+                    dwInputStreamIndex,
+                    inFormat1,
+                    /* dwFlags */ 0);
+        if (FAILED(hresult))
+        {
+            throw new HResultException(
+                    hresult,
+                    "IMediaObject_SetInputType, dwInputStreamIndex "
+                        + dwInputStreamIndex + ", " + inFormat1);
+        }
+
+        long captureIMediaBuffer
+            = MediaBuffer_alloc(capture.bufferSize);
+
+        if (captureIMediaBuffer == 0)
+            throw new OutOfMemoryError("MediaBuffer_alloc");
+        try
+        {
+            /*
+             * We explicitly want to support the case in which the user has
+             * selected "none" for the playback/render endpoint device.
+             */
+            long renderIMediaBuffer
+                = MediaBuffer_alloc(
+                        ((render == null) ? capture : render).bufferSize);
+
+            if (renderIMediaBuffer == 0)
+                throw new OutOfMemoryError("MediaBuffer_alloc");
+            try
+            {
+                captureBufferMaxLength
+                    = IMediaBuffer_GetMaxLength(captureIMediaBuffer);
+                renderBufferMaxLength
+                    = IMediaBuffer_GetMaxLength(renderIMediaBuffer);
+
+                this.captureIMediaBuffer
+                    = new PtrMediaBuffer(captureIMediaBuffer);
+                captureIMediaBuffer = 0;
+                this.renderIMediaBuffer
+                    = new PtrMediaBuffer(renderIMediaBuffer);
+                renderIMediaBuffer = 0;
+
+                /*
+                 * Prepare to be ready to compute/determine the duration in
+                 * nanoseconds of a specific number of bytes representing audio
+                 * samples encoded in the outFormat of capture.
+                 */
+                {
+                    AudioFormat af = capture.outFormat;
+                    double sampleRate = af.getSampleRate();
+                    int sampleSizeInBits = af.getSampleSizeInBits();
+                    int channels = af.getChannels();
+
+                    captureNanosPerByte
+                        = (8d * 1000d * 1000d * 1000d)
+                            / (sampleRate * sampleSizeInBits * channels);
+                }
+                /*
+                 * Prepare to be ready to compute/determine the number of bytes
+                 * representing a specific duration in nanoseconds of audio
+                 * samples encoded in the outFormat of render.
+                 */
+                {
+                    /*
+                     * We explicitly want to support the case in which the user
+                     * has selected "none" for the playback/render endpoint
+                     * device.
+                     */
+                    AudioFormat af
+                        = ((render == null) ? capture : render).outFormat;
+                    double sampleRate = af.getSampleRate();
+                    int sampleSizeInBits = af.getSampleSizeInBits();
+                    int channels = af.getChannels();
+
+                    renderBytesPerNano
+                        = (sampleRate * sampleSizeInBits * channels)
+                            / (8d * 1000d * 1000d * 1000d);
+                }
+            }
+            finally
+            {
+                if (renderIMediaBuffer != 0)
+                    IMediaBuffer_Release(renderIMediaBuffer);
+            }
+        }
+        finally
+        {
+            if (captureIMediaBuffer != 0)
+                IMediaBuffer_Release(captureIMediaBuffer);
+        }
+    }
+
+    /**
+     * Initializes the Voice Capture DSP which is to perform acoustic echo
+     * cancellation. The method is invoked in case the Voice Capture DSP is to
+     * be used in source mode.
+     *
+     * @param iPropertyStore the <tt>IPropertyStore</tt> interface to the Voice
+     * Capture DSP to be initialized in source mode
+     * @param captureDevice <tt>CaptureDeviceInfo2</tt> which identifies the
+     * capture endpoint device to be used
+     * @param renderDevice <tt>CaptureDeviceInfo2</tt> which identifies the
+     * render endpoint device to be used
+     * @throws Exception if the initialization of the <tt>IMediaObject</tt>
+     * implementing acoustic echo cancellation fails
+     */
+    private void initializeAECInSourceMode(
+            long iPropertyStore,
+            CaptureDeviceInfo2 captureDevice,
+            CaptureDeviceInfo2 renderDevice)
+        throws Exception
+    {
+        WASAPISystem audioSystem = dataSource.audioSystem;
+        int captureDeviceIndex
+            = audioSystem.getIMMDeviceIndex(
+                    captureDevice.getLocator().getRemainder(),
+                    eCapture);
+
+        if (captureDeviceIndex == -1)
+        {
+            throw new IllegalStateException(
+                    "Acoustic echo cancellation (AEC) cannot be initialized"
+                        + " without a microphone.");
+        }
+
+        MediaLocator renderLocator = renderDevice.getLocator();
+        int renderDeviceIndex
+            = audioSystem.getIMMDeviceIndex(
+                    renderLocator.getRemainder(),
+                    eRender);
+
+        if (renderDeviceIndex == -1)
+        {
+            throw new IllegalStateException(
+                    "Acoustic echo cancellation (AEC) cannot be initialized"
+                        + " without a speaker (line).");
+        }
+
+        int hresult
+            = IPropertyStore_SetValue(
+                    iPropertyStore,
+                    MFPKEY_WMAAECMA_DEVICE_INDEXES,
+                    ((0x0000ffff & captureDeviceIndex))
+                        | ((0x0000ffff & renderDeviceIndex) << 16));
+
+        if (FAILED(hresult))
+        {
+            throw new HResultException(
+                    hresult,
+                    "IPropertyStore_SetValue MFPKEY_WMAAECMA_DEVICE_INDEXES");
+        }
+
+        /*
+         * If the selected rendering device does not have an active stream, the
+         * DSP cannot process any output.
+         */
+        AbstractAudioRenderer<?> renderer = new WASAPIRenderer();
+
+        renderer.setLocator(renderLocator);
+
+        Format[] rendererSupportedInputFormats
+            = renderer.getSupportedInputFormats();
+
+        if ((rendererSupportedInputFormats != null)
+                && (rendererSupportedInputFormats.length != 0))
+        {
+            renderer.setInputFormat(rendererSupportedInputFormats[0]);
+        }
+        renderer.open();
+
+        devicePeriod = WASAPISystem.DEFAULT_DEVICE_PERIOD / 2;
+        this.renderDeviceIndex = renderDeviceIndex;
+        this.renderer = renderer;
     }
 
     /**
@@ -1148,13 +1775,31 @@ public class WASAPIStream
      * @throws Exception if the initialization of the delivery of audio samples
      * from the specified capture endpoint into this instance fails
      */
-    private void initializeCapture(MediaLocator locator, AudioFormat format)
+    private void initializeCapture(
+            MediaLocator locator,
+            AudioFormat format)
         throws Exception
     {
         long hnsBufferDuration
-            = dataSource.aec
+            = aec
                 ? Format.NOT_SPECIFIED
                 : WASAPISystem.DEFAULT_BUFFER_DURATION;
+        /*
+         * The capture endpoint device specified locator/MediaLocator may not
+         * support the specified format at all. In such a case, this
+         * SourceStream will have to resample.
+         */
+        AudioFormat captureFormat
+            = findClosestMatchCaptureSupportedFormat(format);
+
+        if (captureFormat == null)
+        {
+            throw new IllegalStateException(
+                    "Failed to determine an AudioFormat with which to"
+                        + " initialize IAudioClient for MediaLocator " + locator
+                        + " based on AudioFormat " + format);
+        }
+
         BufferTransferHandler transferHandler
             = new BufferTransferHandler()
                     {
@@ -1171,7 +1816,7 @@ public class WASAPIStream
                     AudioSystem.DataFlow.CAPTURE,
                     /* streamFlags */ 0,
                     hnsBufferDuration,
-                    format,
+                    captureFormat,
                     transferHandler);
         bufferSize = capture.bufferSize;
         devicePeriod = capture.devicePeriod;
@@ -1180,7 +1825,7 @@ public class WASAPIStream
     /**
      * Initializes the delivery of audio data/samples from a render endpoint
      * device identified by a specific <tt>MediaLocator</tt> into this instance
-     * for the purposes of acoust echo cancellation (AEC).
+     * for the purposes of acoustic echo cancellation (AEC).
      *
      * @param locator the <tt>MediaLocator</tt> identifying the render endpoint
      * device from which this instance is to read
@@ -1220,6 +1865,63 @@ public class WASAPIStream
     }
 
     /**
+     * Closes {@link #resampler} if it is non-<tt>null</tt>.
+     */
+    private void maybeCloseResampler()
+    {
+        Codec resampler = this.resampler;
+
+        if (resampler != null)
+        {
+            this.resampler = null;
+            resamplerBuffer = null;
+
+            try
+            {
+                resampler.close();
+            }
+            catch (Throwable t)
+            {
+                if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+                else
+                    logger.error("Failed to close resampler.", t);
+            }
+        }
+    }
+
+    /**
+     * Initializes and opens a new instance of {@link #resampler} if the
+     * <tt>Format</tt>-related state of this instance deems its existence
+     * necessary.
+     */
+    private void maybeOpenResampler()
+    {
+        AudioFormat inFormat = this.effectiveFormat;
+        AudioFormat outFormat = this.format;
+
+        // We are able to translate between mono and stereo.
+        if ((inFormat.getSampleRate() == outFormat.getSampleRate())
+                && (inFormat.getSampleSizeInBits()
+                        == outFormat.getSampleSizeInBits()))
+        {
+            return;
+        }
+
+        Codec resampler
+            = WASAPIRenderer.maybeOpenResampler(inFormat, outFormat);
+
+        if (resampler == null)
+        {
+            throw new IllegalStateException(
+                    "Failed to open a codec to resample [" + inFormat
+                        + "] into [" + outFormat + "].");
+        }
+        else
+            this.resampler = resampler;
+    }
+
+    /**
      * Pops a specific number of bytes from {@link #processed}. For example,
      * because such a number of bytes have been read from <tt>processed</tt> and
      * written into a <tt>Buffer</tt>.
@@ -1241,8 +1943,8 @@ public class WASAPIStream
      * <tt>iMediaObject</tt> to which audio samples are to be delivered
      * @param maxLength the maximum number of bytes to the delivered through the
      * specified input stream. Ignored if negative or greater than the actual
-     * capacity/maximum length of the <tt>IMediaBuffer</tt> associated with the specified
-     * <tt>dwInputStreamIndex</tt>.
+     * capacity/maximum length of the <tt>IMediaBuffer</tt> associated with the
+     * specified <tt>dwInputStreamIndex</tt>.
      */
     private void processInput(int dwInputStreamIndex, int maxLength)
     {
@@ -1493,142 +2195,103 @@ public class WASAPIStream
     }
 
     /**
+     * Notifies this instance about a specific <tt>PropertyChangeEvent</tt>.
+     * <tt>WASAPIStream</tt> listens to changes in the values of the properties
+     * of the associated <tt>AudioSystem</tt>.
+     *
+     * @param ev the <tt>PropertyChangeEvent</tt> to notify this instance about
+     */
+    private synchronized void propertyChange(PropertyChangeEvent ev)
+        throws Exception
+    {
+        /*
+         * The propertyChangeListener this invokes the method will be added only
+         * when acoustic echo cancellation (AEC) is enabled.
+         */
+
+        if (DeviceSystem.PROP_DEVICES.equals(ev.getPropertyName()))
+        {
+            MediaLocator oldRenderDevice = this.renderDevice;
+            WASAPISystem audioSystem = dataSource.audioSystem;
+            CaptureDeviceInfo2 newRenderDeviceInfo
+                = audioSystem.getSelectedDevice(
+                        AudioSystem.DataFlow.PLAYBACK);
+            MediaLocator newRenderDevice
+                = (newRenderDeviceInfo == null)
+                    ? null
+                    : newRenderDeviceInfo.getLocator();
+
+            /*
+             * If the MediaLocators are equal, make sure that the indexes within
+             * the IMMDeviceCollection interface are equal.
+             */
+            if ((oldRenderDevice == null)
+                    ? (newRenderDevice == null)
+                    : oldRenderDevice.equals(newRenderDevice))
+            {
+                int oldRenderDeviceIndex = this.renderDeviceIndex;
+                int newRenderDeviceIndex
+                    = (newRenderDevice == null)
+                        ? -1
+                        : audioSystem.getIMMDeviceIndex(
+                                newRenderDevice.getRemainder(),
+                                eRender);
+
+                if (oldRenderDeviceIndex == newRenderDeviceIndex)
+                    return;
+            }
+
+            /*
+             * If there are changes either to the MediaLocators or to the
+             * indexes within the IMMDeviceCollection interface, re-connect this
+             * instance.
+             */
+            waitWhileCaptureIsBusy();
+            waitWhileRenderIsBusy();
+
+            boolean connected = (capture != null) || (iMediaObject != 0);
+
+            if (connected)
+            {
+                boolean started = this.started;
+
+                disconnect();
+                connect();
+                if (started)
+                    start();
+            }
+        }
+    }
+
+    /**
      * {@inheritDoc}
+     *
+     * If {@link #resampler} is non-<tt>null</tt>, uses it to resample the media
+     * data read from {@link #capture} or {@link #processed} into
+     * {@link #format}.
      */
     public void read(Buffer buffer)
         throws IOException
     {
-        // Reduce relocations as much as possible.
-        int capacity = dataSource.aec ? bufferMaxLength : bufferSize;
-        byte[] data
-            = AbstractCodec2.validateByteArraySize(buffer, capacity, false);
-        int length = 0;
+        Codec resampler = this.resampler;
 
-        buffer.setLength(0);
-        buffer.setOffset(0);
-
-        do
+        if (resampler == null)
+            doRead(buffer);
+        else
         {
-            String message;
+            Buffer resamplerBuffer = this.resamplerBuffer;
 
-            synchronized (this)
-            {
-                /*
-                 * We explicitly want to support the case in which the user has
-                 * selected "none" for the playback/render endpoint device.
-                 * Otherwise, we could have added a check
-                 * (dataSource.aec && (render == null)). 
-                 */
-                if (capture == null)
-                    message = getClass().getName() + " is disconnected.";
-                else
-                {
-                    message = null;
-                    captureIsBusy = true;
-                    renderIsBusy = true;
-                }
-            }
-            /*
-             * The caller shouldn't call #read(Buffer) if this instance is
-             * disconnected or stopped. Additionally, if she does, she may be
-             * persistent. If we do not slow her down, she may hog the CPU.
-             */
-            if (message != null)
-            {
-                yield();
-                throw new IOException(message);
-            }
+            doRead(resamplerBuffer);
 
-            int read;
-            Throwable cause;
+            int process = resampler.process(resamplerBuffer, buffer);
 
-            try
+            if (process == PlugIn.BUFFER_PROCESSED_FAILED)
             {
-                int toRead = capacity - length;
-
-                /*
-                 * We explicitly want to support the case in which the user has
-                 * selected "none" for the playback/render endpoint device.
-                 * Otherwise, we could have used a check (render == null).
-                 */
-                if (!dataSource.aec)
-                    read = capture.read(data, length, toRead);
-                else
-                {
-                    toRead = Math.min(toRead, processedLength);
-                    if (toRead == 0)
-                        read = 0;
-                    else
-                    {
-                        System.arraycopy(processed, 0, data, length, toRead);
-                        popFromProcessed(toRead);
-                        read = toRead;
-                    }
-                }
-                cause = null;
-            }
-            catch (Throwable t)
-            {
-                /*
-                 * The exception will be rethrown after we exit the busy block
-                 * of this Renderer.
-                 */
-                read = 0;
-                cause = t;
-            }
-            finally
-            {
-                synchronized (this)
-                {
-                    captureIsBusy = false;
-                    renderIsBusy = false;
-                    notifyAll();
-                }
-            }
-            if (cause == null)
-            {
-                if (length == 0)
-                {
-                    long timeStamp = System.nanoTime();
-
-                    buffer.setFlags(Buffer.FLAG_SYSTEM_TIME);
-                    buffer.setTimeStamp(timeStamp);
-                    updateReadWASAPIData(read);
-                }
-                length += read;
-                if ((length >= capacity) || (read == 0))
-                {
-                    if (format != null)
-                        buffer.setFormat(format);
-                    buffer.setLength(length);
-                    break;
-                }
-                else
-                {
-                    /*
-                     * TODO The implementation of PushBufferStream.read(Buffer)
-                     * should not block, it should return with whatever is
-                     * available.
-                     */
-                    yield();
-                }
-            }
-            else
-            {
-                if (cause instanceof ThreadDeath)
-                    throw (ThreadDeath) cause;
-                else if (cause instanceof IOException)
-                    throw (IOException) cause;
-                else
-                {
-                    IOException ioe = new IOException();
-
-                    ioe.initCause(cause);
-                    throw ioe;
-                }
+                throw new IOException(
+                        "Failed to resample from [" + effectiveFormat
+                            + "] into [" + format + "].");
             }
         }
-        while (true);
     }
 
     /**
@@ -1649,31 +2312,41 @@ public class WASAPIStream
 
         do
         {
-            processInput(CAPTURE_INPUT_STREAM_INDEX, captureMaxLength);
-
-            /*
-             * If the capture endpoint device has not made any audio samples
-             * available, there is no input to be processed. Moreover, inputting
-             * from the render endpoint device in such a case will be
-             * inappropriate because it will (repeatedly) introduce random skew
-             * in the audio delivered by the render endpoint device.
-             */
-            int captureLength = maybeIMediaBufferGetLength(captureIMediaBuffer);
             boolean flush;
 
-            if (captureLength < captureMaxLength)
+            if (sourceMode)
+            {
                 flush = false;
+            }
             else
             {
-                int renderMaxLength
-                    = computeRenderLength(
-                            computeCaptureDuration(captureLength));
+                processInput(CAPTURE_INPUT_STREAM_INDEX, captureMaxLength);
 
-                processInput(RENDER_INPUT_STREAM_INDEX, renderMaxLength);
+                /*
+                 * If the capture endpoint device has not made any audio samples
+                 * available, there is no input to be processed. Moreover,
+                 * inputting from the render endpoint device in such a case will
+                 * be inappropriate because it will (repeatedly) introduce
+                 * random skew in the audio delivered by the render endpoint
+                 * device.
+                 */
+                int captureLength
+                    = maybeIMediaBufferGetLength(captureIMediaBuffer);
 
-                processOutput();
-                flush = true;
+                if (captureLength < captureMaxLength)
+                    flush = false;
+                else
+                {
+                    int renderMaxLength
+                        = computeRenderLength(
+                                computeCaptureDuration(captureLength));
+
+                    processInput(RENDER_INPUT_STREAM_INDEX, renderMaxLength);
+                    flush = true;
+                }
             }
+
+            processOutput();
 
             /*
              * IMediaObject::ProcessOutput has completed which means that, as
@@ -1747,7 +2420,9 @@ public class WASAPIStream
                      * device. Otherwise, we could have added a check
                      * (render == null).
                      */
-                    if ((capture == null) || !started)
+                    boolean connected = (capture != null) || sourceMode;
+
+                    if (!connected || !started)
                         break;
 
                     waitWhileCaptureIsBusy();
@@ -1858,17 +2533,26 @@ public class WASAPIStream
          * "none" for the playback/render endpoint device. Otherwise, we could
          * have replaced the dataSource.aec check with (render != null).
          */
-        if (dataSource.aec && (capture != null) && (processThread == null))
+        if (aec
+                && ((capture != null) || sourceMode)
+                && (processThread == null))
         {
+            /*
+             * If the selected rendering device does not have an active stream,
+             * the DSP cannot process any output in source mode.
+             */
+            if (renderer != null)
+                renderer.start();
+
             processThread
                 = new Thread(WASAPIStream.class + ".processThread")
+                {
+                    @Override
+                    public void run()
                     {
-                        @Override
-                        public void run()
-                        {
-                            runInProcessThread(this);
-                        }
-                    };
+                        runInProcessThread(this);
+                    }
+                };
             processThread.setDaemon(true);
             processThread.start();
         }
@@ -1896,8 +2580,12 @@ public class WASAPIStream
 
         waitWhileProcessThread();
         processedLength = 0;
-
-        initClockChecker();
+        /*
+         * If the selected rendering device does not have an active stream, the
+         * DSP cannot process any output in source mode.
+         */
+        if (renderer != null)
+            renderer.stop();
     }
 
     /**
@@ -1906,7 +2594,7 @@ public class WASAPIStream
      */
     private void transferCaptureData()
     {
-        if (dataSource.aec)
+        if (aec)
         {
             synchronized (this)
             {
@@ -1965,6 +2653,12 @@ public class WASAPIStream
             captureIMediaBuffer.Release();
             captureIMediaBuffer = null;
         }
+
+        Renderer renderer = this.renderer;
+
+        this.renderer = null;
+        if (renderer != null)
+            renderer.close();
     }
 
     private void uninitializeCapture()
@@ -2063,51 +2757,5 @@ public class WASAPIStream
         }
         if (interrupted)
             Thread.currentThread().interrupt();
-    }
-
-    long timeFirstRead = 0;
-    long totalReads = 0;
-    long lastLogTime = 0;
-    long lastLogReads = 0;
-
-    private void updateReadWASAPIData(int read) {
-        if (timeFirstRead == 0)
-        {
-            timeFirstRead = System.currentTimeMillis();
-        }
-
-        totalReads += read;
-
-        long currentTime = System.currentTimeMillis();
-        if (lastLogTime < currentTime - LOG_INTERVAL)
-        {
-            long readsInLastInterval = totalReads - lastLogReads;
-            lastLogReads = totalReads;
-
-            long lastIntervalLength = currentTime - lastLogTime;
-            lastLogTime = currentTime;
-
-            long totalTime = currentTime - timeFirstRead;
-
-            String logLine = String.format("Reads - Total=%s in %s (%s per sec)\n" +
-                                  "        In last %s ms. = %s (%s per sec)",
-                                  totalReads, totalTime, calculatePerSec(totalTime, totalReads), lastIntervalLength, readsInLastInterval, calculatePerSec(lastIntervalLength, readsInLastInterval) 
-                            );
-
-            logger.debug(logLine);
-        }
-    }
-    
-    private double calculatePerSec(long intervalInMs, long count)
-    {
-        double intervalInSecs = intervalInMs / 1000d;
-        return count / intervalInSecs;
-    }
-
-    private void initClockChecker() {
-        timeFirstRead = 0;
-        totalReads = 0;
-        lastLogTime = 0;
-        lastLogReads = 0;
     }
 }
