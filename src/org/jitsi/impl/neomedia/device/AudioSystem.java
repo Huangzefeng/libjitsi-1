@@ -7,13 +7,18 @@
 package org.jitsi.impl.neomedia.device;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import javax.media.*;
+import javax.media.Renderer;
 import javax.sound.sampled.*;
+import javax.swing.*;
 
+import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -136,13 +141,19 @@ public abstract class AudioSystem
         List<AudioSystem> audioSystems;
 
         if (deviceSystems == null)
+        {
             audioSystems = null;
+        }
         else
         {
             audioSystems = new ArrayList<AudioSystem>(deviceSystems.length);
             for (DeviceSystem deviceSystem : deviceSystems)
+            {
                 if (deviceSystem instanceof AudioSystem)
+                {
                     audioSystems.add((AudioSystem) deviceSystem);
+                }
+            }
         }
         return
             (audioSystems == null)
@@ -218,7 +229,9 @@ public abstract class AudioSystem
             catch (Throwable t)
             {
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
                 else
                 {
                     clazz = null;
@@ -277,7 +290,9 @@ public abstract class AudioSystem
                         catch (Throwable t)
                         {
                             if (t instanceof ThreadDeath)
+                            {
                                 throw (ThreadDeath) t;
+                            }
                             else
                             {
                                 renderer = null;
@@ -336,7 +351,9 @@ public abstract class AudioSystem
                 }
 
                 if (superCreateRenderer && (renderer == null))
+                {
                     renderer = super.createRenderer();
+                }
             }
         }
         return renderer;
@@ -363,7 +380,9 @@ public abstract class AudioSystem
         {
             // Not found by the class loader? Perhaps it is a local file.
             if (url == null)
+            {
                 url = new URL(uri);
+            }
 
             audioStream
                 = javax.sound.sampled.AudioSystem.getAudioInputStream(url);
@@ -499,7 +518,9 @@ public abstract class AudioSystem
         boolean value = ((getFeatures() & FEATURE_DENOISE) == FEATURE_DENOISE);
 
         if (cfg != null)
+        {
             value = cfg.getBoolean(getPropertyName(PNAME_DENOISE), value);
+        }
         return value;
     }
 
@@ -518,7 +539,9 @@ public abstract class AudioSystem
                     == FEATURE_ECHO_CANCELLATION);
 
         if (cfg != null)
+        {
             value = cfg.getBoolean(getPropertyName(PNAME_ECHOCANCEL), value);
+        }
         return value;
     }
 
@@ -681,5 +704,379 @@ public abstract class AudioSystem
         devices[DataFlow.PLAYBACK.ordinal()].setDevices(playbackDevices);
         // The notify devices are the same as the playback devices.
         devices[DataFlow.NOTIFY.ordinal()].setDevices(playbackDevices);
+    }
+
+    /**
+     * Encapsulates the monitoring of the functional health of
+     * procedures/processes represented as <tt>DiagnosticsControl</tt>
+     * implementations.
+     */
+    public static class DiagnosticsControlMonitor
+    {
+        /**
+         * The <tt>Runnable</tt> to be executed by {@link #executor} and to
+         * monitor the functional health of {@link #diagnosticsControls}.
+         */
+        private static Runnable command;
+
+        /**
+         * The <tt>DiagnosticControl</tt>s representing procedures/processes
+         * whose functional health is to be monitored.
+         */
+        private static final Map<DiagnosticsControl,Boolean> diagnosticsControls
+            = new WeakHashMap<DiagnosticsControl,Boolean>();
+
+        private static WeakReference<JDialog> dialog;
+
+        private static ExecutorService executor;
+
+        /**
+         * The time in milliseconds of (uninterrupted) malfunctioning after
+         * which the respective <tt>DiagnosticsControl</tt> is to be reported
+         * (to the user).
+         */
+        private static final long MALFUNCTIONING_TIMEOUT = 1000;
+
+        /**
+         * The interval of time in milliseconds between subsequent checks upon
+         * the functional health of the monitored <tt>DiagnosticsControl</tt>s.s
+         */
+        private static final long MONITOR_INTERVAL = 1000;
+
+        /**
+         * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
+         * functional health because of a malfunction in its procedure/process.
+         * The monitoring will automatically cease after the procedure/process
+         * resumes executing normally or is garbage collected.
+         *
+         * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be
+         * placed under monitoring of its functional health because of a
+         * malfunction in its procedure/process
+         */
+        public static synchronized void monitorFunctionalHealth(
+                DiagnosticsControl diagnosticsControl)
+        {
+            if (!diagnosticsControls.containsKey(diagnosticsControl))
+            {
+                diagnosticsControls.put(diagnosticsControl, null);
+
+                if (executor == null)
+                {
+                    executor = Executors.newSingleThreadExecutor();
+                }
+                if (command == null)
+                {
+                    command
+                        = new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                runInCommand();
+                            }
+                        };
+                }
+                executor.execute(command);
+            }
+        }
+
+        /**
+         * Reports a specific list of malfunctioning
+         * <tt>DiagnosticsControl</tt>s to the user.
+         *
+         * @param malfunctioning the list of malfunctioning
+         * <tt>DiagnosticsControl</tt>s to be reported to the user
+         */
+        private static void reportMalfunctioning(
+                final List<WeakReference<DiagnosticsControl>> malfunctioning)
+        {
+            if (!SwingUtilities.isEventDispatchThread())
+            {
+                SwingUtilities.invokeLater(
+                        new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                reportMalfunctioning(malfunctioning);
+                            }
+                        });
+                return;
+            }
+
+            /*
+             * Prepare a message to be displayed to the user listing the names
+             * of the audio device which are malfunctioning.
+             */
+            ResourceManagementService r = LibJitsi.getResourceManagementService();
+            if (r == null)
+            {
+                return;
+            }
+            StringBuilder param = new StringBuilder();
+            String lineSeparator = System.getProperty("line.separator");
+            int malfunctioningCount = 0;
+
+            synchronized (DiagnosticsControlMonitor.class)
+            {
+                for (WeakReference<DiagnosticsControl> aMalfunctioning
+                        : malfunctioning)
+                {
+                    DiagnosticsControl key = aMalfunctioning.get();
+
+                    if ((key != null)
+                            && diagnosticsControls.containsKey(key)
+                            && (diagnosticsControls.get(key) == null))
+                    {
+                        String name = key.toString();
+
+                        if ((name == null) || (name.length() == 0))
+                        {
+                            continue;
+                        }
+
+                        param.append(name).append(lineSeparator);
+                        malfunctioningCount++;
+                    }
+                }
+            }
+            if (malfunctioningCount == 0)
+            {
+                return;
+            }
+
+            /*
+             * Display the list of malfunctioning audio devices to the user.
+             */
+            String message
+                = r.getI18NString(
+                        "impl.neomedia.device.audiosystem"
+                            + ".diagnosticscontrolmonitor.MESSAGE",
+                        new String[] { param.toString() });
+            logger.warn("Reporting device as malfunctioning: " + message);
+            showWarningPopup(message);
+
+            /*
+             * Once a device is reported to be malfunctioning, do not report it
+             * again until sufficient time has passed to warrant its new report.
+             */
+            synchronized (DiagnosticsControlMonitor.class)
+            {
+                for (WeakReference<DiagnosticsControl> aMalfunctioning
+                        : malfunctioning)
+                {
+                    DiagnosticsControl key = aMalfunctioning.get();
+
+                    if ((key != null) && diagnosticsControls.containsKey(key))
+                    {
+                        diagnosticsControls.put(key, true);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Reports a malfunctioning audio system to the user.
+         *
+         * @param message The audio system-specific message to be displayed to
+         * the user
+         */
+        private static void reportSystemUnavailable(final String message)
+        {
+            if (!SwingUtilities.isEventDispatchThread())
+            {
+                SwingUtilities.invokeLater(
+                        new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                reportSystemUnavailable(message);
+                            }
+                        });
+                return;
+            }
+
+            showWarningPopup(message);
+        }
+
+        /**
+         * Show an error dialog to the user indicating that something has gone
+         * wrong with the audio system.
+         *
+         * @param message The specific error text to show
+         */
+        private static void showWarningPopup(String message)
+        {
+            /*
+             * If the dialog is shown, do not report any subsequent errors
+             * until the dialog is hidden in order to prevent multiple dialogs.
+             */
+            JDialog dialog;
+            if (DiagnosticsControlMonitor.dialog == null)
+            {
+                dialog = null;
+            }
+            else
+            {
+                dialog = DiagnosticsControlMonitor.dialog.get();
+                if ((dialog != null) && dialog.isVisible())
+                {
+                    return;
+                }
+            }
+
+            ResourceManagementService r = LibJitsi.getResourceManagementService();
+            if (r == null)
+            {
+                return;
+            }
+
+            String title = r.getI18NString(
+                "impl.neomedia.device.audiosystem.diagnosticscontrolmonitor.TITLE");
+
+            JOptionPane optionPane = new JOptionPane();
+
+            optionPane.setMessage(message);
+            optionPane.setMessageType(JOptionPane.WARNING_MESSAGE);
+            optionPane.setOptionType(JOptionPane.DEFAULT_OPTION);
+
+            dialog = optionPane.createDialog(null, title);
+            dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            dialog.setModal(false);
+
+            DiagnosticsControlMonitor.dialog =
+                new WeakReference<JDialog>(dialog);
+
+            dialog.setVisible(true);
+            dialog.setAlwaysOnTop(true);
+        }
+
+        /**
+         * Implements {@link Runnable#run()} in {@link #command}. Monitors the
+         * functional health of {@link #diagnosticsControls}.
+         */
+        private static void runInCommand()
+        {
+            DiagnosticsControl[] keys = new DiagnosticsControl[0];
+
+            do
+            {
+                synchronized (DiagnosticsControlMonitor.class)
+                {
+                    if (diagnosticsControls.isEmpty())
+                    {
+                        break;
+                    }
+
+                    Set<DiagnosticsControl> keySet
+                        = diagnosticsControls.keySet();
+
+                    keys = keySet.toArray(keys);
+                }
+
+                int keyCount = 0;
+                long now = System.currentTimeMillis();
+                List<WeakReference<DiagnosticsControl>> malfunctioning = null;
+
+                for (int i = 0; i < keys.length; i++)
+                {
+                    DiagnosticsControl key = keys[i];
+
+                    if (key == null)
+                    {
+                        continue;
+                    }
+
+                    /*
+                     * XXX The array keys will live as much as possible in order
+                     * to reduce allocations. However, its elements should be
+                     * referenced as little as possible in order to not prevent
+                     * their garbage collection.
+                     */
+                    keys[i] = null;
+
+                    /*
+                     * The PortAudio device represented by the
+                     * DiagnosticsControl may have already been disconnected. We
+                     * do not have reliable way of detecting that fact here so
+                     * we will rely on the garbage collector and the
+                     * implementation of DiagnosticsControl#toString().
+                     */
+                    keyCount++;
+
+                    long malfunctioningSince = key.getMalfunctioningSince();
+
+                    if (malfunctioningSince == DiagnosticsControl.NEVER)
+                    {
+                        continue;
+                    }
+                    if (now - malfunctioningSince < MALFUNCTIONING_TIMEOUT)
+                    {
+                        continue;
+                    }
+
+                    if (malfunctioning == null)
+                    {
+                        malfunctioning
+                            = new LinkedList<WeakReference<DiagnosticsControl>>();
+                    }
+                    malfunctioning.add(
+                            new WeakReference<DiagnosticsControl>(key));
+                }
+                if (keyCount == 0)
+                {
+                    break;
+                }
+
+                if ((malfunctioning != null) && !malfunctioning.isEmpty())
+                {
+                    reportMalfunctioning(malfunctioning);
+                    /*
+                     * Make sure we are not accidentally preventing the garbage
+                     * collection of DiagnosticsControl instances.
+                     */
+                    malfunctioning = null;
+                }
+
+                try
+                {
+                    Thread.sleep(MONITOR_INTERVAL);
+                }
+                catch (InterruptedException ie)
+                {
+                }
+            }
+            while (true);
+        }
+    }
+
+    /**
+     * Places a specific <tt>DiagnosticsControl</tt> under monitoring of its
+     * functional health because of a malfunction in its procedure/process. The
+     * monitoring will automatically cease after the procedure/process resumes
+     * executing normally or is garbage collected.
+     *
+     * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be placed
+     * under monitoring of its functional health because of a malfunction in its
+     * procedure/process
+     */
+    public static void monitorFunctionalHealth(
+            DiagnosticsControl diagnosticsControl)
+    {
+        DiagnosticsControlMonitor.monitorFunctionalHealth(diagnosticsControl);
+    }
+
+    /**
+     * Reports the audio system as being unavailable.  This is currently used
+     * to indicate that the Windows audio service is not running and therefore
+     * that we can't use any of the audio devices.
+     *
+     * @param diagnosticsControl the <tt>DiagnosticsControl</tt> to be used to
+     * report the issue
+     */
+    public static void reportAudioSystemUnavailable(String message)
+    {
+        DiagnosticsControlMonitor.reportSystemUnavailable(message);
     }
 }

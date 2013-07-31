@@ -68,6 +68,8 @@ public class WASAPI
 
     public static final int RPC_E_CHANGED_MODE = 0x80010106;
 
+    public static final int AUDCLNT_E_SERVICE_NOT_RUNNING = 0x88890010;
+
     public static final int S_FALSE = 1;
 
     public static final int S_OK = 0;
@@ -128,7 +130,9 @@ public class WASAPI
             pszString = "{a45c254e-df1c-4efd-8020-67d146a850e0} 14";
             PKEY_Device_FriendlyName = PSPropertyKeyFromString(pszString);
             if (PKEY_Device_FriendlyName == 0)
+            {
                 throw new IllegalStateException("PKEY_Device_FriendlyName");
+            }
         }
         catch (HResultException hre)
         {

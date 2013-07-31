@@ -16,7 +16,9 @@ import javax.media.format.*;
 
 import org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi.*;
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.service.resources.*;
 import org.jitsi.util.*;
 
 /**
@@ -194,22 +196,30 @@ public class WASAPISystem
             AudioFormat audioFormat)
     {
         if (!AudioFormat.LINEAR.equals(audioFormat.getEncoding()))
+        {
             throw new IllegalArgumentException("audioFormat.encoding");
+        }
 
         int channels = audioFormat.getChannels();
 
         if (channels == Format.NOT_SPECIFIED)
+        {
             throw new IllegalArgumentException("audioFormat.channels");
+        }
 
         int sampleRate = (int) audioFormat.getSampleRate();
 
         if (sampleRate == Format.NOT_SPECIFIED)
+        {
             throw new IllegalArgumentException("audioFormat.sampleRate");
+        }
 
         int sampleSizeInBits = audioFormat.getSampleSizeInBits();
 
         if (sampleSizeInBits == Format.NOT_SPECIFIED)
+        {
             throw new IllegalArgumentException("audioFormat.sampleSizeInBits");
+        }
 
         char nBlockAlign = (char) ((channels * sampleSizeInBits) / 8);
 
@@ -285,7 +295,7 @@ public class WASAPISystem
      * <tt>IAudioClient</tt>. Allows this instance to add and/or remove
      * <tt>AudioFormat</tt>s that it will and/or will not support in addition to
      * the support of the very <tt>IAudioClient</tt>.
-     * 
+     *
      * @param dataFlow the flow of the media supported by the associated
      * <tt>IAudioClient</tt>
      * @param formats the <tt>List</tt> of <tt>AudioFormat</tt>s supported by
@@ -309,8 +319,12 @@ public class WASAPISystem
             if (!aecSupportedFormats.isEmpty())
             {
                 for (AudioFormat format : aecSupportedFormats)
+                {
                     if (!formats.contains(format))
+                    {
                         formats.add(format);
+                    }
+                }
             }
             break;
 
@@ -329,7 +343,7 @@ public class WASAPISystem
                 AudioFormat outFormat = formats.get(i);
                 /*
                  * The resamplers are not expected to convert between mono and
-                 * stereo. 
+                 * stereo.
                  */
                 AudioFormat inFormat
                     = new AudioFormat(
@@ -367,7 +381,9 @@ public class WASAPISystem
                                 {
                                     if (!(aInFormat instanceof AudioFormat)
                                             || !inFormat.matches(aInFormat))
+                                    {
                                         continue;
+                                    }
 
                                     Format[] outFormats
                                         = codec.getSupportedOutputFormats(
@@ -386,18 +402,22 @@ public class WASAPISystem
                                         }
                                     }
                                     if (add && !formats.contains(aInFormat))
+                                    {
                                         formats.add((AudioFormat) aInFormat);
+                                    }
                                 }
                             }
                         }
                         catch (Throwable t)
                         {
                             if (t instanceof ThreadDeath)
+                            {
                                 throw (ThreadDeath) t;
                             /*
                              * The failings of a resampler are of no concern
                              * here.
                              */
+                            }
                         }
                     }
                 }
@@ -425,7 +445,7 @@ public class WASAPISystem
          * more than once at a time, it may be concurrently invoked along with
          * other methods. We do not want the methods setCaptureDevices and
          * setPlaybackDevices in the synchronized block because they may fire
-         * events which may in turn lead to deadlocks. 
+         * events which may in turn lead to deadlocks.
          */
         synchronized (this)
         {
@@ -446,7 +466,9 @@ public class WASAPISystem
                         CLSCTX_ALL,
                         IID_IMMDeviceEnumerator);
             if (iMMDeviceEnumerator == 0)
+            {
                 throw new IllegalStateException("iMMDeviceEnumerator");
+            }
 
             /*
              * Register this DeviceSystem to be notified when an audio endpoint
@@ -501,7 +523,9 @@ public class WASAPISystem
                         catch (Throwable t)
                         {
                             if (t instanceof ThreadDeath)
+                            {
                                 throw (ThreadDeath) t;
+                            }
                             /*
                              * We do not want the initialization of one
                              * IMMDevice to prevent the initialization of other
@@ -511,6 +535,22 @@ public class WASAPISystem
                                     "Failed to doInitialize for IMMDevice"
                                         + " at index " + i,
                                     t);
+
+                            if ((t instanceof HResultException) &&
+                                (((HResultException)t).getHResult() == AUDCLNT_E_SERVICE_NOT_RUNNING))
+                            {
+                                String message = "Windows audio service isn't running!";
+                                logger.error(message);
+                                ResourceManagementService r =
+                                    LibJitsi.getResourceManagementService();
+                                if (r != null)
+                                {
+                                    message = r.getI18NString(
+                                        "impl.neomedia.device.WASAPISystem.AUDIO_SERVICE_NOT_RUNNING");
+                                }
+
+                                AudioSystem.reportAudioSystemUnavailable(message);
+                            }
                         }
                         finally
                         {
@@ -564,14 +604,18 @@ public class WASAPISystem
          * the MediaLocator of its representative CaptureDeviceInfo.
          */
         if (id == null)
+        {
             throw new RuntimeException("IMMDevice_GetId");
+        }
 
         long iAudioClient
             = IMMDevice_Activate(iMMDevice, IID_IAudioClient, CLSCTX_ALL, 0);
         List<AudioFormat> formats;
 
         if (iAudioClient == 0)
+        {
             throw new RuntimeException("IMMDevice_Activate");
+        }
         try
         {
             formats = getIAudioClientSupportedFormats(iAudioClient);
@@ -591,14 +635,18 @@ public class WASAPISystem
             catch (Throwable t)
             {
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
                 logger.warn(
                         "Failed to retrieve the PKEY_Device_FriendlyName"
                             + " of IMMDevice " + id,
                         t);
             }
             if ((name == null) || (name.length() == 0))
+            {
                 name = id;
+            }
 
             int dataFlow = getIMMDeviceDataFlow(iMMDevice);
             List<CaptureDeviceInfo2> devices;
@@ -674,7 +722,7 @@ public class WASAPISystem
      * signals that the <tt>AudioFormat</tt> in question has been included in
      * that <tt>formats</tt> or <tt>supportedFormat</tt>s only because it is
      * supported by the voice capture DMO supporting/implementing the acoustic
-     * echo cancellation (AEC) feature. 
+     * echo cancellation (AEC) feature.
      * </p>
      *
      * @return the <tt>List</tt> of <tt>AudioFormat</tt>s supported by the voice
@@ -686,7 +734,9 @@ public class WASAPISystem
         List<AudioFormat> aecSupportedFormats = this.aecSupportedFormats;
 
         if (aecSupportedFormats == null)
+        {
             aecSupportedFormats = Collections.emptyList();
+        }
         return aecSupportedFormats;
     }
 
@@ -738,8 +788,10 @@ public class WASAPISystem
                                 AUDCLNT_SHAREMODE_SHARED,
                                 waveformatex);
 
-                    if (pClosestMatch == 0) // not supported
+                    if (pClosestMatch == 0)
+                    {
                         continue;
+                    }
                     try
                     {
                         /*
@@ -751,7 +803,9 @@ public class WASAPISystem
                             // We support AutioFormat.LINEAR only.
                             if (WAVEFORMATEX_getWFormatTag(pClosestMatch)
                                     != WAVE_FORMAT_PCM)
+                            {
                                 continue;
+                            }
 
                             nChannels
                                 = WAVEFORMATEX_getNChannels(pClosestMatch);
@@ -785,7 +839,9 @@ public class WASAPISystem
                                         /* frameRate */ Format.NOT_SPECIFIED,
                                         Format.byteArray);
                             if (!supportedFormats.contains(supportedFormat))
+                            {
                                 supportedFormats.add(supportedFormat);
+                            }
                         }
                         supportedFormat
                             = new NativelySupportedAudioFormat(
@@ -799,12 +855,16 @@ public class WASAPISystem
                                     /* frameRate */ Format.NOT_SPECIFIED,
                                     Format.byteArray);
                         if (!supportedFormats.contains(supportedFormat))
+                        {
                             supportedFormats.add(supportedFormat);
+                        }
                     }
                     finally
                     {
                         if (pClosestMatch != waveformatex)
+                        {
                             CoTaskMemFree(pClosestMatch);
+                        }
                     }
                 }
             }
@@ -832,7 +892,9 @@ public class WASAPISystem
         long pmt = MoCreateMediaType(/* cbFormat */ 0);
 
         if (pmt == 0)
+        {
             throw new OutOfMemoryError("MoCreateMediaType");
+        }
         try
         {
             char cbSize = 0;
@@ -851,7 +913,9 @@ public class WASAPISystem
                         waveformatex);
 
             if (FAILED(hresult))
+            {
                 throw new HResultException(hresult, "DMO_MEDIA_TYPE_fill");
+            }
 
             for (char nChannels = 1; nChannels <= 2; nChannels++)
             {
@@ -912,7 +976,9 @@ public class WASAPISystem
                                         Format.byteArray);
 
                             if (!supportedFormats.contains(supportedFormat))
+                            {
                                 supportedFormats.add(supportedFormat);
+                            }
                         }
                     }
                 }
@@ -952,9 +1018,13 @@ public class WASAPISystem
         long iMMDeviceEnumerator = this.iMMDeviceEnumerator;
 
         if (iMMDeviceEnumerator == 0)
+        {
             throw new IllegalStateException("iMMDeviceEnumerator");
+        }
         else
+        {
             return IMMDeviceEnumerator_GetDevice(iMMDeviceEnumerator, id);
+        }
     }
 
     /**
@@ -975,7 +1045,9 @@ public class WASAPISystem
         int dataFlow;
 
         if (iMMEndpoint == 0)
+        {
             throw new RuntimeException("IMMDevice_QueryInterface");
+        }
         try
         {
             dataFlow = IMMEndpoint_GetDataFlow(iMMEndpoint);
@@ -1014,7 +1086,9 @@ public class WASAPISystem
         long iPropertyStore = IMMDevice_OpenPropertyStore(iMMDevice, STGM_READ);
 
         if (iPropertyStore == 0)
+        {
             throw new RuntimeException("IMMDevice_OpenPropertyStore");
+        }
 
         String deviceFriendlyName;
 
@@ -1024,13 +1098,13 @@ public class WASAPISystem
                 = IPropertyStore_GetString(
                         iPropertyStore,
                         PKEY_Device_FriendlyName);
-            
+
             // The device name returned by WASAPI is sometimes bogus - namely
             // that if this is a USB device the USB port number may be
             // prepended to the device name (i.e. the bit inside the braces).
             // We remove any such port numbers here to ensure that the same
             // device is treated as the same when plugged into a different USB
-            // port. 
+            // port.
             String pattern = "\\([0-9]+- ";
             deviceFriendlyName = deviceFriendlyName.replaceAll(pattern, "(");
         }
@@ -1038,7 +1112,7 @@ public class WASAPISystem
         {
             IPropertyStore_Release(iPropertyStore);
         }
-        
+
         return deviceFriendlyName;
     }
 
@@ -1065,7 +1139,9 @@ public class WASAPISystem
         long iMMDeviceEnumerator = this.iMMDeviceEnumerator;
 
         if (iMMDeviceEnumerator == 0)
+        {
             throw new IllegalStateException("iMMDeviceEnumerator");
+        }
 
         long iMMDeviceCollection
             = IMMDeviceEnumerator_EnumAudioEndpoints(
@@ -1163,7 +1239,9 @@ public class WASAPISystem
                         CLSCTX_ALL,
                         IID_IMediaObject);
             if (iMediaObject == 0)
+            {
                 throw new RuntimeException("CoCreateInstance");
+            }
             else
             {
                 iPropertyStore
@@ -1171,7 +1249,9 @@ public class WASAPISystem
                             iMediaObject,
                             IID_IPropertyStore);
                 if (iPropertyStore == 0)
+                {
                     throw new RuntimeException("IMediaObject_QueryInterface");
+                }
                 else
                 {
                     int hresult
@@ -1198,9 +1278,13 @@ public class WASAPISystem
         finally
         {
             if (iPropertyStore != 0)
+            {
                 IPropertyStore_Release(iPropertyStore);
+            }
             if (iMediaObject != 0)
+            {
                 IMediaObject_Release(iMediaObject);
+            }
         }
         return aecIMediaObject;
     }
@@ -1282,13 +1366,17 @@ public class WASAPISystem
             case CAPTURE:
                 if ((iMMDeviceDataFlow != eAll)
                         && (iMMDeviceDataFlow != eCapture))
+                {
                     throw new IllegalArgumentException("dataFlow");
+                }
                 break;
             case NOTIFY:
             case PLAYBACK:
                 if ((iMMDeviceDataFlow != eAll)
                         && (iMMDeviceDataFlow != eRender))
+                {
                     throw new IllegalArgumentException("dataFlow");
+                }
                 break;
             }
 
@@ -1300,13 +1388,17 @@ public class WASAPISystem
                         0);
 
             if (iAudioClient == 0)
+            {
                 throw new RuntimeException("IMMDevice_Activate");
+            }
             try
             {
                 long waveformatex = WAVEFORMATEX_alloc();
 
                 if (waveformatex == 0)
+                {
                     throw new OutOfMemoryError("WAVEFORMATEX_alloc");
+                }
                 try
                 {
                     int shareMode = AUDCLNT_SHAREMODE_SHARED;
@@ -1346,7 +1438,9 @@ public class WASAPISystem
                             finally
                             {
                                 if (pClosestMatch != waveformatex)
+                                {
                                     CoTaskMemFree(pClosestMatch);
+                                }
                             }
                         }
                     }
@@ -1360,7 +1454,9 @@ public class WASAPISystem
 
                     streamFlags |= AUDCLNT_STREAMFLAGS_NOPERSIST;
                     if (eventHandle != 0)
+                    {
                         streamFlags |= AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+                    }
 
                     if (hnsBufferDuration == Format.NOT_SPECIFIED)
                     {
@@ -1411,13 +1507,36 @@ public class WASAPISystem
             finally
             {
                 if (iAudioClient != 0)
+                {
                     IAudioClient_Release(iAudioClient);
+                }
             }
+        }
+        catch (HResultException e)
+        {
+            if (e.getHResult() == AUDCLNT_E_SERVICE_NOT_RUNNING)
+            {
+                String message = "Windows audio service isn't running!";
+                logger.error(message);
+                ResourceManagementService r =
+                    LibJitsi.getResourceManagementService();
+                if (r != null)
+                {
+                    message = r.getI18NString(
+                        "impl.neomedia.device.WASAPISystem.AUDIO_SERVICE_NOT_RUNNING");
+                }
+
+                AudioSystem.reportAudioSystemUnavailable(message);
+            }
+
+            throw e;
         }
         finally
         {
             if (iMMDevice != 0)
+            {
                 IMMDevice_Release(iMMDevice);
+            }
         }
         return ret;
     }
@@ -1458,9 +1577,13 @@ public class WASAPISystem
              * formats.
              */
             if (t instanceof ThreadDeath)
+            {
                 throw (ThreadDeath) t;
+            }
             else
+            {
                 supportedFormats = null;
+            }
         }
         msg.append("Supported formats: ");
         msg.append(Arrays.toString(supportedFormats));
@@ -1477,7 +1600,9 @@ public class WASAPISystem
     private void maybeInitializeAEC()
     {
         if ((aecIMediaObject != 0) || (aecSupportedFormats != null))
+        {
             return;
+        }
 
         try
         {
@@ -1500,13 +1625,17 @@ public class WASAPISystem
             finally
             {
                 if (iMediaObject != 0)
+                {
                     IMediaObject_Release(iMediaObject);
+                }
             }
         }
         catch (Throwable t)
         {
             if (t instanceof ThreadDeath)
+            {
                 throw (ThreadDeath) t;
+            }
             else
             {
                 logger.error(
@@ -1534,7 +1663,9 @@ public class WASAPISystem
         catch (Throwable t)
         {
             if (t instanceof ThreadDeath)
+            {
                 throw (ThreadDeath) t;
+            }
             else
             {
                 logger.error(
@@ -1584,13 +1715,16 @@ public class WASAPISystem
         }
         waveformatex = WAVEFORMATEX_alloc();
         if (waveformatex == 0)
+        {
             throw new OutOfMemoryError("WAVEFORMATEX_alloc");
+        }
 
         if (pNotify == null)
         {
             pNotify
                 = new IMMNotificationClient()
                 {
+                    @Override
                     public void OnDefaultDeviceChanged(
                             int flow,
                             int role,
@@ -1599,27 +1733,31 @@ public class WASAPISystem
                         logger.info("Default device changed - ignoring");
                     }
 
+                    @Override
                     public void OnDeviceAdded(String pwstrDeviceId)
                     {
                         logger.info("Device added: " + pwstrDeviceId);
                         reinitialize(pwstrDeviceId);
                     }
 
+                    @Override
                     public void OnDeviceRemoved(String pwstrDeviceId)
                     {
                         logger.info("Device removed: " + pwstrDeviceId);
                         reinitialize(pwstrDeviceId);
                     }
 
+                    @Override
                     public void OnDeviceStateChanged(
                             String pwstrDeviceId,
                             int dwNewState)
                     {
-                        logger.info("Device (" + pwstrDeviceId + 
+                        logger.info("Device (" + pwstrDeviceId +
                                     ") state changed to " + dwNewState);
                         reinitialize(pwstrDeviceId);
                     }
 
+                    @Override
                     public void OnPropertyValueChanged(
                             String pwstrDeviceId,
                             long key)

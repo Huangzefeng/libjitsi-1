@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 import javax.media.*;
 import javax.media.format.*;
 
-import net.sf.fmj.utility.charting.Charting;
+import net.sf.fmj.utility.charting.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
@@ -237,9 +237,63 @@ public class WASAPIRenderer
      * render endpoint buffer is allowed to be under suspicion that it is
      * malfunctioning. If it remains under suspicion after the maximum interval
      * of time has elapsed, the writing to the render endpoint buffer is to be
-     * considered malfunctioning for real. 
+     * considered malfunctioning for real.
      */
     private long writeIsMalfunctioningTimeout;
+
+    /**
+     * The <tt>DiagnosticsControl</tt> implementation of this instance which
+     * allows the diagnosis of the functional health of WASAPI devices.
+     */
+    private final DiagnosticsControl diagnosticsControl
+        = new DiagnosticsControl()
+        {
+            /**
+             * {@inheritDoc}
+             *
+             * <tt>WASAPIRenderer</tt>'s <tt>DiagnosticsControl</tt>
+             * implementation does not provide its own user interface and always
+             * returns <tt>null</tt>.
+             */
+            @Override
+            public java.awt.Component getControlComponent()
+            {
+                return null;
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public long getMalfunctioningSince()
+            {
+                return writeIsMalfunctioningSince;
+            }
+
+            /**
+             * {@inheritDoc}
+             *
+             * Returns the identifier of the WASAPI device written through
+             * this <tt>WASAPIRenderer</tt>.
+             */
+            @Override
+            public String toString()
+            {
+                String name;
+
+                try
+                {
+                    CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow);
+                    name = device.getName();
+                }
+                catch (Exception e)
+                {
+                    logger.error("Failed to find name for device:" + e);
+                    name = "";
+                }
+                return name;
+            }
+        };
 
     /**
      * Initializes a new <tt>WASAPIRenderer</tt> instance which is to perform
@@ -364,7 +418,9 @@ public class WASAPIRenderer
         AudioFormat inputFormat = this.inputFormat;
 
         if (inputFormat == null)
+        {
             throw new NullPointerException("No inputFormat set.");
+        }
         else
         {
             /*
@@ -382,7 +438,9 @@ public class WASAPIRenderer
             for (AudioFormat format : preferredFormats)
             {
                 if (!formats.contains(format))
+                {
                     formats.add(format);
+                }
             }
             for (Format format : supportedFormats)
             {
@@ -399,6 +457,7 @@ public class WASAPIRenderer
     /**
      * {@inheritDoc}
      */
+    @Override
     public String getName()
     {
         return PLUGIN_NAME;
@@ -435,7 +494,9 @@ public class WASAPIRenderer
 
             if ((sampleRate == Format.NOT_SPECIFIED)
                     && (Constants.AUDIO_SAMPLE_RATES.length != 0))
+            {
                 sampleRate = Constants.AUDIO_SAMPLE_RATES[0];
+            }
             return
                 WASAPISystem.getFormatsToInitializeIAudioClient(
                         new AudioFormat(
@@ -450,9 +511,11 @@ public class WASAPIRenderer
                                 Format.byteArray));
         }
         else
+        {
             return super.getSupportedInputFormats();
+        }
     }
-    
+
     /**
      * Closes {@link #resampler} if it is non-<tt>null</tt>.
      */
@@ -473,9 +536,13 @@ public class WASAPIRenderer
             catch (Throwable t)
             {
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
                 else
+                {
                     logger.error("Failed to close resampler.", t);
+                }
             }
         }
     }
@@ -537,7 +604,9 @@ public class WASAPIRenderer
         if ((inFormat.getSampleRate() == outFormat.getSampleRate())
                 && (inFormat.getSampleSizeInBits()
                         == outFormat.getSampleSizeInBits()))
+        {
             return;
+        }
 
         // The resamplers are not expected to convert between mono and stereo.
         int channels = inFormat.getChannels();
@@ -628,7 +697,9 @@ public class WASAPIRenderer
                 catch (Throwable t)
                 {
                     if (t instanceof ThreadDeath)
+                    {
                         throw (ThreadDeath) t;
+                    }
                     else
                     {
                         logger.warn(
@@ -649,7 +720,9 @@ public class WASAPIRenderer
         throws ResourceUnavailableException
     {
         if (this.iAudioClient != 0)
+        {
             return;
+        }
 
         MediaLocator locator = null;
 
@@ -736,8 +809,10 @@ public class WASAPIRenderer
                             if ((devicePeriod
                                         > WASAPISystem.DEFAULT_DEVICE_PERIOD)
                                     || (devicePeriod <= 1))
+                            {
                                 devicePeriod
                                     = WASAPISystem.DEFAULT_DEVICE_PERIOD;
+                            }
                         }
                         devicePeriodInFrames
                             = (int) (devicePeriod * dstSampleRate / 1000L);
@@ -765,6 +840,7 @@ public class WASAPIRenderer
                          */
                         remainderLength = remainder.length;
 
+                        setWriteIsMalfunctioning(false);
                         if (resampler != null)
                         {
                             resamplerInBuffer = new Buffer();
@@ -773,7 +849,6 @@ public class WASAPIRenderer
                             resamplerOutBuffer = new Buffer();
                         }
 
-                        writeIsMalfunctioningSince = DiagnosticsControl.NEVER;
                         writeIsMalfunctioningTimeout
                             = 2 * Math.max(bufferDuration, devicePeriod);
 
@@ -787,7 +862,9 @@ public class WASAPIRenderer
                     finally
                     {
                         if (iAudioRenderClient != 0)
+                        {
                             IAudioRenderClient_Release(iAudioRenderClient);
+                        }
                     }
                 }
                 finally
@@ -802,7 +879,9 @@ public class WASAPIRenderer
             finally
             {
                 if (eventHandle != 0)
+                {
                     CloseHandle(eventHandle);
+                }
             }
 
             } // The locator of this Renderer is not null.
@@ -810,7 +889,9 @@ public class WASAPIRenderer
         catch (Throwable t)
         {
             if (t instanceof ThreadDeath)
+            {
                 throw (ThreadDeath) t;
+            }
             else
             {
                 logger.error(
@@ -818,7 +899,9 @@ public class WASAPIRenderer
                             + " device " + toString(locator),
                         t);
                 if (t instanceof ResourceUnavailableException)
+                {
                     throw (ResourceUnavailableException) t;
+                }
                 else
                 {
                     ResourceUnavailableException rue
@@ -868,7 +951,9 @@ public class WASAPIRenderer
                 throw new UndeclaredThrowableException(rue);
             }
             if (start)
+            {
                 start();
+            }
         }
     }
 
@@ -899,31 +984,42 @@ public class WASAPIRenderer
     public static int pop(byte[] array, int arrayLength, int length)
     {
         if (length < 0)
+        {
             throw new IllegalArgumentException("length");
+        }
         if (length == 0)
+        {
             return arrayLength;
+        }
 
         int newArrayLength = arrayLength - length;
 
         if (newArrayLength > 0)
         {
             for (int i = 0, j = length; i < newArrayLength; i++, j++)
+            {
                 array[i] = array[j];
+            }
         }
         else
+        {
             newArrayLength = 0;
+        }
         return newArrayLength;
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public int process(Buffer buffer)
     {
         int length = buffer.getLength();
 
         if (length < 1)
+        {
             return BUFFER_PROCESSED_OK;
+        }
 
         byte[] data = (byte[]) buffer.getData();
         int offset = buffer.getOffset();
@@ -943,7 +1039,9 @@ public class WASAPIRenderer
                         : BUFFER_PROCESSED_FAILED;
             }
             else if (!started)
+            {
                 return BUFFER_PROCESSED_FAILED;
+            }
             else
             {
                 waitWhileBusy();
@@ -1007,7 +1105,9 @@ public class WASAPIRenderer
                         if (toCopy > 0)
                         {
                             if (toCopy > length)
+                            {
                                 toCopy = length;
+                            }
                             System.arraycopy(
                                     data, offset,
                                     remainder, remainderLength,
@@ -1026,9 +1126,7 @@ public class WASAPIRenderer
                              * occurred so it does not look like the writing to
                              * the render endpoint buffer is malfunctioning.
                              */
-                            if (writeIsMalfunctioningSince
-                                    != DiagnosticsControl.NEVER)
-                                setWriteIsMalfunctioning(false);
+                            setWriteIsMalfunctioning(false);
                         }
                         else
                         {
@@ -1039,9 +1137,7 @@ public class WASAPIRenderer
                              * has occurred so it is possible that the writing
                              * to the render endpoint buffer is malfunctioning.
                              */
-                            if (writeIsMalfunctioningSince
-                                    == DiagnosticsControl.NEVER)
-                                setWriteIsMalfunctioning(true);
+                            //setWriteIsMalfunctioning(true);
                         }
                     }
                 }
@@ -1072,11 +1168,15 @@ public class WASAPIRenderer
                         int toCopy = toWrite - remainderLength;
 
                         if (toCopy <= 0)
+                        {
                             ret |= INPUT_BUFFER_NOT_CONSUMED;
+                        }
                         else
                         {
                             if (toCopy > length)
+                            {
                                 toCopy = length;
+                            }
                             System.arraycopy(
                                     data, offset,
                                     remainder, remainderLength,
@@ -1084,7 +1184,9 @@ public class WASAPIRenderer
                             remainderLength += toCopy;
 
                             if (toWrite > remainderLength)
+                            {
                                 toWrite = remainderLength;
+                            }
 
                             if (length > toCopy)
                             {
@@ -1108,7 +1210,9 @@ public class WASAPIRenderer
                     int written;
 
                     if ((toWrite / srcFrameSize) == 0)
+                    {
                         written = 0;
+                    }
                     else
                     {
                         /*
@@ -1176,7 +1280,9 @@ public class WASAPIRenderer
 
                         if (writeIsMalfunctioningSince
                                 != DiagnosticsControl.NEVER)
+                        {
                             setWriteIsMalfunctioning(false);
+                        }
                     }
                 }
 
@@ -1249,7 +1355,9 @@ public class WASAPIRenderer
                 }
             }
             if (interrupted)
+            {
                 Thread.currentThread().interrupt();
+            }
         }
         return ret;
     }
@@ -1310,12 +1418,16 @@ public class WASAPIRenderer
                      * execute?
                      */
                     if (!eventHandleCmd.equals(this.eventHandleCmd))
+                    {
                         break;
+                    }
                     // Is this WASAPIRenderer still opened and started?
                     if ((iAudioClient == 0)
                             || (iAudioRenderClient == 0)
                             || !started)
+                    {
                         break;
+                    }
 
                     /*
                      * The value of eventHandle will remain valid while this
@@ -1323,7 +1435,9 @@ public class WASAPIRenderer
                      */
                     eventHandle = this.eventHandle;
                     if (eventHandle == 0)
+                    {
                         throw new IllegalStateException("eventHandle");
+                    }
 
                     waitWhileBusy();
                     busy = true;
@@ -1351,7 +1465,7 @@ public class WASAPIRenderer
                          * Since remainder is measured in units based on
                          * srcFormat and numFramesRequested is currently
                          * expressed in units based on dstFormat, convert
-                         * numFramesRequested in units based on srcFormat. 
+                         * numFramesRequested in units based on srcFormat.
                          */
                         int srcSampleRate = (int) srcFormat.getSampleRate();
                         /*
@@ -1385,7 +1499,9 @@ public class WASAPIRenderer
 
                         if ((numFramesRequested > remainderFrames)
                                 && (remainderFrames >= devicePeriodInFrames))
+                        {
                             numFramesRequested = remainderFrames;
+                        }
 
                         // Pad with silence in order to avoid underflows.
                         int toWrite = numFramesRequested * srcFrameSize;
@@ -1442,7 +1558,9 @@ public class WASAPIRenderer
                                 written = toWrite;
                             }
                             else
+                            {
                                 written = 0;
+                            }
                         }
                         if (written != 0)
                         {
@@ -1450,7 +1568,9 @@ public class WASAPIRenderer
 
                             if (writeIsMalfunctioningSince
                                     != DiagnosticsControl.NEVER)
+                            {
                                 setWriteIsMalfunctioning(false);
+                            }
                         }
                     }
                 }
@@ -1484,7 +1604,9 @@ public class WASAPIRenderer
                  * likely fail forever. Bail out of a possible busy wait.
                  */
                 if ((wfso == WAIT_FAILED) || (wfso == WAIT_ABANDONED))
+                {
                     break;
+                }
             }
             while (true);
         }
@@ -1515,9 +1637,13 @@ public class WASAPIRenderer
          * inputFormat.
          */
         if ((iAudioClient != 0) || (iAudioRenderClient != 0))
+        {
             return null;
+        }
         else
+        {
             return super.setInputFormat(format);
+        }
     }
 
     /**
@@ -1534,15 +1660,21 @@ public class WASAPIRenderer
         if (writeIsMalfunctioning)
         {
             if (writeIsMalfunctioningSince == DiagnosticsControl.NEVER)
+            {
                 writeIsMalfunctioningSince = System.currentTimeMillis();
+                WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
+            }
         }
         else
+        {
             writeIsMalfunctioningSince = DiagnosticsControl.NEVER;
+        }
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public synchronized void start()
     {
         if (iAudioClient == 0)
@@ -1553,7 +1685,9 @@ public class WASAPIRenderer
              * playback.
              */
             if (locatorIsNull)
+            {
                 started = true;
+            }
         }
         else
         {
@@ -1580,7 +1714,9 @@ public class WASAPIRenderer
                     }
                 }
                 else if (remainderLength < 0)
+                {
                     remainderLength = 0;
+                }
 
                 /*
                  * If there is valid audio data in remainder, it has been
@@ -1589,7 +1725,9 @@ public class WASAPIRenderer
                 int silence = remainder.length - remainderLength;
 
                 if (silence > 0)
+                {
                     Arrays.fill(remainder, 0, silence, (byte) 0);
+                }
                 remainderLength = remainder.length;
             }
 
@@ -1603,6 +1741,7 @@ public class WASAPIRenderer
                     Runnable eventHandleCmd
                         = new Runnable()
                         {
+                            @Override
                             public void run()
                             {
                                 runInEventHandleCmd(this);
@@ -1626,7 +1765,9 @@ public class WASAPIRenderer
                     {
                         if (!submitted
                                 && eventHandleCmd.equals(this.eventHandleCmd))
+                        {
                             this.eventHandleCmd = null;
+                        }
                     }
                 }
             }
@@ -1638,7 +1779,9 @@ public class WASAPIRenderer
                  * AUDCLNT_E_NOT_STOPPED.
                  */
                 if (hre.getHResult() != AUDCLNT_E_NOT_STOPPED)
+                {
                     logger.error("IAudioClient_Start", hre);
+                }
             }
         }
     }
@@ -1646,6 +1789,7 @@ public class WASAPIRenderer
     /**
      * {@inheritDoc}
      */
+    @Override
     public synchronized void stop()
     {
         if (iAudioClient == 0)
@@ -1656,7 +1800,9 @@ public class WASAPIRenderer
              * playback.
              */
             if (locatorIsNull)
+            {
                 started = false;
+            }
         }
         else
         {
@@ -1697,7 +1843,9 @@ public class WASAPIRenderer
         String s;
 
         if (locator == null)
+        {
             s = "null";
+        }
         else
         {
             s = null;
@@ -1720,19 +1868,27 @@ public class WASAPIRenderer
                         String name = cdi2.getName();
 
                         if ((name != null) && !id.equals(name))
+                        {
                             s = id + " with friendly name " + name;
+                        }
                     }
                     if (s == null)
+                    {
                         s = id;
+                    }
                 }
             }
             catch (Throwable t)
             {
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
             }
             if (s == null)
+            {
                 s = locator.toString();
+            }
         }
         return s;
     }
@@ -1757,7 +1913,9 @@ public class WASAPIRenderer
             }
         }
         if (interrupted)
+        {
             Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -1767,7 +1925,9 @@ public class WASAPIRenderer
     private synchronized void waitWhileEventHandleCmd()
     {
         if (eventHandle == 0)
+        {
             throw new IllegalStateException("eventHandle");
+        }
 
         boolean interrupted = false;
 
@@ -1783,6 +1943,8 @@ public class WASAPIRenderer
             }
         }
         if (interrupted)
+        {
             Thread.currentThread().interrupt();
+        }
     }
 }
