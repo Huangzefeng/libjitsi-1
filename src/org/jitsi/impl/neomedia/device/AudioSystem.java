@@ -997,11 +997,11 @@ public abstract class AudioSystem
                     keys[i] = null;
 
                     /*
-                     * The PortAudio device represented by the
-                     * DiagnosticsControl may have already been disconnected. We
-                     * do not have reliable way of detecting that fact here so
-                     * we will rely on the garbage collector and the
-                     * implementation of DiagnosticsControl#toString().
+                     * The audio device represented by the DiagnosticsControl
+                     * may have already been disconnected. We do not have
+                     * reliable way of detecting that fact here so we will rely
+                     * on the garbage collector and the implementation of
+                     * DiagnosticsControl#toString().
                      */
                     keyCount++;
 
