@@ -891,21 +891,18 @@ public class AudioCaptureClient
      */
     private synchronized void waitWhileBusy()
     {
-        boolean interrupted = false;
+        long waitStartTime = System.currentTimeMillis();
 
         while (busy)
         {
-            try
+            if (System.currentTimeMillis() - waitStartTime > WASAPIStream.MAX_WAIT_TIME)
             {
-                wait(devicePeriod);
+                logger.error("Wait is deadlocked - continue");
+                break;
             }
-            catch (InterruptedException ie)
-            {
-                interrupted = true;
-            }
+
+            yield();
         }
-        if (interrupted)
-            Thread.currentThread().interrupt();
     }
 
     /**
@@ -915,22 +912,43 @@ public class AudioCaptureClient
     private synchronized void waitWhileEventHandleCmd()
     {
         if (eventHandle == 0)
+        {
             throw new IllegalStateException("eventHandle");
+        }
 
-        boolean interrupted = false;
+        long waitStartTime = System.currentTimeMillis();
 
         while (eventHandleCmd != null)
         {
-            try
+            if (System.currentTimeMillis() - waitStartTime > WASAPIStream.MAX_WAIT_TIME)
             {
-                wait(devicePeriod);
+                logger.error("Wait is deadlocked - continue");
+                break;
             }
-            catch (InterruptedException ie)
-            {
-                interrupted = true;
-            }
+
+            yield();
+        }
+    }
+
+    /**
+     * Causes the currently executing thread to temporarily pause and allow
+     * other threads to execute.
+     */
+    private synchronized void yield()
+    {
+        boolean interrupted = false;
+
+        try
+        {
+            wait(devicePeriod);
+        }
+        catch (InterruptedException ie)
+        {
+            interrupted = true;
         }
         if (interrupted)
+        {
             Thread.currentThread().interrupt();
+        }
     }
 }

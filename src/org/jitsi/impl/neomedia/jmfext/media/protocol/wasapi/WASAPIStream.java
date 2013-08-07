@@ -68,7 +68,7 @@ public class WASAPIStream
      * a stream.  If this time elapses, we should stop waiting because we're
      * effectively deadlocked and it's better to unblock processing.
      */
-    private static final int MAX_WAIT_TIME = 1000;
+    protected static final int MAX_WAIT_TIME = 1000;
 
     /**
      * Finds an <tt>AudioFormat</tt> in a specific list of <tt>Format</tt>s
@@ -1209,18 +1209,18 @@ public class WASAPIStream
                  * We explicitly want to support the case in which the user has
                  * selected "none" for the playback/render endpoint device.
                  * Otherwise, we could have added a check
-                 * (dataSource.aec && (render == null)). 
+                 * (dataSource.aec && (render == null)).
                  */
-                boolean connected = (capture != null) || sourceMode;
-
-                if (connected)
+                if (((capture != null) || sourceMode) && started)
                 {
                     message = null;
                     captureIsBusy = true;
                     renderIsBusy = true;
                 }
                 else
+                {
                     message = getClass().getName() + " is disconnected.";
+                }
             }
             /*
              * The caller shouldn't call #read(Buffer) if this instance is
@@ -2581,6 +2581,8 @@ public class WASAPIStream
     public synchronized void stop()
         throws IOException
     {
+        started = false;
+
         if (capture != null)
         {
             waitWhileCaptureIsBusy();
@@ -2592,7 +2594,6 @@ public class WASAPIStream
             render.stop();
             replenishRender = true;
         }
-        started = false;
 
         waitWhileProcessThread();
         processedLength = 0;
@@ -2601,7 +2602,9 @@ public class WASAPIStream
          * DSP cannot process any output in source mode.
          */
         if (renderer != null)
+        {
             renderer.stop();
+        }
     }
 
     /**
