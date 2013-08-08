@@ -254,6 +254,13 @@ public interface MediaStream
                                                  byte overloadPt);
 
     /**
+     * Clears the dynamic RTP payload type override mapping as set by
+     * {@link addDynamicRTPPayloadTypeOverride(byte, byte)} so that we can set
+     * new overrides.
+     */
+    public void clearDynamicRTPPayloadTypeOverrides();
+
+    /**
      * Adds or updates an association in this <tt>MediaStream</tt> mapping the
      * specified <tt>extensionID</tt> to <tt>rtpExtension</tt> and enabling or
      * disabling its use according to the direction attribute of

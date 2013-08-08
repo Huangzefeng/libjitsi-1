@@ -2874,12 +2874,27 @@ public class MediaStreamImpl
      * @param originalPt the payload type that we are overriding
      * @param overloadPt the payload type that we are overriging it with
      */
+    @Override
     public void addDynamicRTPPayloadTypeOverride(byte originalPt,
                                                  byte overloadPt)
     {
         if(ptTransformEngine != null)
         {
             ptTransformEngine.addPTMappingOverride(originalPt, overloadPt);
+        }
+    }
+
+    /**
+     * Clears the dynamic RTP payload type override mapping as set by
+     * {@link addDynamicRTPPayloadTypeOverride(byte, byte)} so that we can set
+     * new overrides.
+     */
+    @Override
+    public void clearDynamicRTPPayloadTypeOverrides()
+    {
+        if (ptTransformEngine != null)
+        {
+            ptTransformEngine.clearPTMappingOverrides();
         }
     }
 }

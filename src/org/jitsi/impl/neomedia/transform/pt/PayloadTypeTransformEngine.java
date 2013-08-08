@@ -130,4 +130,15 @@ public class PayloadTypeTransformEngine
             mappingOverridesCopy = new HashMap<Byte, Byte>(mappingOverrides);
         }
     }
+
+    /**
+     * Clears the dynamic RTP payload type override mapping as set by
+     * {@link addPTMappingOverride(byte, byte)} so that we can set new
+     * overrides.
+     */
+    public void clearPTMappingOverrides()
+    {
+        mappingOverrides.clear();
+        mappingOverridesCopy = new HashMap<Byte, Byte>(mappingOverrides);
+    }
 }
