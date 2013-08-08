@@ -897,7 +897,7 @@ public class AudioCaptureClient
         {
             if (System.currentTimeMillis() - waitStartTime > WASAPIStream.MAX_WAIT_TIME)
             {
-                logger.error("Wait is deadlocked - continue");
+                logger.error("waitWhileBusy is deadlocked - continue");
                 break;
             }
 
@@ -922,7 +922,7 @@ public class AudioCaptureClient
         {
             if (System.currentTimeMillis() - waitStartTime > WASAPIStream.MAX_WAIT_TIME)
             {
-                logger.error("Wait is deadlocked - continue");
+                logger.error("waitWhileEventHandleCmd is deadlocked - continue");
                 break;
             }
 
@@ -936,17 +936,11 @@ public class AudioCaptureClient
      */
     private synchronized void yield()
     {
-        boolean interrupted = false;
-
         try
         {
             wait(devicePeriod);
         }
         catch (InterruptedException ie)
-        {
-            interrupted = true;
-        }
-        if (interrupted)
         {
             Thread.currentThread().interrupt();
         }

@@ -1211,7 +1211,8 @@ public class WASAPIStream
                  * Otherwise, we could have added a check
                  * (dataSource.aec && (render == null)).
                  */
-                if (((capture != null) || sourceMode) && started)
+                boolean connected = ((capture != null) || sourceMode);
+                if (connected && started)
                 {
                     message = null;
                     captureIsBusy = true;
@@ -2730,7 +2731,7 @@ public class WASAPIStream
         {
             if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
-                logger.error("Wait is deadlocked - continue");
+                logger.error("waitWhileProcessThread is deadlocked - continue");
                 break;
             }
 
@@ -2750,7 +2751,7 @@ public class WASAPIStream
         {
             if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
-                logger.error("Wait is deadlocked - continue");
+                logger.error("waitWhileRenderIsBusy is deadlocked - continue");
                 break;
             }
 
@@ -2764,17 +2765,13 @@ public class WASAPIStream
      */
     private synchronized void yield()
     {
-        boolean interrupted = false;
-
         try
         {
             wait(devicePeriod);
         }
         catch (InterruptedException ie)
         {
-            interrupted = true;
-        }
-        if (interrupted)
             Thread.currentThread().interrupt();
+        }
     }
 }
