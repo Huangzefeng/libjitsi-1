@@ -6,10 +6,11 @@
  */
 package org.jitsi.impl.neomedia.transform.pt;
 
+import java.util.*;
+import java.util.concurrent.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
-
-import java.util.*;
 
 /**
  * We use this engine to change payload types of outgoing RTP packets if needed.
@@ -31,13 +32,8 @@ public class PayloadTypeTransformEngine
      * and we do nothing, packets are passed through without modification.
      * Maps source payload to target payload.
      */
-    private Map<Byte, Byte> mappingOverrides = new HashMap<Byte, Byte>();
-
-    /**
-     * This map is a copy of <tt>mappingOverride</tt> that we use during actual
-     * transformation
-     */
-    private Map<Byte, Byte> mappingOverridesCopy = null;
+    private final Map<Byte, Byte> mappingOverrides =
+        new ConcurrentHashMap<Byte, Byte>();
 
     /**
      * Checks if there are any override mappings, if no setting just pass
@@ -51,14 +47,14 @@ public class PayloadTypeTransformEngine
      * @return the updated <tt>RawPacket</tt> instance containing the changed
      * payload type.
      */
+    @Override
     public RawPacket transform(RawPacket pkt)
     {
-        if(mappingOverridesCopy == null || mappingOverridesCopy.isEmpty())
-            return pkt;
-
-        Byte newPT = mappingOverridesCopy.get(pkt.getPayloadType());
+        Byte newPT = mappingOverrides.get(pkt.getPayloadType());
         if(newPT != null)
+        {
             pkt.setPayload(newPT);
+        }
 
         return pkt;
     }
@@ -70,6 +66,7 @@ public class PayloadTypeTransformEngine
      *
      * @return the same <tt>RawPacket</tt> that is passing through.
      */
+    @Override
     public RawPacket reverseTransform(RawPacket pkt)
     {
         return pkt;
@@ -79,6 +76,7 @@ public class PayloadTypeTransformEngine
      * Closes this <tt>PacketTransformer</tt> i.e. releases the resources
      * allocated by it and prepares it for garbage collection.
      */
+    @Override
     public void close()
     {
     }
@@ -90,6 +88,7 @@ public class PayloadTypeTransformEngine
      * @return a reference to <tt>this</tt> instance of the
      * <tt>PayloadTypeTransformEngine</tt>.
      */
+    @Override
     public PacketTransformer getRTPTransformer()
     {
         return this;
@@ -102,6 +101,7 @@ public class PayloadTypeTransformEngine
      * @return <tt>null</tt> since this engine does not require any
      * RTCP transformations.
      */
+    @Override
     public PacketTransformer getRTCPTransformer()
     {
         return null;
@@ -112,23 +112,13 @@ public class PayloadTypeTransformEngine
      * type of outgoing RTP packets. If an override for <tt>originalPT<tt/>,
      * was already being overridden, this call is simply going to update the
      * override to the new one.
-     * <p>
-     * This method creates a copy of the local overriding map so that mapping
-     * overrides could be set during a call (e.g. after a SIP re-INVITE) in a
-     * thread-safe way without using synchronization.
      *
      * @param originalPt the payload type that we are overriding
      * @param overridePt the payload type that we are overriding it with
      */
     public void addPTMappingOverride(byte originalPt, byte overridePt)
     {
-        Byte existingOverride = mappingOverrides.get(originalPt);
-
-        if ((existingOverride == null) || (existingOverride != overridePt))
-        {
-            mappingOverrides.put(originalPt, overridePt);
-            mappingOverridesCopy = new HashMap<Byte, Byte>(mappingOverrides);
-        }
+        mappingOverrides.put(originalPt, overridePt);
     }
 
     /**
@@ -139,6 +129,5 @@ public class PayloadTypeTransformEngine
     public void clearPTMappingOverrides()
     {
         mappingOverrides.clear();
-        mappingOverridesCopy = new HashMap<Byte, Byte>(mappingOverrides);
     }
 }
