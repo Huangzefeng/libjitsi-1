@@ -13,8 +13,6 @@ import javax.media.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
-import net.sf.fmj.media.*;
-
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.util.*;
@@ -129,9 +127,6 @@ public class AudioMixingPushBufferStream
             AudioMixerPushBufferStream audioMixerStream,
             AudioMixingPushBufferDataSource dataSource)
     {
-        Log.objectCreated(this, "AudioMixingPushBufferStream");
-        Log.createLink(this, audioMixerStream, "AudioMixingPushBufferStream uses AudioMixerPushBufferStream");
-        Log.createLink(this, dataSource, "AudioMixingPushBufferStream uses AudioMixingPushBufferDataSource");
         this.audioMixerStream = audioMixerStream;
         this.dataSource = dataSource;
     }

@@ -14,8 +14,6 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
-import net.sf.fmj.media.*;
-
 import org.jitsi.util.*;
 
 /**
@@ -112,8 +110,6 @@ public class CachingPushBufferStream
      */
     public CachingPushBufferStream(PushBufferStream stream)
     {
-        Log.objectCreated(this, "CachingPushBufferStream");
-        Log.createLink(this, stream, "CachingPBS wraps PBS");
         this.stream = stream;
     }
 
@@ -593,7 +589,6 @@ public class CachingPushBufferStream
         synchronized (cache)
         {
             stream.setTransferHandler(substituteTransferHandler);
-            Log.createLink(this, substituteTransferHandler, "CPBS set transferHandler StreamSubstituteBufferTransferHandler");
             this.transferHandler = substituteTransferHandler;
             cache.notifyAll();
         }

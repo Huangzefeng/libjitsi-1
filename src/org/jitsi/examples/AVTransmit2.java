@@ -387,7 +387,7 @@ public class AVTransmit2
      * <tt>AVTransmit2</tt> application on the command line in the form of
      * name-value associations
      */
-    public static Map<String, String> parseCommandLineArgs(String[] args)
+    static Map<String, String> parseCommandLineArgs(String[] args)
     {
         Map<String, String> argMap = new HashMap<String, String>();
 

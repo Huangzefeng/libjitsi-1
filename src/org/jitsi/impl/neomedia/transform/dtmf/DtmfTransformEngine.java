@@ -143,7 +143,7 @@ public class DtmfTransformEngine
     /**
      * The maximal DTMF tone dration. The default value is -1 telling
      * to stop only when the user asks to. This can be changed by using the
-     * "org.jitsi.impl.neomedia.transform.dtmf.maximalToneDuration" property. 
+     * "org.jitsi.impl.neomedia.transform.dtmf.maximalToneDuration" property.
      */
     private int maximalToneDuration;
 
@@ -288,6 +288,7 @@ public class DtmfTransformEngine
         DtmfRawPacket dtmfPkt = new DtmfRawPacket(
                 pkt.getBuffer(),
                 pkt.getOffset(),
+                pkt.getLength(),
                 currentDtmfPayload);
 
         long audioPacketTimestamp = dtmfPkt.getTimestamp();
