@@ -191,8 +191,8 @@ public abstract class Devices
         {
             logger.debug("Got some active devices");
             String property = getPropDevice();
-            loadDevicePreferences(locator, property);
-            renameOldFashionedIdentifier(activeDevices);
+
+            loadDevicePreferences(property);
 
             // Search if an active device is a new one (is not stored in the
             // preferences yet). If true, then active this device and set it as
@@ -288,14 +288,8 @@ public abstract class Devices
 
             if (cfg != null)
             {
-                String new_property = DeviceConfiguration.PROP_AUDIO_SYSTEM
-                    + "."
-                    + locator
-                    + "."
-                    + property
-                    + "_list";
-
-                String deviceIdentifiersString = cfg.getString(new_property);
+                String newProperty = audioSystem.getPropertyName(property + "_list");
+                String deviceIdentifiersString = cfg.getString(newProperty);
 
                 logger.debug("Loading device preferences to be " +
                         deviceIdentifiersString);

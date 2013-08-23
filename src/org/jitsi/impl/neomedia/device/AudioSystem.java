@@ -515,42 +515,6 @@ public abstract class AudioSystem
         boolean value = ((getFeatures() & FEATURE_DENOISE) == FEATURE_DENOISE);
 
         if (cfg != null)
-            value = cfg.getBoolean(getPropertyName(PNAME_DENOISE), value);
-        return value;
-    }
-
-    /**
-     * Gets the indicator which determines whether echo cancellation is to be
-     * performed for captured audio.
-     *
-     * @return <tt>true</tt> if echo cancellation is to be performed for
-     * captured audio; otherwise, <tt>false</tt>
-     */
-    public boolean isEchoCancel()
-    {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-        boolean value
-            = ((getFeatures() & FEATURE_ECHO_CANCELLATION)
-                    == FEATURE_ECHO_CANCELLATION);
-
-        if (cfg != null)
-            value = cfg.getBoolean(getPropertyName(PNAME_ECHOCANCEL), value);
-        return value;
-    }
-
-    /**
-     * Gets the indicator which determines whether noise suppression is to be
-     * performed for captured audio.
-     *
-     * @return <tt>true</tt> if noise suppression is to be performed for
-     * captured audio; otherwise, <tt>false</tt>
-     */
-    public boolean isDenoise()
-    {
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-        boolean value = ((getFeatures() & FEATURE_DENOISE) == FEATURE_DENOISE);
-
-        if (cfg != null)
         {
             value = cfg.getBoolean(getPropertyName(PNAME_DENOISE), value);
         }
