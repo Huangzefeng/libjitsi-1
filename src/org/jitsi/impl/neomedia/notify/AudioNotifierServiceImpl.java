@@ -302,6 +302,21 @@ public class AudioNotifierServiceImpl
                         {
                             return finalAudio.isStarted();
                         }
+                        
+                        public boolean isInvalid()
+                        {
+                            return finalAudio.isInvalid();
+                        }
+                        
+                        public void registerAudioListener(AudioListener l)
+                        {
+                            finalAudio.registerAudioListener(l);
+                        }
+                        
+                        public void removeAudioListener(AudioListener l)
+                        {
+                            finalAudio.removeAudioListener(l);
+                        }
                     };
             }
         }

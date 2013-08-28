@@ -6,6 +6,8 @@
  */
 package org.jitsi.service.audionotifier;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 
 /**
@@ -60,6 +62,11 @@ public abstract class AbstractSCAudioClip
      * started.
      */
     private boolean started;
+    
+    /**
+     * Tracks if a start event has been fired, but no stop event has been yet.
+     */
+    private boolean isCurrentlyPlaying = false;
 
     /**
      * The <tt>Object</tt> used for internal synchronization purposes which
@@ -71,6 +78,11 @@ public abstract class AbstractSCAudioClip
      * stopped.
      */
     protected final Object sync = new Object();
+    
+    /**
+     * The AudioListeners registered with this AudioClip.
+     */
+    private List<AudioListener> audioListeners = new ArrayList<AudioListener>();
 
     /**
      * The <tt>String</tt> uri of the audio to be played by this instance.
@@ -367,8 +379,12 @@ public abstract class AbstractSCAudioClip
                     enterRunOnceInPlayThread();
                     try
                     {
-                        if (!runOnceInPlayThread())
+                        boolean success = runOnceInPlayThread();
+                        fireAudioEndedEvent();
+                        if (!success)
+                        {
                             break;
+                        }
                     }
                     finally
                     {
@@ -547,5 +563,66 @@ public abstract class AbstractSCAudioClip
     {
         internalStop();
         setLooping(false);
+    }
+    
+    public void registerAudioListener(AudioListener listener)
+    {
+        if (!audioListeners.contains(listener))
+        {
+            audioListeners.add(listener);
+        }
+    }
+    
+    public void removeAudioListener(AudioListener listener)
+    {
+        audioListeners.remove(listener);
+    }
+    
+    /**
+     * Notify all AudioListeners registered with this clip that playback
+     * of the clip has begun.
+     */
+    protected void fireAudioStartedEvent()
+    {
+        if (isCurrentlyPlaying)
+            return;
+
+        isCurrentlyPlaying = true;
+        for (final AudioListener listener : audioListeners)
+        {
+            new Thread("AudioStartedEventThread")
+            {
+                @Override
+                public void run()
+                {
+                    listener.onClipStarted();
+                }
+            }.start();
+        }
+    }
+    
+    /**
+     * Notify all AudioListeners registered with this clip that playback of
+     * this clip has ceased. For looping audio, this will be called at the end
+     * of each loop iteration.
+     */
+    protected void fireAudioEndedEvent()
+    {
+        if (!isCurrentlyPlaying)
+            return;
+
+        isCurrentlyPlaying = false;
+
+        for (final AudioListener listener : audioListeners)
+        {
+            new Thread("AudioEndedEventThread")
+            {
+                @Override
+                public void run()
+                {
+                    listener.onClipEnded();
+                }
+            }.start();
+        }
     }
 }

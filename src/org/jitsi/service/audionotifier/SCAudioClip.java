@@ -50,4 +50,26 @@ public interface SCAudioClip
      * @return <tt>true</tt> if this audio is started; otherwise, <tt>false</tt>
      */
     public boolean isStarted();
+    
+    /**
+     * Determines whether this audio file is invalid.
+     * 
+     * @return <tt>true</tt> iff this audio file is not in an acceptable format.
+     */
+    public boolean isInvalid();
+    
+    /**
+     * Registers the given listener with this SCAudioClip, so that we notify it
+     * of changes in the state of the audio clip.
+     * 
+     * @param listener The listener to register.
+     */
+    public void registerAudioListener(AudioListener listener);
+    
+    /**
+     * Unregisters the given listener.
+     * 
+     * @param listener The listener to unregister.
+     */
+    public void removeAudioListener(AudioListener listener);
 }
