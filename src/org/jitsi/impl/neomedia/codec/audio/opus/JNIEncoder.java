@@ -64,7 +64,7 @@ public class JNIEncoder
                             Constants.OPUS_RTP,
                             48000,
                             /* sampleSizeInBits */ Format.NOT_SPECIFIED,
-                            1,
+                            /* channels */ 2,
                             /* endian */ Format.NOT_SPECIFIED,
                             /* signed */ Format.NOT_SPECIFIED,
                             /* frameSizeInBits */ Format.NOT_SPECIFIED,
@@ -87,7 +87,8 @@ public class JNIEncoder
 
         int supportedInputCount = SUPPORTED_INPUT_SAMPLE_RATES.length;
 
-        SUPPORTED_INPUT_FORMATS = new Format[supportedInputCount*2];
+        SUPPORTED_INPUT_FORMATS = new Format[supportedInputCount];
+        //SUPPORTED_INPUT_FORMATS = new Format[supportedInputCount*2];
         for (int i = 0; i < supportedInputCount; i++)
         {
             SUPPORTED_INPUT_FORMATS[i]
@@ -102,20 +103,26 @@ public class JNIEncoder
                         /* frameRate */ Format.NOT_SPECIFIED,
                         Format.byteArray);
         }
-        for (int i = 0; i < supportedInputCount; i++)
-        {
-            SUPPORTED_INPUT_FORMATS[i+supportedInputCount]
-                = new AudioFormat(
-                        AudioFormat.LINEAR,
-                        SUPPORTED_INPUT_SAMPLE_RATES[i],
-                        16,
-                        2,
-                        AudioFormat.LITTLE_ENDIAN,
-                        AudioFormat.SIGNED,
-                        /* frameSizeInBits */ Format.NOT_SPECIFIED,
-                        /* frameRate */ Format.NOT_SPECIFIED,
-                        Format.byteArray);
-        }
+        /*
+         * Using stereo input formats leads to problems (at least when used with
+         * pulse audio). It is unclear whether they are rooted in this encoder
+         * or somewhere else in the code. So stereo input formats are disabled
+         * until we make sure that they work properly.
+         */
+        //for (int i = 0; i < supportedInputCount; i++)
+        //{
+        //    SUPPORTED_INPUT_FORMATS[i+supportedInputCount]
+        //        = new AudioFormat(
+        //                AudioFormat.LINEAR,
+        //                SUPPORTED_INPUT_SAMPLE_RATES[i],
+        //                16,
+        //                2,
+        //                AudioFormat.LITTLE_ENDIAN,
+        //                AudioFormat.SIGNED,
+        //                /* frameSizeInBits */ Format.NOT_SPECIFIED,
+        //                /* frameRate */ Format.NOT_SPECIFIED,
+        //                Format.byteArray);
+        //}
     }
 
     /**
