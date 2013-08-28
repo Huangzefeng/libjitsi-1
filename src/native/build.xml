@@ -244,8 +244,7 @@
       <linkerarg value="-o" location="end" if="is.running.macos" />
       <linkerarg value="libjnawtrenderer.jnilib" location="end" if="is.running.macos" />
       <linkerarg value="-dynamiclib" if="is.running.macos" />
-      <linkerarg value="-arch" if="is.running.macos" />
-      <linkerarg value="i386" if="is.running.macos" />
+
       <linkerarg value="-arch" if="is.running.macos" />
       <linkerarg value="x86_64" if="is.running.macos" />
       <linkerarg value="-framework" if="is.running.macos" />
@@ -256,8 +255,8 @@
       <linkerarg value="AppKit" if="is.running.macos" />
       <linkerarg value="-framework" if="is.running.macos" />
       <linkerarg value="QuartzCore" if="is.running.macos" />
-      <linkerarg value="-L/System/Library/Frameworks/JavaVM.framework/Libraries/" if="is.running.macos" />
-
+      <linkerarg value="-L/Users/tim/code/openjdk/sources/openjdk7/build/macosx-x86_64/j2re-bundle/jre1.7.0.jre/Contents/Home/lib/" if="is.running.macos" />
+    	
       <fileset dir="${src}/native/jawtrenderer" includes="org*.c JAWTRenderer_MacOSX.m" if="is.running.macos" />
 
       <!-- Windows-specific flags -->
