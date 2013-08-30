@@ -126,16 +126,6 @@ public class AudioSystemClipImpl
     @Override
     public boolean isInvalid()
     {
-        return !isValid();
-    }
-
-    /**
-     * Determines if the audio file at 'uri' is valid, by attempting to render
-     * it.
-     * @return <tt>true</tt> iff the audio file can be successfully rendered.
-     */
-    public boolean isValid()
-    {
         buffer = new Buffer();
         bufferData = new byte[DEFAULT_BUFFER_DATA_LENGTH];
         buffer.setData(bufferData);
@@ -153,7 +143,7 @@ public class AudioSystemClipImpl
         catch (IOException ioex) {}
         catch (ResourceUnavailableException ruex) {}
 
-        return success;
+        return !success;
     }
 
     /**
