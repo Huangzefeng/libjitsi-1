@@ -138,7 +138,7 @@ public class AudioSystemClipImpl
 
         try
         {
-            success = renderAudio(tempRenderer);
+            success = renderAudio(tempRenderer, false);
         }
         catch (IOException ioex) {}
         catch (ResourceUnavailableException ruex) {}
@@ -155,7 +155,7 @@ public class AudioSystemClipImpl
 
         try
         {
-            return renderAudio(renderer);
+            return renderAudio(renderer, true);
         }
         catch (IOException ioex)
         {
@@ -171,12 +171,14 @@ public class AudioSystemClipImpl
     /**
      * Renders audio from the file at the given URI.
      * @param renderer The renderer to use for rendering audio.
+     * @param notifyListeners Whether to notify listeners when rendering starts
+     * and ends.
      * @return <tt>true</tt> iff the rendering was successful.
      * @throws IOException If the file is not accessible, or is invalid.
      * @throws ResourceUnavailableException If the resampler or renderer is not
      * available.
      */
-    public boolean renderAudio(Renderer renderer)
+    public boolean renderAudio(Renderer renderer, boolean notifyListeners)
         throws IOException, ResourceUnavailableException
     {
         InputStream audioStream = null;
@@ -278,7 +280,11 @@ public class AudioSystemClipImpl
             {
                 renderer.open();
                 renderer.start();
-                fireAudioStartedEvent();
+
+                if (notifyListeners)
+                {
+                    fireAudioStartedEvent();
+                }
 
                 int bufferLength;
 
@@ -320,7 +326,11 @@ public class AudioSystemClipImpl
                                 & Renderer.INPUT_BUFFER_NOT_CONSUMED)
                             == Renderer.INPUT_BUFFER_NOT_CONSUMED);
                 }
-                fireAudioEndedEvent();
+
+                if (notifyListeners)
+                {
+                    fireAudioEndedEvent();
+                }
             }
             catch (IOException ioex)
             {
