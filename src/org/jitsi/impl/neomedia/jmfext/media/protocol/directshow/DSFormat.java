@@ -62,11 +62,6 @@ public class DSFormat
      */
     public static final int YUY2;
 
-    /**
-     * The MJPEG constant.
-     */
-    public static final int MJPG;
-
     static
     {
         System.loadLibrary("jndirectshow");
@@ -80,7 +75,6 @@ public class DSFormat
         Y411 = Y411();
         Y41P = Y41P();
         I420 = I420();
-        MJPG = MJPG();
     }
 
     private static native int ARGB32();
@@ -122,8 +116,6 @@ public class DSFormat
     public static native int YVU9();
 
     public static native int YVYU();
-
-    public static native int MJPG();
 
     /**
      * Video height.
@@ -203,7 +195,6 @@ public class DSFormat
             s.append(", width ").append(width);
         if (height != Format.NOT_SPECIFIED)
             s.append(", height ").append(height);
-
         return s.toString();
     }
 }
