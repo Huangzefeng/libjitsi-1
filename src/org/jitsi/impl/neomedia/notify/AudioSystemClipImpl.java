@@ -11,7 +11,7 @@ import java.io.*;
 import javax.media.*;
 import javax.media.format.*;
 
-import org.jitsi.impl.neomedia.MediaUtils;
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.audio.speex.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.audionotifier.*;
@@ -124,26 +124,30 @@ public class AudioSystemClipImpl
     }
 
     @Override
-    public boolean isInvalid()
+    public boolean isValid()
     {
         buffer = new Buffer();
         bufferData = new byte[DEFAULT_BUFFER_DATA_LENGTH];
         buffer.setData(bufferData);
 
-        // Use a temporary renderer, with playback disabled.
+        // Use a temporary renderer, with playback disabled, since we're only
+        // rendering to check validity rather than to actually produce audio.
         Renderer tempRenderer = audioSystem.createRenderer(false);
 
         // Unless the renderer explicitly tells us we succeeded, then we failed.
         boolean success = false;
 
-        try
+        success = renderAudio(tempRenderer, false);
+        if (success)
         {
-            success = renderAudio(tempRenderer, false);
+            logger.debug("Audio " + this + " is valid.");
         }
-        catch (IOException ioex) {}
-        catch (ResourceUnavailableException ruex) {}
+        else
+        {
+            logger.debug("Audio " + this + " is invalid.");
+        }
 
-        return !success;
+        return success;
     }
 
     /**
@@ -153,33 +157,22 @@ public class AudioSystemClipImpl
     {
         logger.debug("Run once in play thread called");
 
-        try
-        {
-            return renderAudio(renderer, true);
-        }
-        catch (IOException ioex)
-        {
-            logger.error(ioex);
-            return false;
-        }
-        catch (ResourceUnavailableException ruex)
-        {
-            return false;
-        }
+        return renderAudio(renderer, true);
     }
 
     /**
      * Renders audio from the file at the given URI.
+     *
      * @param renderer The renderer to use for rendering audio.
      * @param notifyListeners Whether to notify listeners when rendering starts
      * and ends.
-     * @return <tt>true</tt> iff the rendering was successful.
+     * @return <tt>true</tt> if the rendering was successful, <tt>false</tt>
+     * otherwise.
      * @throws IOException If the file is not accessible, or is invalid.
      * @throws ResourceUnavailableException If the resampler or renderer is not
      * available.
      */
     public boolean renderAudio(Renderer renderer, boolean notifyListeners)
-        throws IOException, ResourceUnavailableException
     {
         InputStream audioStream = null;
 
@@ -189,10 +182,15 @@ public class AudioSystemClipImpl
         }
         catch (IOException ioex)
         {
-            throw new IOException("Failed to get audio stream " + uri, ioex);
-        }
-        if (audioStream == null)
+            logger.error("Failed to get audio stream " + uri, ioex);
             return false;
+        }
+
+        if (audioStream == null)
+        {
+            logger.error("Audio stream " + uri + " unexpectedly null.");
+            return false;
+        }
 
         Codec resampler = null;
         boolean success = true;
@@ -206,12 +204,27 @@ public class AudioSystemClipImpl
                 = audioStreamFormat
                     = audioSystem.getFormat(audioStream);
 
-            if (rendererFormat == null || renderer == null)
+            if (rendererFormat == null)
+            {
+                logger.error("Renderer format was unexpectedly null for " +
+                             uri);
                 return false;
+            }
+            else if (renderer == null)
+            {
+                logger.error("Renderer was unexpectedly null for " + uri);
+                return false;
+            }
 
-            if (((AudioFormat)rendererFormat).getSampleRate() >
-                MediaUtils.MAX_AUDIO_SAMPLE_RATE)
+            double sampleRate = ((AudioFormat)rendererFormat).getSampleRate();
+            if (sampleRate > MediaUtils.MAX_AUDIO_SAMPLE_RATE)
+            {
+                logger.error("The audio data at " + uri + " has a sample rate "+
+                             "of " + sampleRate + "Hz, exceeding the maximum " +
+                             "of " + MediaUtils.MAX_AUDIO_SAMPLE_RATE + "Hz," +
+                             " and so was not rendered.");
                 return false;
+            }
 
             Format resamplerFormat = null;
 
@@ -247,7 +260,11 @@ public class AudioSystemClipImpl
             }
 
             if (buffer == null)
+            {
+                logger.error("Audio buffer was not initialized for " + uri + "," +
+                		     " so audio could no tbe rendered.");
                 return false;
+            }
 
             Buffer rendererBuffer = buffer;
             Buffer resamplerBuffer;
@@ -317,38 +334,36 @@ public class AudioSystemClipImpl
                         rendererProcess = renderer.process(rendererBuffer);
                         if (rendererProcess == Renderer.BUFFER_PROCESSED_FAILED)
                         {
-                            String error = "Failed to render audio stream " +
-                                            uri;
-                            throw new IOException(error);
+                            logger.error("Failed to render audio stream " +
+                                         uri);
+                            return false;
                         }
                     }
                     while ((rendererProcess
                                 & Renderer.INPUT_BUFFER_NOT_CONSUMED)
                             == Renderer.INPUT_BUFFER_NOT_CONSUMED);
                 }
-
-                if (notifyListeners)
-                {
-                    fireAudioEndedEvent();
-                }
+               
             }
             catch (IOException ioex)
             {
-                throw new IOException("Failed to read from audio stream " + uri,
-                                      ioex);
+                logger.error("Failed to read from audio stream " + uri, ioex);
+                return false;
             }
             catch (ResourceUnavailableException ruex)
             {
-                String error = "Failed to open "+renderer.getClass().getName();
-                throw new ResourceUnavailableException(error, ruex);
+                logger.error("Failed to open "+renderer.getClass().getName(),
+                             ruex);
+                return false;
             }
         }
         catch (ResourceUnavailableException ruex)
         {
             if (resampler != null)
             {
-                String error = "Failed to open "+resampler.getClass().getName();
-                throw new ResourceUnavailableException(error, ruex);
+                logger.error("Failed to open "+resampler.getClass().getName(),
+                             ruex);
+                return false;
             }
         }
         finally
@@ -368,6 +383,11 @@ public class AudioSystemClipImpl
             if (resampler != null)
                 resampler.close();
 
+            if (notifyListeners)
+            {
+                fireAudioEndedEvent();
+            }
+            
             /*
              * XXX We do not know whether the Renderer implementation of the
              * stop method will wait for the playback to complete.

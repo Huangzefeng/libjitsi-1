@@ -6,8 +6,7 @@
  */
 package org.jitsi.service.audionotifier;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -62,11 +61,6 @@ public abstract class AbstractSCAudioClip
      * started.
      */
     private boolean started;
-    
-    /**
-     * Tracks if a start event has been fired, but no stop event has been yet.
-     */
-    private boolean isCurrentlyPlaying = false;
 
     /**
      * The <tt>Object</tt> used for internal synchronization purposes which
@@ -78,11 +72,12 @@ public abstract class AbstractSCAudioClip
      * stopped.
      */
     protected final Object sync = new Object();
-    
+
     /**
      * The AudioListeners registered with this AudioClip.
      */
-    private List<AudioListener> audioListeners = new ArrayList<AudioListener>();
+    private Set<AudioListener> audioListeners =
+                      Collections.synchronizedSet(new HashSet<AudioListener>());
 
     /**
      * The <tt>String</tt> uri of the audio to be played by this instance.
@@ -208,7 +203,7 @@ public abstract class AbstractSCAudioClip
      * @return <tt>true</tt> if this instance is invalid; otherwise,
      * <tt>false</tt>
      */
-    public boolean isInvalid()
+    public boolean isValid()
     {
         return invalid;
     }
@@ -380,7 +375,6 @@ public abstract class AbstractSCAudioClip
                     try
                     {
                         boolean success = runOnceInPlayThread();
-                        fireAudioEndedEvent();
                         if (!success)
                         {
                             break;
@@ -501,7 +495,7 @@ public abstract class AbstractSCAudioClip
      * Sets the indicator which determines whether this instance is invalid.
      * <tt>AbstractSCAudioClip</tt> does not use the <tt>invalid</tt>
      * property/state of this instance and merely remembers the value which was
-     * set on it so that it can be retrieved by {@link #isInvalid()}. The
+     * set on it so that it can be retrieved by {@link #isValid()}. The
      * default value is <tt>false</tt> i.e. this instance is valid by default.
      *
      * @param invalid <tt>true</tt> to mark this instance invalid or
@@ -564,7 +558,7 @@ public abstract class AbstractSCAudioClip
         internalStop();
         setLooping(false);
     }
-    
+
     public void registerAudioListener(AudioListener listener)
     {
         if (!audioListeners.contains(listener))
@@ -572,57 +566,50 @@ public abstract class AbstractSCAudioClip
             audioListeners.add(listener);
         }
     }
-    
+
     public void removeAudioListener(AudioListener listener)
     {
         audioListeners.remove(listener);
     }
-    
+
     /**
      * Notify all AudioListeners registered with this clip that playback
-     * of the clip has begun.
+     * of the clip has begun. Note that all notifications happen in the same
+     * thread, so callers must be careful not to block execution.
      */
     protected void fireAudioStartedEvent()
     {
-        if (isCurrentlyPlaying)
-            return;
-
-        isCurrentlyPlaying = true;
-        for (final AudioListener listener : audioListeners)
+        new Thread("AudioStartedEventThread")
         {
-            new Thread("AudioStartedEventThread")
+            @Override
+            public void run()
             {
-                @Override
-                public void run()
+                for (final AudioListener listener : audioListeners)
                 {
                     listener.onClipStarted();
                 }
-            }.start();
-        }
+            }
+        }.start();
     }
-    
+
     /**
      * Notify all AudioListeners registered with this clip that playback of
      * this clip has ceased. For looping audio, this will be called at the end
-     * of each loop iteration.
+     * of each loop iteration. Note that all notifications happen in the same
+     * thread, so callers must be careful not to block execution.
      */
     protected void fireAudioEndedEvent()
     {
-        if (!isCurrentlyPlaying)
-            return;
-
-        isCurrentlyPlaying = false;
-
-        for (final AudioListener listener : audioListeners)
+        new Thread("AudioEndedEventThread")
         {
-            new Thread("AudioEndedEventThread")
+            @Override
+            public void run()
             {
-                @Override
-                public void run()
+                for (final AudioListener listener : audioListeners)
                 {
                     listener.onClipEnded();
                 }
-            }.start();
-        }
+            }
+        }.start();
     }
 }

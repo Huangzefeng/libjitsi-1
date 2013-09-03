@@ -303,9 +303,9 @@ public class AudioNotifierServiceImpl
                             return finalAudio.isStarted();
                         }
                         
-                        public boolean isInvalid()
+                        public boolean isValid()
                         {
-                            return finalAudio.isInvalid();
+                            return finalAudio.isValid();
                         }
                         
                         public void registerAudioListener(AudioListener l)

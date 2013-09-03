@@ -2,9 +2,22 @@ package org.jitsi.service.audionotifier;
 
 /**
  * Used to track the state of audio clips that are playing.
- * Handler functions are executed in their own thread.
+ * Handler functions are all executed in the same thread, so implementations
+ * must be careful to avoid blocking execution.
  */
-public interface AudioListener {
+public interface AudioListener
+{
+    /**
+     * Called when playback of the associated audio clip begins. Note that this
+     * happens on a shared thread, so the implementation should avoid blocking
+     * execution.
+     */
 	public void onClipStarted();
+
+	/**
+	 * Called when playback of the associated audio clip ends. Note that this
+     * happens on a shared thread, so the implementation should avoid blocking
+     * execution.
+	 */
 	public void onClipEnded();
 }
