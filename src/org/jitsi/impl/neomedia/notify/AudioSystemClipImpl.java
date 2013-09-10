@@ -7,6 +7,10 @@
 package org.jitsi.impl.neomedia.notify;
 
 import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.LinkedList;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -15,6 +19,7 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.audio.speex.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.audionotifier.*;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.util.*;
 
 /**
@@ -145,6 +150,7 @@ public class AudioSystemClipImpl
         else
         {
             logger.debug("Audio " + this + " is invalid.");
+            logAudioDataInNewThread();
         }
 
         return success;
@@ -157,7 +163,12 @@ public class AudioSystemClipImpl
     {
         logger.debug("Run once in play thread called");
 
-        return renderAudio(renderer, true);
+        boolean success = renderAudio(renderer, true);
+
+        if (!success)
+            logAudioDataInNewThread();
+
+        return success;
     }
 
     /**
@@ -175,6 +186,7 @@ public class AudioSystemClipImpl
     public boolean renderAudio(Renderer renderer, boolean notifyListeners)
     {
         InputStream audioStream = null;
+        logger.debug("Rendering audio " + uri + "...");
 
         try
         {
@@ -262,7 +274,7 @@ public class AudioSystemClipImpl
             if (buffer == null)
             {
                 logger.error("Audio buffer was not initialized for " + uri + "," +
-                		     " so audio could no tbe rendered.");
+                		     " so audio could not be rendered.");
                 return false;
             }
 
@@ -297,6 +309,7 @@ public class AudioSystemClipImpl
             {
                 renderer.open();
                 renderer.start();
+
 
                 if (notifyListeners)
                 {
@@ -343,7 +356,7 @@ public class AudioSystemClipImpl
                                 & Renderer.INPUT_BUFFER_NOT_CONSUMED)
                             == Renderer.INPUT_BUFFER_NOT_CONSUMED);
                 }
-               
+
             }
             catch (IOException ioex)
             {
@@ -383,11 +396,13 @@ public class AudioSystemClipImpl
             if (resampler != null)
                 resampler.close();
 
+
             if (notifyListeners)
             {
+                logger.debug("Firing audio-ended event.");
                 fireAudioEndedEvent();
             }
-            
+
             /*
              * XXX We do not know whether the Renderer implementation of the
              * stop method will wait for the playback to complete.
@@ -447,5 +462,148 @@ public class AudioSystemClipImpl
         }
 
         return success;
+    }
+
+    /**
+     * Logs an extract from the start and end of the audio file, for debugging
+     * purposes. Works in its own thread.
+     */
+    private void logAudioDataInNewThread()
+    {
+        new Thread("AudioFileLogger")
+        {
+            public void run()
+            {
+                logAudioData();
+            }
+        }.start();
+    }
+
+    /**
+     * Logs an extract from the start and end of the audio file, for debugging
+     * purposes.
+     */
+    private void logAudioData()
+    {
+        URL audioUrl = LibJitsi.getResourceManagementService().
+                                                        getSoundURLForPath(uri);
+        if (audioUrl == null)
+        {
+            try
+            {
+                audioUrl = new URL(uri);
+            }
+            catch (MalformedURLException e)
+            {
+                logger.error("Could not log audio data: uri " + uri +
+                             " was invalid.");
+                return;
+            }
+        }
+
+        InputStreamReader audioStream;
+        try
+        {
+            audioStream = new InputStreamReader(audioUrl.openStream());
+        }
+        catch (IOException ioex)
+        {
+            logger.error("Could not log audio data: " +
+                         "failed to get audio stream " + uri, ioex);
+            return;
+        }
+
+        if (audioStream == null)
+        {
+            logger.error("Could not log data: " +
+                         "Audio stream " + uri + " unexpectedly null.");
+        }
+
+        int maxHeaderSize = 50;
+
+        // Obtain the first n bytes of the file for debugging.
+        int[] header = new int[maxHeaderSize];
+        int idx;
+        for (idx = 0; idx < maxHeaderSize; idx++)
+        {
+            try
+            {
+                int nextByte = audioStream.read();
+
+                if (nextByte == -1)
+                {
+                    break;
+                }
+
+                header[idx] = nextByte;
+            }
+            catch (IOException e)
+            {
+                logger.error("Tried to log audio data, but failed to read " +
+                        " from stream.");
+                return;
+            }
+        }
+
+        logger.error("Invalid audio file at " + uri + " started with:\n"+
+                     Arrays.toString(header));
+
+        LimitedQueue<Integer> lastFewBytes =
+                                       new LimitedQueue<Integer>(maxHeaderSize);
+
+        // Spin through the rest of the file, maintaining a List of the last
+        // n bytes, so that when the file ends we can output the last n bytes
+        // in the file for debugging.
+        while (idx > 0)
+        {
+            try
+            {
+                int nextByte = audioStream.read();
+
+                if (nextByte == -1)
+                    break;
+
+                lastFewBytes.add(nextByte);
+                idx += 1;
+            }
+            catch (IOException e)
+            {
+                logger.error("Tried to log audio data, but failed to read " +
+                             " from stream.");
+                return;
+            }
+        }
+
+        logger.error("Invalid audio file at " + uri + " ended with:\n"+
+                     lastFewBytes.toString());
+
+    }
+
+    /**
+     * Implementation of List with a fixed capacity, which discards the oldest
+     * element from the list when a new element is added and the list is already
+     * at capacity.
+     *
+     * @param <E> The type of objects in the list.
+     */
+    private static class LimitedQueue<E> extends LinkedList<E>
+    {
+        private final int limit;
+
+        public LimitedQueue(int limit)
+        {
+            this.limit = limit;
+        }
+
+        @Override
+        public boolean add(E o)
+        {
+            super.add(o);
+
+            while (size() > limit)
+                remove();
+
+            return true;
+        }
     }
 }
