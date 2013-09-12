@@ -7,10 +7,8 @@
 package org.jitsi.impl.neomedia.notify;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.LinkedList;
+import java.net.*;
+import java.util.*;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -19,7 +17,7 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.audio.speex.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.audionotifier.*;
-import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
 
 /**
@@ -42,13 +40,6 @@ public class AudioSystemClipImpl
      */
     private static final Logger logger
         = Logger.getLogger(AudioSystemClipImpl.class);
-
-    /**
-     * The minimum duration in milliseconds to be assumed for the audio streams
-     * played by <tt>AudioSystemClipImpl</tt> in order to ensure that they are
-     * played back long enough to be heard.
-     */
-    private static final long MIN_AUDIO_STREAM_DURATION = 200;
 
     private final AudioSystem audioSystem;
 
@@ -387,77 +378,20 @@ public class AudioSystemClipImpl
             }
             catch (IOException ioex)
             {
-                /*
-                 * The audio stream failed to close but it doesn't mean the URL
-                 * will fail to open again so ignore the exception.
-                 */
+                // The audio stream failed to close but it doesn't mean the URL
+                // will fail to open again so just log the exception.
+                logger.info("Hit IOException attempting to close file " + ioex);
             }
 
             if (resampler != null)
+            {
                 resampler.close();
-
+            }
 
             if (notifyListeners)
             {
                 logger.debug("Firing audio-ended event.");
                 fireAudioEndedEvent();
-            }
-
-            /*
-             * XXX We do not know whether the Renderer implementation of the
-             * stop method will wait for the playback to complete.
-             */
-            if (success
-                    && (audioStreamFormat != null)
-                    && (audioStreamLength > 0)
-                    && (rendererProcessStartTime > 0)
-                    && isStarted())
-            {
-                long audioStreamDuration
-                    = (audioStreamFormat.computeDuration(audioStreamLength)
-                            + 999999)
-                        / 1000000;
-
-                if (audioStreamDuration > 0)
-                {
-                    /*
-                     * XXX The estimation is not accurate because we do not
-                     * know, for example, how much the Renderer may be buffering
-                     * before it starts the playback.
-                     */
-                    audioStreamDuration += MIN_AUDIO_STREAM_DURATION;
-
-                    boolean interrupted = false;
-
-                    synchronized (sync)
-                    {
-                        while (isStarted())
-                        {
-                            long timeout
-                                = System.currentTimeMillis()
-                                    - rendererProcessStartTime;
-
-                            if ((timeout >= audioStreamDuration)
-                                    || (timeout <= 0))
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    sync.wait(timeout);
-                                }
-                                catch (InterruptedException ie)
-                                {
-                                    interrupted = true;
-                                }
-                            }
-                        }
-                    }
-                    if (interrupted)
-                        Thread.currentThread().interrupt();
-                }
             }
         }
 
