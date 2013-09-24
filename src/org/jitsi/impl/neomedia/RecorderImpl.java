@@ -281,6 +281,9 @@ public class RecorderImpl
                 }
             }
         }
+
+        for (Recorder.Listener listener : listeners)
+            listener.recorderStarted(this);
     }
 
     /**

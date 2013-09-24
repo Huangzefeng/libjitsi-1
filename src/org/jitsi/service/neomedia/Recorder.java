@@ -95,6 +95,15 @@ public interface Recorder
     {
         /**
          * Notifies this <tt>Listener</tt> that a specific <tt>Recorder</tt> has
+         * started recording the media associated with it.
+         *
+         * @param recorder the <tt>Recorder</tt> which has stopped recording its
+         * associated media
+         */
+        public void recorderStarted(Recorder recorder);
+
+        /**
+         * Notifies this <tt>Listener</tt> that a specific <tt>Recorder</tt> has
          * stopped recording the media associated with it.
          *
          * @param recorder the <tt>Recorder</tt> which has stopped recording its
