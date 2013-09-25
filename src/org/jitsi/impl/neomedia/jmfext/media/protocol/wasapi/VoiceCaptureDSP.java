@@ -41,6 +41,9 @@ public class VoiceCaptureDSP
 
     public static final String IID_IPropertyStore
         = "{886d8eeb-8cf2-4446-8d02-cdba1dbdcf99}";
+    
+    public static final String IID_IAudioAutoGainControl
+        = "{85401FD4-6DE4-4b9d-9869-2D6753A82F3C}";
 
     /**
      * The <tt>Logger</tt> used by the <tt>VoiceCaptureDSP</tt> class to print
@@ -367,6 +370,9 @@ public class VoiceCaptureDSP
     public static native int IPropertyStore_SetValue(
             long thiz,
             long key, boolean value)
+        throws HResultException;
+    
+    public static native void DisableAGC(long thiz) 
         throws HResultException;
 
     public static native int IPropertyStore_SetValue(

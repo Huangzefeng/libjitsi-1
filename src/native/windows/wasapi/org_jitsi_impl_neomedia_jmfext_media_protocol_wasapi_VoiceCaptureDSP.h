@@ -190,6 +190,14 @@ JNIEXPORT jint JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi
  */
 JNIEXPORT jint JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_VoiceCaptureDSP_IPropertyStore_1SetValue__JJZ
   (JNIEnv *, jclass, jlong, jlong, jboolean);
+  
+/*
+ * Class:     org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_VoiceCaptureDSP
+ * Method:    DisableAGC
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_VoiceCaptureDSP_DisableAGC
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_VoiceCaptureDSP

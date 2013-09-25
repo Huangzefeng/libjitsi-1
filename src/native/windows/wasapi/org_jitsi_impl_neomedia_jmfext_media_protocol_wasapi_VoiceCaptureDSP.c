@@ -10,6 +10,7 @@
 #include <objbase.h> /* CoTaskMemAlloc */
 #include <propsys.h> /* IPropertyStore */
 #include <stdint.h> /* intptr_t */
+#include "Devicetopology.h" /* IAudioAutoGainControl */
 
 #include "HResultException.h"
 #include "MediaBuffer.h"
@@ -328,6 +329,18 @@ Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_VoiceCaptureDSP_IMedia
     if (FAILED(hr))
         WASAPI_throwNewHResultException(env, hr, __func__, __LINE__);
     return (jint) hr;
+}
+
+JNIEXPORT void JNICALL
+Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_VoiceCaptureDSP_DisableAGC(JNIEnv *env, jclass clazz, jlong thiz)
+{ //TJLP
+    // (IAudioAutoGainControl* This,WINBOOL bEnabled,LPCGUID pguidEventContext)
+	IAudioAutoGainControl *agc = (IAudioAutoGainControl *)thiz;
+	//long thing = __uuidof(NULL);
+    HRESULT hr = IAudioAutoGainControl_GetEnabled(agc, FALSE, (DWORD)0);
+	
+	if (FAILED(hr))
+		WASAPI_throwNewHResultException(env, hr, __func__, __LINE__);
 }
 
 JNIEXPORT jint JNICALL
