@@ -1028,6 +1028,20 @@ Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_IPropertyStore_
     (JNIEnv *env, jclass clazz, jlong thiz)
 {
     IPropertyStore_Release((IPropertyStore *) (intptr_t) thiz);
+    
+    /* // Attempt to commit the store before releasing it.
+    IPropertyStore *propStore = (IPropertyStore *) (intptr_t) thiz;
+	
+	HRESULT hr = IPropertyStore_Commit(propStore);
+    if (FAILED(hr))
+        WASAPI_throwNewHResultException(env, hr, __func__, __LINE__);
+	else
+	{
+	    hr = IPropertyStore_Release(propStore);
+		if (FAILED(hr))
+			WASAPI_throwNewHResultException(env, hr, __func__, __LINE__);	
+	}
+    /**/
 }
 
 JNIEXPORT jstring JNICALL
