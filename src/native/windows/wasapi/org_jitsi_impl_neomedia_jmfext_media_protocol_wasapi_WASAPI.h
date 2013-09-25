@@ -313,6 +313,13 @@ JNIEXPORT jstring JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_was
 
 /*
  * Class:     org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI
+ * Method:    IPropertyStore_GetBoolean
+ * Signature: (JJ)Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_IPropertyStore_1GetBoolean
+  (JNIEnv *, jclass, jlong, jlong);
+/*
+ * Class:     org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI
  * Method:    IPropertyStore_Release
  * Signature: (J)V
  */
@@ -327,6 +334,13 @@ JNIEXPORT void JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi
 JNIEXPORT jlong JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_PSPropertyKeyFromString
   (JNIEnv *, jclass, jstring);
 
+/*
+ * Class:     org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI
+ * Method:    PSStringFromPropertyKey
+ * Signature: (J)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_PSStringFromPropertyKey
+  (JNIEnv *, jclass, jlong);
 /*
  * Class:     org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI
  * Method:    ResetEvent

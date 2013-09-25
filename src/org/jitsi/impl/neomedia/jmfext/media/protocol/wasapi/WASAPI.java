@@ -329,6 +329,9 @@ public class WASAPI
 
     public static native String IPropertyStore_GetString(long thiz, long key)
         throws HResultException;
+    
+    public static native boolean IPropertyStore_GetBoolean(long thiz, long key)
+        throws HResultException;
 
     public static native void IPropertyStore_Release(long thiz);
 
@@ -338,6 +341,9 @@ public class WASAPI
     }
 
     public static native long PSPropertyKeyFromString(String pszString)
+        throws HResultException;
+    
+    public static native String PSStringFromPropertyKey(long thiz)
         throws HResultException;
 
     public static native void ResetEvent(long hEvent)

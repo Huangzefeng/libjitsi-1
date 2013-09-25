@@ -18,6 +18,7 @@
 #include <audioclient.h> /* IAudioClient */
 #include <mmreg.h> /* WAVEFORMATEX */
 #include <objbase.h>
+#include <propsys.h> 
 #include <stdint.h> /* intptr_t */
 #include <string.h>
 #include <windows.h> /* LoadLibrary, GetProcAddress */
@@ -29,6 +30,12 @@
     WASAPI_pPSPropertyKeyFromString(pszString,pkey)
 
 typedef HRESULT (WINAPI *LPPSPropertyKeyFromString)(LPCWSTR,PROPERTYKEY*);
+	
+#define PSStringFromPropertyKey(pkey, szKey, keySize) \
+    WASAPI_pPSStringFromPropertyKey(pkey, szKey, keySize)
+
+typedef HRESULT (WINAPI *LPPSStringFromPropertyKey)(REFPROPERTYKEY,LPWSTR,UINT);
+
 
 ULONG STDMETHODCALLTYPE MMNotificationClient_AddRef
     (IMMNotificationClient* thiz);
@@ -88,6 +95,12 @@ static IMMNotificationClientVtbl *WASAPI_iMMNotificationClient
  * to link to at this time.
  */
 static LPPSPropertyKeyFromString WASAPI_pPSPropertyKeyFromString = NULL;
+
+/**
+ * The pointer to the function PSStringFromPropertyKey
+ */
+static LPPSStringFromPropertyKey WASAPI_pPSStringFromPropertyKey = NULL;
+ 
 static JavaVM *WASAPI_vm = NULL;
 
 JNIEXPORT void JNICALL
@@ -972,12 +985,64 @@ Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_IPropertyStore_
     return ret;
 }
 
+JNIEXPORT jboolean JNICALL
+Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_IPropertyStore_1GetBoolean
+    (JNIEnv *env, jclass clazz, jlong thiz, jlong key)
+{
+    PROPVARIANT v;
+    HRESULT hr;
+    jboolean ret;
+
+    PropVariantInit(&v);
+    hr
+        = IPropertyStore_GetValue(
+                (IPropertyStore *) (intptr_t) thiz,
+                (REFPROPERTYKEY) (intptr_t) key,
+                &v);
+    if (SUCCEEDED(hr))
+    {
+        if (v.vt == VT_BOOL)
+        {
+            ret = v.pwszVal ? TRUE : FALSE;
+        }
+        else
+        {
+            ret = FALSE;
+            WASAPI_throwNewHResultException(
+                    env,
+                    E_UNEXPECTED,
+                    __func__, __LINE__);
+        }
+        PropVariantClear(&v);
+    }
+    else
+    {
+        ret = FALSE;
+        WASAPI_throwNewHResultException(env, hr, __func__, __LINE__);
+    }
+    return ret;
+}
+
 JNIEXPORT void JNICALL
 Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_IPropertyStore_1Release
     (JNIEnv *env, jclass clazz, jlong thiz)
 {
     IPropertyStore_Release((IPropertyStore *) (intptr_t) thiz);
 }
+
+JNIEXPORT jstring JNICALL
+Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_PSStringFromPropertyKey
+    (JNIEnv *env, jclass clazz, jlong pszKey)
+{
+	REFPROPERTYKEY pkey = (REFPROPERTYKEY) (intptr_t) pszKey;
+	WCHAR szKey[PKEYSTR_MAX];
+
+    HRESULT hr = PSStringFromPropertyKey(pkey, szKey, ARRAYSIZE(szKey));
+    if (FAILED(hr))
+        WASAPI_throwNewHResultException(env, hr, __func__, __LINE__);    
+    
+    return (*env)->NewString(env, szKey, wcslen(szKey));
+}	
 
 JNIEXPORT jlong JNICALL
 Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_PSPropertyKeyFromString
@@ -1191,6 +1256,14 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
             = (LPPSPropertyKeyFromString)
                 GetProcAddress(hPropSys, "PSPropertyKeyFromString");
         ret = WASAPI_pPSPropertyKeyFromString ? JNI_VERSION_1_4 : JNI_ERR;
+        
+        if (JNI_ERR != ret)
+        {
+            WASAPI_pPSStringFromPropertyKey
+                = (LPPSStringFromPropertyKey)
+                    GetProcAddress(hPropSys, "PSStringFromPropertyKey");
+            ret = WASAPI_pPSStringFromPropertyKey ? JNI_VERSION_1_4 : JNI_ERR;
+        }
     }
     else
         ret = JNI_ERR;
