@@ -1257,6 +1257,20 @@ public class WASAPISystem
                     int hresult
                         = IPropertyStore_SetValue(
                                 iPropertyStore,
+                                MFPKEY_WMAAECMA_DMO_SOURCE_MODE,
+                                true);
+
+                    if (FAILED(hresult))
+                    {
+                        throw new HResultException(
+                                hresult,
+                                "IPropertyStore_SetValue"
+                                    + " MFPKEY_WMAAECMA_DMO_SOURCE_MODE");
+                    }
+                    
+                    hresult
+                        = IPropertyStore_SetValue(
+                                iPropertyStore,
                                 MFPKEY_WMAAECMA_SYSTEM_MODE,
                                 SINGLE_CHANNEL_AEC);
 

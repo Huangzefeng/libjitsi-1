@@ -9,6 +9,7 @@ package org.jitsi.impl.neomedia.jmfext.media.renderer.video;
 import java.awt.*;
 
 import org.jitsi.impl.neomedia.codec.video.*;
+import org.jitsi.util.swing.TransparentPanel;
 
 /**
  * Implements an AWT <tt>Component</tt> in which <tt>JAWTRenderer</tt> paints.

@@ -773,7 +773,17 @@ public class WASAPIStream
                     IPropertyStore_SetValue(
                             iPropertyStore,
                             MFPKEY_WMAAECMA_FEATR_AGC,
-                            true);
+                            false);
+                    
+                    DisableAGC(iPropertyStore);
+                }
+                // Perform VAD for AGC.
+                if (MFPKEY_WMAAECMA_FEATR_VAD != 0)
+                {
+                    IPropertyStore_SetValue(
+                            iPropertyStore,
+                            MFPKEY_WMAAECMA_FEATR_VAD,
+                            2); // Chosen by CRS
                 }
                 // Perform noise suppression (NS).
                 if (MFPKEY_WMAAECMA_FEATR_NS != 0)
@@ -788,7 +798,7 @@ public class WASAPIStream
                     IPropertyStore_SetValue(
                             iPropertyStore,
                             MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH,
-                            256);
+                            128);
                 }
             }
         }
@@ -1431,21 +1441,6 @@ public class WASAPIStream
             try
             {
                 int hresult
-                    = IPropertyStore_SetValue(
-                            iPropertyStore,
-                            MFPKEY_WMAAECMA_DMO_SOURCE_MODE,
-                            sourceMode);
-
-                if (FAILED(hresult))
-                {
-                    throw new HResultException(
-                            hresult,
-                            "IPropertyStore_SetValue"
-                                + " MFPKEY_WMAAECMA_DMO_SOURCE_MODE");
-                }
-                configureAEC(iPropertyStore);
-
-                hresult
                     = IMediaObject_SetXXXputType(
                             iMediaObject,
                             /* IMediaObject_SetOutputType */ false,
@@ -1511,6 +1506,7 @@ public class WASAPIStream
                                     captureFormat,
                                     renderFormat);
                         }
+                        configureAEC(iPropertyStore);
 
                         this.dmoOutputDataBuffer = dmoOutputDataBuffer;
                         dmoOutputDataBuffer = 0;

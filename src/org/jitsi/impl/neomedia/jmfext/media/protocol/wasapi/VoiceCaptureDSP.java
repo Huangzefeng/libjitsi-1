@@ -101,6 +101,9 @@ public class VoiceCaptureDSP
      * set the {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>.
      */
     public static final long MFPKEY_WMAAECMA_FEATR_AGC;
+    
+    /** Some VAD thing */
+    public static final long MFPKEY_WMAAECMA_FEATR_VAD;
 
     /**
      * Specifies whether the Voice Capture DSP performs center clipping. Center
@@ -255,6 +258,7 @@ public class VoiceCaptureDSP
          */
         MFPKEY_WMAAECMA_FEATR_AES = maybePSPropertyKeyFromString(fmtid + "10");
         MFPKEY_WMAAECMA_FEATR_AGC = maybePSPropertyKeyFromString(fmtid + "9");
+        MFPKEY_WMAAECMA_FEATR_VAD = maybePSPropertyKeyFromString(fmtid + "11");
         MFPKEY_WMAAECMA_FEATR_CENTER_CLIP
             = maybePSPropertyKeyFromString(fmtid + "12");
         MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH
