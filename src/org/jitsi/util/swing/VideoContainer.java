@@ -12,6 +12,8 @@ import java.beans.*;
 
 import javax.swing.*;
 
+import org.jitsi.util.OSUtils;
+
 /**
  * Implements a <tt>Container</tt> for video/visual <tt>Component</tt>s.
  * <tt>VideoContainer</tt> uses {@link VideoLayout} to layout the video/visual
@@ -33,7 +35,8 @@ public class VideoContainer
      * The default background color of <tt>VideoContainer</tt> when it contains
      * <tt>Component</tt> instances other than {@link #noVideoComponent}.
      */
-    public static final Color DEFAULT_BACKGROUND_COLOR = Color.BLACK;
+    public static final Color DEFAULT_BACKGROUND_COLOR = OSUtils.IS_MAC ?
+    		new Color(240, 240, 240) : Color.BLACK;
 
     private static final String PREFERRED_SIZE_PROPERTY_NAME = "preferredSize";
 
