@@ -200,12 +200,12 @@ public abstract class DeviceSystem
                 {
                     OSUtils.IS_ANDROID ? ".AudioRecordSystem" : null,
                     OSUtils.IS_ANDROID ? ".OpenSLESSystem" : null,
-                    OSUtils.IS_LINUX ? ".PulseAudioSystem" : null,
-                    (OSUtils.IS_WINDOWS_7 ||
-                        OSUtils.IS_WINDOWS_8)? ".WASAPISystem" : null,
-                    (OSUtils.IS_ANDROID ||
-                        OSUtils.IS_WINDOWS_7 ||
-                            OSUtils.IS_WINDOWS_8) ? null : ".PortAudioSystem",
+                    (OSUtils.IS_LINUX || OSUtils.IS_FREEBSD)
+                        ? ".PulseAudioSystem"
+                        : null,
+                    OSUtils.IS_WINDOWS ? ".WASAPISystem" : null,
+                    OSUtils.IS_ANDROID ? null : ".PortAudioSystem",
+                    OSUtils.IS_MAC ? ".MacCoreaudioSystem" : null,
                     ".NoneAudioSystem"
                 };
             break;
