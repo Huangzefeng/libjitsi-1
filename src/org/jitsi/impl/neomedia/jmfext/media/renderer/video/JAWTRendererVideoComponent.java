@@ -61,7 +61,14 @@ public class JAWTRendererVideoComponent
     @Override
     public void addNotify()
     {
-        super.addNotify();
+    	try
+    	{
+    		super.addNotify();
+    	}
+    	catch (Exception e)
+    	{
+    		// Not fatal so just continue
+    	}
 
         wantsPaint = true;
     }
