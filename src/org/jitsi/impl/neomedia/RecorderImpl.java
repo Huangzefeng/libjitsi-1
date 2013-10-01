@@ -281,6 +281,18 @@ public class RecorderImpl
                 }
             }
         }
+
+        Recorder.Listener[] listeners;
+
+        synchronized (this.listeners)
+        {
+            listeners
+                = this.listeners.toArray(
+                        new Recorder.Listener[this.listeners.size()]);
+        }
+
+        for (Recorder.Listener listener : listeners)
+            listener.recorderStarted(this);
     }
 
     /**
@@ -317,6 +329,7 @@ public class RecorderImpl
                     = this.listeners.toArray(
                             new Recorder.Listener[this.listeners.size()]);
             }
+
             for (Recorder.Listener listener : listeners)
                 listener.recorderStopped(this);
         }
