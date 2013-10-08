@@ -2414,6 +2414,12 @@ public class MediaStreamImpl
 
             if (receiveStream != null)
             {
+                if (logger.isTraceEnabled())
+                {
+                    logger.trace("Received TimeoutEvent on receive stream" +
+                        receiveStream.hashCode());
+                }
+
                 synchronized (receiveStreams)
                 {
                     if (receiveStreams.contains(receiveStream))
@@ -2434,6 +2440,13 @@ public class MediaStreamImpl
 
             if(receiveStream != null)
             {
+                if (logger.isTraceEnabled())
+                {
+                    logger.trace(
+                        "Received RemotePayloadChangeEvent on receive stream" +
+                        receiveStream.hashCode());
+                }
+
                 MediaDeviceSession deviceSession = getDeviceSession();
 
                 if (deviceSession != null)

@@ -109,20 +109,6 @@ public abstract class AbstractCodec2
     	return seqNo;
     }
 
-    /**
-     * Utility to perform format matching.
-     *
-     * @param in input format
-     * @param outs array of output formats
-     * @return the first output format that is supported
-     */
-    public static Format matches(Format in, Format outs[])
-    {
-        for (Format out : outs)
-            if (in.matches(out))
-                return out;
-        return null;
-    }
 
     public static YUVFormat specialize(YUVFormat yuvFormat, Class<?> dataType)
     {
@@ -204,6 +190,7 @@ public abstract class AbstractCodec2
             Class<? extends Format> formatClass,
             Format[] supportedOutputFormats)
     {
+        Log.objectCreated(this, name);
         this.formatClass = formatClass;
         this.name = name;
         this.supportedOutputFormats = supportedOutputFormats;
@@ -222,6 +209,7 @@ public abstract class AbstractCodec2
         if (!opened)
             return;
 
+        Log.annotate(this, "Closing " + this.name);
         doClose();
 
         opened = false;
@@ -318,6 +306,7 @@ public abstract class AbstractCodec2
         if (opened)
             return;
 
+        Log.annotate(this, "Opening " + this.name);
         doOpen();
 
         opened = true;

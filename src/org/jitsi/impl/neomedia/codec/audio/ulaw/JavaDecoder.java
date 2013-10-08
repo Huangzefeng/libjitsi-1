@@ -8,6 +8,8 @@ package org.jitsi.impl.neomedia.codec.audio.ulaw;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.*;
+
 import com.sun.media.controls.*;
 
 public class JavaDecoder
@@ -24,6 +26,7 @@ public class JavaDecoder
         defaultOutputFormats = new AudioFormat[]
         { new AudioFormat(AudioFormat.LINEAR) };
         PLUGIN_NAME = "Mu-Law Decoder";
+        Log.objectCreated(this, PLUGIN_NAME);
     }
 
     @Override
@@ -77,6 +80,7 @@ public class JavaDecoder
     @Override
     public void open()
     {
+        Log.annotate(this, "Opening U-law decoder");
         initTables();
     }
 
