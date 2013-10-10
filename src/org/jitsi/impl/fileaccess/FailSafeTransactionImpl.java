@@ -8,7 +8,9 @@ package org.jitsi.impl.fileaccess;
 
 import java.io.*;
 
+import org.jitsi.impl.configuration.ConfigurationServiceImpl;
 import org.jitsi.service.fileaccess.*;
+import org.jitsi.util.Logger;
 
 /**
  * A failsafe transaction class. By failsafe we mean here that the file
@@ -20,6 +22,8 @@ import org.jitsi.service.fileaccess.*;
 public class FailSafeTransactionImpl
     implements FailSafeTransaction
 {
+    private final Logger logger
+        = Logger.getLogger(FailSafeTransactionImpl.class);
 
     /**
      * Original file used by the transaction
@@ -137,7 +141,10 @@ public class FailSafeTransactionImpl
     public synchronized void rollback()
         throws IllegalStateException, IOException
     {
+        logger.info("Failsafe transaction rolling back " + file);
+
         if (this.backup == null) {
+            logger.error("Could not roll back - no backup found!");
             return;
         }
 
@@ -146,6 +153,7 @@ public class FailSafeTransactionImpl
                 this.file.getAbsolutePath());
         this.backup.delete();
         this.backup = null;
+        logger.info("Rollback of " + file + " completed and backup removed.");
     }
 
     /**
