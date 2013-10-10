@@ -109,6 +109,12 @@ public class ConfigurationServiceImpl
     private final FileAccessService faService;
 
     /**
+     * The transaction object used to ensure that updates to configuration are
+     * made atomically, and can be rolled back if errors occur.
+     */
+    private FailSafeTransaction failsafeTransaction;
+
+    /**
      * The <code>ConfigurationStore</code> implementation which contains the
      * property name-value associations of this
      * <code>ConfigurationService</code> and performs their actual storing in
@@ -688,12 +694,11 @@ public class ConfigurationServiceImpl
         if ((file != null) && (faService != null))
         {
             // Restore the file if necessary.
-            FailSafeTransaction trans
-                = faService.createFailSafeTransaction(file);
+            failsafeTransaction = faService.createFailSafeTransaction(file);
 
             try
             {
-                trans.restoreFile();
+                failsafeTransaction.restoreFile();
             }
             catch (Exception e)
             {
@@ -722,21 +727,8 @@ public class ConfigurationServiceImpl
     public synchronized void storeConfiguration()
         throws IOException
     {
-        storeConfiguration(getConfigurationFile());
-    }
-
-    /**
-     * Stores local properties in the specified configuration file.
-     *
-     * @param file a reference to the configuration file where properties should
-     *            be stored.
-     * @throws IOException if there was a problem writing to the specified file.
-     */
-    private void storeConfiguration(File file)
-        throws IOException
-    {
         if (logger.isDebugEnabled())
-            logger.debug("Storing configuration to: " + file);
+            logger.debug("Storing configuration to: " + configurationFile);
 
         /*
          * If the configuration file is forcibly considered read-only, do not
@@ -751,18 +743,15 @@ public class ConfigurationServiceImpl
         if (faService == null)
             return;
 
-        // write the file.
-        FailSafeTransaction trans
-            = (file == null) ? null : faService.createFailSafeTransaction(file);
         Throwable exception = null;
 
         try
         {
-            if (trans != null)
-                trans.beginTransaction();
+            if (failsafeTransaction != null)
+                failsafeTransaction.beginTransaction();
 
             OutputStream stream
-                = (file == null) ? null : new FileOutputStream(file);
+                = (configurationFile == null) ? null : new FileOutputStream(configurationFile);
 
             try
             {
@@ -774,8 +763,8 @@ public class ConfigurationServiceImpl
                     stream.close();
             }
 
-            if (trans != null)
-                trans.commit();
+            if (failsafeTransaction != null)
+                failsafeTransaction.commit();
         }
         catch (IllegalStateException isex)
         {
@@ -790,8 +779,8 @@ public class ConfigurationServiceImpl
             logger.error(
                     "can't write data in the configuration file",
                     exception);
-            if (trans != null)
-                trans.rollback();
+            if (failsafeTransaction != null)
+                failsafeTransaction.rollback();
         }
     }
 
@@ -986,7 +975,7 @@ public class ConfigurationServiceImpl
                         Throwable exception = null;
                         try
                         {
-                            storeConfiguration(this.configurationFile);
+                            storeConfiguration();
                         }
                         catch (IllegalStateException isex)
                         {

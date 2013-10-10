@@ -66,7 +66,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the file restoration
      */
-    public void restoreFile()
+    public synchronized void restoreFile()
         throws IllegalStateException, IOException
     {
         File back = new File(this.file.getAbsolutePath() + BAK_EXT);
@@ -91,7 +91,7 @@ public class FailSafeTransactionImpl
      * @throws IOException if an IOException occurs during the transaction
      * creation
      */
-    public void beginTransaction()
+    public synchronized void beginTransaction()
         throws IllegalStateException, IOException
     {
         // if the last transaction hasn't been closed, commit it
@@ -116,7 +116,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
-    public void commit()
+    public synchronized void commit()
         throws IllegalStateException, IOException
     {
         if (this.backup == null) {
@@ -134,7 +134,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
-    public void rollback()
+    public synchronized void rollback()
         throws IllegalStateException, IOException
     {
         if (this.backup == null) {
@@ -158,17 +158,11 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
-    private void failsafeCopy(String from, String to)
+    private synchronized void failsafeCopy(String from, String to)
         throws IllegalStateException, IOException
     {
         FileInputStream in = null;
         FileOutputStream out = null;
-
-        // to ensure a perfect copy, delete the destination if it exists
-        File toF = new File(to);
-        if (toF.exists()) {
-            toF.delete();
-        }
 
         File ptoF = new File(to + PART_EXT);
         if (ptoF.exists()) {
@@ -192,6 +186,12 @@ public class FailSafeTransactionImpl
 
         in.close();
         out.close();
+
+        // to ensure a perfect copy, delete the destination if it exists
+        File toF = new File(to);
+        if (toF.exists()) {
+            toF.delete();
+        }
 
         // once done, rename the partial file to the final copy
         ptoF.renameTo(toF);
