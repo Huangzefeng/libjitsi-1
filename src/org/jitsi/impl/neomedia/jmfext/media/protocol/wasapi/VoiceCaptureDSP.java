@@ -100,6 +100,11 @@ public class VoiceCaptureDSP
     public static final long MFPKEY_WMAAECMA_FEATR_AGC;
 
     /**
+    * Mic gain bounder.
+    */
+    public static final long MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER;
+
+    /**
      * Specifies whether the Voice Capture DSP performs center clipping. Center
      * clipping is a process that removes small echo residuals that remain after
      * AEC processing, in single-talk situations (when speech occurs only on one
@@ -252,6 +257,8 @@ public class VoiceCaptureDSP
          */
         MFPKEY_WMAAECMA_FEATR_AES = maybePSPropertyKeyFromString(fmtid + "10");
         MFPKEY_WMAAECMA_FEATR_AGC = maybePSPropertyKeyFromString(fmtid + "9");
+        MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER 
+            = maybePSPropertyKeyFromString(fmtid + "21");
         MFPKEY_WMAAECMA_FEATR_CENTER_CLIP
             = maybePSPropertyKeyFromString(fmtid + "12");
         MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH
