@@ -767,13 +767,21 @@ public class WASAPIStream
                             MFPKEY_WMAAECMA_FEATR_AES,
                             audioSystem.isEchoCancel() ? 2 : 0);
                 }
-                // Perform automatic gain control (AGC).
+                // Do not perform automatic gain control (AGC).
                 if (MFPKEY_WMAAECMA_FEATR_AGC != 0)
                 {
                     IPropertyStore_SetValue(
                             iPropertyStore,
                             MFPKEY_WMAAECMA_FEATR_AGC,
-                            true);
+                            false);
+                }
+                // Don't perform mic gain bounding.
+                if (MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER != 0)
+                {
+                    IPropertyStore_SetValue(
+                            iPropertyStore,
+                            MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER,
+                            false);
                 }
                 // Perform noise suppression (NS).
                 if (MFPKEY_WMAAECMA_FEATR_NS != 0)
