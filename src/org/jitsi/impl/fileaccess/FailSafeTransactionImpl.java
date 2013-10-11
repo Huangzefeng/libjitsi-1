@@ -8,7 +8,9 @@ package org.jitsi.impl.fileaccess;
 
 import java.io.*;
 
+import org.jitsi.impl.configuration.*;
 import org.jitsi.service.fileaccess.*;
+import org.jitsi.util.*;
 
 /**
  * A failsafe transaction class. By failsafe we mean here that the file
@@ -20,6 +22,8 @@ import org.jitsi.service.fileaccess.*;
 public class FailSafeTransactionImpl
     implements FailSafeTransaction
 {
+    private static final Logger logger
+        = Logger.getLogger(FailSafeTransactionImpl.class);
 
     /**
      * Original file used by the transaction
@@ -66,7 +70,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the file restoration
      */
-    public void restoreFile()
+    public synchronized void restoreFile()
         throws IllegalStateException, IOException
     {
         File back = new File(this.file.getAbsolutePath() + BAK_EXT);
@@ -91,7 +95,7 @@ public class FailSafeTransactionImpl
      * @throws IOException if an IOException occurs during the transaction
      * creation
      */
-    public void beginTransaction()
+    public synchronized void beginTransaction()
         throws IllegalStateException, IOException
     {
         // if the last transaction hasn't been closed, commit it
@@ -116,7 +120,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
-    public void commit()
+    public synchronized void commit()
         throws IllegalStateException, IOException
     {
         if (this.backup == null) {
@@ -134,10 +138,13 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
-    public void rollback()
+    public synchronized void rollback()
         throws IllegalStateException, IOException
     {
+        logger.warn("Failsafe transaction rolling back " + file);
+
         if (this.backup == null) {
+            logger.error("Could not roll back - no backup found!");
             return;
         }
 
@@ -146,6 +153,7 @@ public class FailSafeTransactionImpl
                 this.file.getAbsolutePath());
         this.backup.delete();
         this.backup = null;
+        logger.info("Rollback of " + file + " completed and backup removed.");
     }
 
     /**
@@ -158,17 +166,12 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
-    private void failsafeCopy(String from, String to)
+    private synchronized void failsafeCopy(String from, String to)
         throws IllegalStateException, IOException
     {
+        logger.trace("Beginning failsafe copy from " + from + " to " + to);
         FileInputStream in = null;
         FileOutputStream out = null;
-
-        // to ensure a perfect copy, delete the destination if it exists
-        File toF = new File(to);
-        if (toF.exists()) {
-            toF.delete();
-        }
 
         File ptoF = new File(to + PART_EXT);
         if (ptoF.exists()) {
@@ -193,7 +196,19 @@ public class FailSafeTransactionImpl
         in.close();
         out.close();
 
+        // to ensure a perfect copy, delete the destination if it exists
+        File toF = new File(to);
+        if (toF.exists()) {
+            logger.debug("Overwriting file at " + to + " for failsafe copy.");
+            boolean success = toF.delete();
+            if (!success)
+                logger.error("Failed to delete file at " + to + " during " +
+                             "failsafe copy.");
+        }
+
         // once done, rename the partial file to the final copy
         ptoF.renameTo(toF);
+
+        logger.trace("Failsafe copy from " + from + " to " + to + " succeeded");
     }
 }
