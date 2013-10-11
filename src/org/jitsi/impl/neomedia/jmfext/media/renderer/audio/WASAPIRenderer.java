@@ -315,6 +315,7 @@ public class WASAPIRenderer
     public WASAPIRenderer(AudioSystem.DataFlow dataFlow)
     {
         super(AudioSystem.LOCATOR_PROTOCOL_WASAPI, dataFlow);
+        logger.debug("Created WASAPIRenderer " + this.hashCode());
     }
 
     /**
@@ -340,6 +341,7 @@ public class WASAPIRenderer
     {
         try
         {
+            logger.debug("WASAPIRenderer.close() on " + this.hashCode());
             stop();
         }
         finally
@@ -719,6 +721,7 @@ public class WASAPIRenderer
     public synchronized void open()
         throws ResourceUnavailableException
     {
+        logger.debug("WASAPIRenderer.open() on " + this.hashCode());
         if (this.iAudioClient != 0)
         {
             return;
@@ -736,9 +739,10 @@ public class WASAPIRenderer
                  * and/or notify device to none mid-stream in order to disable
                  * the playback.
                  */
+                logger.debug("WASAPIRenderer open() called but no locator");
+                super.open();
+                return;
             }
-            else
-            {
 
             /*
              * The method getFormatsToInitializeIAudioClient will assert that
@@ -883,8 +887,6 @@ public class WASAPIRenderer
                     CloseHandle(eventHandle);
                 }
             }
-
-            } // The locator of this Renderer is not null.
         }
         catch (Throwable t)
         {
@@ -1009,13 +1011,18 @@ public class WASAPIRenderer
     }
 
     /**
-     * {@inheritDoc}
+     * Processes the provided buffer of audio data into the remainder buffer to
+     * be written to WASAPI on the EventHandleCmd thread.
+     *
+     * Try to spot malfunctioning devices by checking whether the remainder
+     * buffer is filling up and never emptying.
+     *
+     * @param buffer the input audio data
      */
     @Override
     public int process(Buffer buffer)
     {
         int length = buffer.getLength();
-
         if (length < 1)
         {
             return BUFFER_PROCESSED_OK;
@@ -1054,267 +1061,79 @@ public class WASAPIRenderer
 
         try
         {
-            int numPaddingFrames;
-
-            if (eventHandle == 0)
+            /*
+             * We write into remainder, the runInEventHandleCmd will read from
+             * remainder and write into the rendering endpoint buffer.
+             */
+            int toCopy = remainder.length - remainderLength;
+            if (toCopy > 0)
             {
-                try
+                if (toCopy > length)
                 {
-                    numPaddingFrames
-                        = IAudioClient_GetCurrentPadding(iAudioClient);
+                    toCopy = length;
                 }
-                catch (HResultException hre)
+                System.arraycopy(
+                        data, offset,
+                        remainder, remainderLength,
+                        toCopy);
+                remainderLength += toCopy;
+
+                if (length > toCopy)
                 {
-                    numPaddingFrames = 0;
-                    ret = BUFFER_PROCESSED_FAILED;
-                    logger.error("IAudioClient_GetCurrentPadding", hre);
+                    buffer.setLength(length - toCopy);
+                    buffer.setOffset(offset + toCopy);
+                    ret |= INPUT_BUFFER_NOT_CONSUMED;
                 }
+
+                /*
+                 * Writing from the input Buffer into remainder has occurred so
+                 * the remainder buffer is not stuck full of data.  Therefore,
+                 * it does not look like the writing to the render endpoint
+                 * buffer is malfunctioning.
+                 */
+                setWriteIsMalfunctioning(false);
             }
             else
             {
+                ret |= INPUT_BUFFER_NOT_CONSUMED;
+                sleep = devicePeriod;
+
                 /*
-                 * The process method will not write into the rendering endpoint
-                 * buffer, the runInEventHandleCmd method will.
+                 * No writing from the input Buffer into remainder has occurred
+                 * so it is possible that the writing to the render endpoint
+                 * buffer is malfunctioning.
                  */
-                numPaddingFrames = numBufferFrames;
+                setWriteIsMalfunctioning(true);
             }
-            if (ret != BUFFER_PROCESSED_FAILED)
+
+            /*
+             * If the writing to the render endpoint buffer is malfunctioning,
+             * fail the processing of the input Buffer in order to avoid
+             * blocking of the Codec chain.
+             */
+            if (((ret & INPUT_BUFFER_NOT_CONSUMED)
+                        == INPUT_BUFFER_NOT_CONSUMED)
+                    && (writeIsMalfunctioningSince
+                            != DiagnosticsControl.NEVER))
             {
-                int numFramesRequested = numBufferFrames - numPaddingFrames;
+                long writeIsMalfunctioningDuration
+                    = System.currentTimeMillis()
+                        - writeIsMalfunctioningSince;
 
-                if (numFramesRequested == 0)
-                {
-                    if (eventHandle == 0)
-                    {
-                        /*
-                         * The renderer is closed so we can't process it.  Just
-                         * back off.
-                         */
-                        ret |= INPUT_BUFFER_NOT_CONSUMED;
-                        sleep = devicePeriod;
-                    }
-                    else
-                    {
-                        /*
-                         * The process method will write into remainder, the
-                         * runInEventHandleCmd will read from remainder and
-                         * write into the rendering endpoint buffer.
-                         */
-                        int toCopy = remainder.length - remainderLength;
-
-                        if (toCopy > 0)
-                        {
-                            if (toCopy > length)
-                            {
-                                toCopy = length;
-                            }
-                            System.arraycopy(
-                                    data, offset,
-                                    remainder, remainderLength,
-                                    toCopy);
-                            remainderLength += toCopy;
-
-                            if (length > toCopy)
-                            {
-                                buffer.setLength(length - toCopy);
-                                buffer.setOffset(offset + toCopy);
-                                ret |= INPUT_BUFFER_NOT_CONSUMED;
-                            }
-
-                            /*
-                             * Writing from the input Buffer into remainder has
-                             * occurred so it does not look like the writing to
-                             * the render endpoint buffer is malfunctioning.
-                             */
-                            setWriteIsMalfunctioning(false);
-                        }
-                        else
-                        {
-                            ret |= INPUT_BUFFER_NOT_CONSUMED;
-                            sleep = devicePeriod;
-                            /*
-                             * No writing from the input Buffer into remainder
-                             * has occurred so it is possible that the writing
-                             * to the render endpoint buffer is malfunctioning.
-                             */
-                            //setWriteIsMalfunctioning(true);
-                        }
-                    }
-                }
-                else
+                if (writeIsMalfunctioningDuration
+                        > writeIsMalfunctioningTimeout)
                 {
                     /*
-                     * There is available space in the rendering endpoint
-                     * buffer into which this Renderer can write data.
+                     * The writing to the render endpoint buffer has taken
+                     * too long so whatever is in remainder is surely
+                     * out-of-date.
                      */
-                    int effectiveLength = remainderLength + length;
-                    int toWrite
-                        = Math.min(
-                                effectiveLength,
-                                numFramesRequested * srcFrameSize);
-                    byte[] effectiveData;
-                    int effectiveOffset;
-
-                    if (remainderLength > 0)
-                    {
-                        /*
-                         * There is remainder/residue from earlier invocations
-                         * of the method. This Renderer will feed
-                         * iAudioRenderClient from remainder.
-                         */
-                        effectiveData = remainder;
-                        effectiveOffset = 0;
-
-                        int toCopy = toWrite - remainderLength;
-
-                        if (toCopy <= 0)
-                        {
-                            ret |= INPUT_BUFFER_NOT_CONSUMED;
-                        }
-                        else
-                        {
-                            if (toCopy > length)
-                            {
-                                toCopy = length;
-                            }
-                            System.arraycopy(
-                                    data, offset,
-                                    remainder, remainderLength,
-                                    toCopy);
-                            remainderLength += toCopy;
-
-                            if (toWrite > remainderLength)
-                            {
-                                toWrite = remainderLength;
-                            }
-
-                            if (length > toCopy)
-                            {
-                                buffer.setLength(length - toCopy);
-                                buffer.setOffset(offset + toCopy);
-                                ret |= INPUT_BUFFER_NOT_CONSUMED;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        /*
-                         * There is no remainder/residue from earlier
-                         * invocations of the method. This Renderer will feed
-                         * iAudioRenderClient from data.
-                         */
-                        effectiveData = data;
-                        effectiveOffset = offset;
-                    }
-
-                    int written;
-
-                    if ((toWrite / srcFrameSize) == 0)
-                    {
-                        written = 0;
-                    }
-                    else
-                    {
-                        /*
-                         * Take into account the user's preferences with respect
-                         * to the output volume.
-                         */
-                        GainControl gainControl = getGainControl();
-
-                        if (gainControl != null)
-                        {
-                            BasicVolumeControl.applyGain(
-                                    gainControl,
-                                    effectiveData, effectiveOffset, toWrite);
-                        }
-
-                        try
-                        {
-                        	Charting.wroteToWasapi(toWrite);
-                            written
-                                = IAudioRenderClient_Write(
-                                        iAudioRenderClient,
-                                        effectiveData, effectiveOffset, toWrite,
-                                        srcSampleSize, srcChannels,
-                                        dstSampleSize, dstChannels);
-                        }
-                        catch (HResultException hre)
-                        {
-                            written = 0;
-                            ret = BUFFER_PROCESSED_FAILED;
-                            logger.error("IAudioRenderClient_Write", hre);
-                        }
-                    }
-                    if (ret != BUFFER_PROCESSED_FAILED)
-                    {
-                        if (effectiveData == data)
-                        {
-                            // We have consumed frames from data.
-                            if (written == 0)
-                            {
-                                /*
-                                 * The available number of frames appear to be
-                                 * too few for IAudioRenderClient to accept.
-                                 * They will have to be prepended to the next
-                                 * input Buffer.
-                                 */
-                                System.arraycopy(
-                                        data, offset,
-                                        remainder, remainderLength,
-                                        toWrite);
-                                remainderLength += toWrite;
-                                written = toWrite;
-                            }
-                            if (length > written)
-                            {
-                                buffer.setLength(length - written);
-                                buffer.setOffset(offset + written);
-                                ret |= INPUT_BUFFER_NOT_CONSUMED;
-                            }
-                        }
-                        else if (written > 0)
-                        {
-                            // We have consumed frames from remainder.
-                            popFromRemainder(written);
-                        }
-
-                        if (writeIsMalfunctioningSince
-                                != DiagnosticsControl.NEVER)
-                        {
-                            setWriteIsMalfunctioning(false);
-                        }
-                    }
-                }
-
-                /*
-                 * If the writing to the render endpoint buffer is
-                 * malfunctioning, fail the processing of the input Buffer in
-                 * order to avoid blocking of the Codec chain.
-                 */
-                if (((ret & INPUT_BUFFER_NOT_CONSUMED)
-                            == INPUT_BUFFER_NOT_CONSUMED)
-                        && (writeIsMalfunctioningSince
-                                != DiagnosticsControl.NEVER))
-                {
-                    long writeIsMalfunctioningDuration
-                        = System.currentTimeMillis()
-                            - writeIsMalfunctioningSince;
-
-                    if (writeIsMalfunctioningDuration
-                            > writeIsMalfunctioningTimeout)
-                    {
-                        /*
-                         * The writing to the render endpoint buffer has taken
-                         * too long so whatever is in remainder is surely
-                         * out-of-date.
-                         */
-                        remainderLength = 0;
-                        ret = BUFFER_PROCESSED_FAILED;
-                        logger.warn(
-                                "Audio endpoint device appears to be"
-                                    + " malfunctioning: "
-                                    + getLocator());
-                    }
+                    remainderLength = 0;
+                    ret = BUFFER_PROCESSED_FAILED;
+                    logger.warn(
+                            "Audio endpoint device appears to be"
+                                + " malfunctioning: "
+                                + getLocator());
                 }
             }
         }
@@ -1326,12 +1145,12 @@ public class WASAPIRenderer
                 notifyAll();
             }
         }
+
         /*
-         * If there was no available space in the rendering endpoint buffer, we
-         * will want to wait a bit for such space to be made available.
+         * If we've been told to sleep (to make space available in the
+         * remainder buffer), do so now.
          */
-        if (((ret & INPUT_BUFFER_NOT_CONSUMED) == INPUT_BUFFER_NOT_CONSUMED)
-                && (sleep > 0))
+        if (sleep > 0)
         {
             boolean interrupted = false;
 
@@ -1550,6 +1369,7 @@ public class WASAPIRenderer
                                         / resamplerFrameSize
                                         * resamplerFrameSize;
 
+                                Charting.wroteToWasapi(toWrite);
                                 maybeIAudioRenderClientWrite(
                                         (byte[]) resamplerOutBuffer.getData(),
                                         resamplerOutBuffer.getOffset(),
@@ -1677,6 +1497,7 @@ public class WASAPIRenderer
     @Override
     public synchronized void start()
     {
+        logger.debug("WASAPIRenderer.start() on " + this.hashCode());
         if (iAudioClient == 0)
         {
             /*
@@ -1792,6 +1613,7 @@ public class WASAPIRenderer
     @Override
     public synchronized void stop()
     {
+        logger.debug("WASAPIRenderer.stop() on " + this.hashCode());
         if (iAudioClient == 0)
         {
             /*

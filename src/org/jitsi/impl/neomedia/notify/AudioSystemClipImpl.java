@@ -35,6 +35,15 @@ public class AudioSystemClipImpl
     private static final int DEFAULT_BUFFER_DATA_LENGTH = 8 * 1024;
 
     /**
+     * The max time to wait to render a single buffer (in ms).  It normally
+     * takes up to around 20ms.  Note this has the possible side effect that an
+     * audio clip may stop being played if the device is swapped part-way
+     * through (and rebuilding the renderer takes a while) but that's
+     * acceptable.
+     */
+    private static final long MAX_RENDER_TIME = 500;
+
+    /**
      * The <tt>Logger</tt> used by the <tt>AudioSystemClipImpl</tt> class and
      * its instances for logging output.
      */
@@ -197,15 +206,11 @@ public class AudioSystemClipImpl
 
         Codec resampler = null;
         boolean success = true;
-        AudioFormat audioStreamFormat = null;
-        int audioStreamLength = 0;
         long rendererProcessStartTime = 0;
 
         try
         {
-            Format rendererFormat
-                = audioStreamFormat
-                    = audioSystem.getFormat(audioStream);
+            Format rendererFormat = audioSystem.getFormat(audioStream);
 
             if (rendererFormat == null)
             {
@@ -285,36 +290,39 @@ public class AudioSystemClipImpl
                 {
                     AudioFormat af = (AudioFormat) resamplerFormat;
                     int frameSize
-                        = af.getSampleSizeInBits() / 8 * af.getChannels();
+                        = (af.getSampleSizeInBits() / 8) * af.getChannels();
 
-                    bufferDataLength = bufferDataLength / frameSize * frameSize;
+                    // Ensure the buffer is still an integer number of frames
+                    bufferDataLength -= bufferDataLength % frameSize;
                 }
+
                 bufferData = new byte[bufferDataLength];
                 resamplerBuffer.setData(bufferData);
                 resamplerBuffer.setFormat(resamplerFormat);
-
                 resampler.open();
             }
 
             try
             {
+                // Open and start the renderer here but note that we don't
+                // close and stop it - that is done in
+                // exitRunOnceInPlayThread().
                 renderer.open();
                 renderer.start();
 
-
                 if (notifyListeners)
                 {
+                    logger.debug("Firing audio-started event.");
                     fireAudioStartedEvent();
                 }
 
                 int bufferLength;
+                boolean renderTookTooLong = false;
 
-                while (isStarted()
-                        && ((bufferLength = audioStream.read(bufferData))
-                                != -1))
+                while (isStarted() &&
+                       ((bufferLength = audioStream.read(bufferData)) != -1) &&
+                       !renderTookTooLong)
                 {
-                    audioStreamLength += bufferLength;
-
                     if (resampler == null)
                     {
                         rendererBuffer.setLength(bufferLength);
@@ -331,8 +339,11 @@ public class AudioSystemClipImpl
 
                     int rendererProcess;
 
-                    if (rendererProcessStartTime == 0)
-                        rendererProcessStartTime = System.currentTimeMillis();
+                    // We're about to call in to the renderer to process this
+                    // buffer.  We have seen hangs inside the renderer so put
+                    // in a failsafe here by checking that we don't take too
+                    // long to render the data.
+                    rendererProcessStartTime = System.currentTimeMillis();
                     do
                     {
                         rendererProcess = renderer.process(rendererBuffer);
@@ -341,6 +352,15 @@ public class AudioSystemClipImpl
                             logger.error("Failed to render audio stream " +
                                          uri);
                             return false;
+                        }
+
+                        if (System.currentTimeMillis() -
+                            rendererProcessStartTime > MAX_RENDER_TIME)
+                        {
+                            logger.error("Failed to complete rendering in " +
+                                MAX_RENDER_TIME + "ms");
+                            renderTookTooLong = true;
+                            break;
                         }
                     }
                     while ((rendererProcess
@@ -445,12 +465,6 @@ public class AudioSystemClipImpl
             logger.error("Could not log audio data: " +
                          "failed to get audio stream " + uri, ioex);
             return;
-        }
-
-        if (audioStream == null)
-        {
-            logger.error("Could not log data: " +
-                         "Audio stream " + uri + " unexpectedly null.");
         }
 
         int maxHeaderSize = 50;
