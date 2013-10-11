@@ -139,7 +139,7 @@ public class MediaDeviceImpl
 
         CaptureDeviceInfo captureDeviceInfo
             = captureDevice.getCaptureDeviceInfo();
-        MediaLocator mediaLocator = (captureDeviceInfo == null) ? 
+        MediaLocator mediaLocator = (captureDeviceInfo == null) ?
                                           null : captureDeviceInfo.getLocator();
 
         str.append((mediaLocator == null) ? captureDeviceInfo : mediaLocator);
@@ -340,16 +340,32 @@ public class MediaDeviceImpl
 
         if (captureDevice != null)
         {
-            MediaType mediaType = getMediaType();
-
-            for (FormatControl formatControl
-                    : captureDevice.getFormatControls())
+            try
             {
-                MediaFormat format
-                    = MediaFormatImpl.createInstance(formatControl.getFormat());
+                MediaType mediaType = getMediaType();
 
-                if ((format != null) && format.getMediaType().equals(mediaType))
-                    return format;
+                for (FormatControl formatControl
+                        : captureDevice.getFormatControls())
+                {
+                    MediaFormat format
+                        = MediaFormatImpl.createInstance(formatControl.getFormat());
+
+                    if ((format != null) && format.getMediaType().equals(mediaType))
+                        return format;
+                }
+            }
+            finally
+            {
+                // We must close the capture device we just opened as we're not
+                // actually using it.
+                try
+                {
+                    captureDevice.disconnect();
+                }
+                catch (Exception e)
+                {
+                    // just ignore any exceptions trying to clean up
+                }
             }
         }
         return null;
