@@ -112,7 +112,7 @@ public class ConfigurationServiceImpl
      * The transaction object used to ensure that updates to configuration are
      * made atomically, and can be rolled back if errors occur.
      */
-    private FailSafeTransaction failsafeTransaction;
+    private FailSafeTransaction failSafeTransaction;
 
     /**
      * The <code>ConfigurationStore</code> implementation which contains the
@@ -694,11 +694,9 @@ public class ConfigurationServiceImpl
         if ((file != null) && (faService != null))
         {
             // Restore the file if necessary.
-            failsafeTransaction = faService.createFailSafeTransaction(file);
-
             try
             {
-                failsafeTransaction.restoreFile();
+                failSafeTransaction.restoreFile();
             }
             catch (Exception e)
             {
@@ -747,11 +745,12 @@ public class ConfigurationServiceImpl
 
         try
         {
-            if (failsafeTransaction != null)
-                failsafeTransaction.beginTransaction();
+            if (failSafeTransaction != null)
+                failSafeTransaction.beginTransaction();
 
-            OutputStream stream
-                = (configurationFile == null) ? null : new FileOutputStream(configurationFile);
+            OutputStream stream = (configurationFile == null) ?
+                                        null :
+                                        new FileOutputStream(configurationFile);
 
             try
             {
@@ -763,8 +762,8 @@ public class ConfigurationServiceImpl
                     stream.close();
             }
 
-            if (failsafeTransaction != null)
-                failsafeTransaction.commit();
+            if (failSafeTransaction != null)
+                failSafeTransaction.commit();
         }
         catch (IllegalStateException isex)
         {
@@ -779,8 +778,8 @@ public class ConfigurationServiceImpl
             logger.error(
                     "can't write data in the configuration file",
                     exception);
-            if (failsafeTransaction != null)
-                failsafeTransaction.rollback();
+            if (failSafeTransaction != null)
+                failSafeTransaction.rollback();
         }
     }
 
@@ -831,6 +830,13 @@ public class ConfigurationServiceImpl
             getScHomeDirLocation();
             getScHomeDirName();
         }
+
+        if (failSafeTransaction == null)
+        {
+            failSafeTransaction =
+                    faService.createFailSafeTransaction(this.configurationFile);
+        }
+
         return this.configurationFile;
     }
 

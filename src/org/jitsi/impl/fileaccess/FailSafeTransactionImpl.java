@@ -8,9 +8,9 @@ package org.jitsi.impl.fileaccess;
 
 import java.io.*;
 
-import org.jitsi.impl.configuration.ConfigurationServiceImpl;
+import org.jitsi.impl.configuration.*;
 import org.jitsi.service.fileaccess.*;
-import org.jitsi.util.Logger;
+import org.jitsi.util.*;
 
 /**
  * A failsafe transaction class. By failsafe we mean here that the file
@@ -22,7 +22,7 @@ import org.jitsi.util.Logger;
 public class FailSafeTransactionImpl
     implements FailSafeTransaction
 {
-    private final Logger logger
+    private static final Logger logger
         = Logger.getLogger(FailSafeTransactionImpl.class);
 
     /**
@@ -141,7 +141,7 @@ public class FailSafeTransactionImpl
     public synchronized void rollback()
         throws IllegalStateException, IOException
     {
-        logger.info("Failsafe transaction rolling back " + file);
+        logger.warn("Failsafe transaction rolling back " + file);
 
         if (this.backup == null) {
             logger.error("Could not roll back - no backup found!");
@@ -169,6 +169,7 @@ public class FailSafeTransactionImpl
     private synchronized void failsafeCopy(String from, String to)
         throws IllegalStateException, IOException
     {
+        logger.trace("Beginning failsafe copy from " + from + " to " + to);
         FileInputStream in = null;
         FileOutputStream out = null;
 
@@ -198,10 +199,16 @@ public class FailSafeTransactionImpl
         // to ensure a perfect copy, delete the destination if it exists
         File toF = new File(to);
         if (toF.exists()) {
-            toF.delete();
+            logger.debug("Overwriting file at " + to + " for failsafe copy.");
+            boolean success = toF.delete();
+            if (!success)
+                logger.error("Failed to delete file at " + to + " during " +
+                             "failsafe copy.");
         }
 
         // once done, rename the partial file to the final copy
         ptoF.renameTo(toF);
+
+        logger.trace("Failsafe copy from " + from + " to " + to + " succeeded");
     }
 }
