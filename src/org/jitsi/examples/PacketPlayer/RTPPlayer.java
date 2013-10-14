@@ -1,10 +1,8 @@
 package org.jitsi.examples.PacketPlayer;
 
 import java.awt.*;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.dnd.DnDConstants;
-import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetDropEvent;
+import java.awt.datatransfer.*;
+import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.*;
@@ -136,7 +134,7 @@ public class RTPPlayer
         mframe.setBounds(100, 100, 517, 366);
         mframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        
+
         JButton btnChooseFile = new JButton("Choose File");
         btnChooseFile.setDropTarget(new DropTarget() {
         	public synchronized void drop(DropTargetDropEvent evt) {
@@ -144,12 +142,12 @@ public class RTPPlayer
         			evt.acceptDrop(DnDConstants.ACTION_COPY);
         			List<File> droppedFiles = (List<File>)
         					evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
-        			
+
         			if (droppedFiles.size() == 1)
         			{
         				loadFile(droppedFiles.get(0));
         			}
-        			
+
         		} catch (Exception ex) {
         			ex.printStackTrace();
         		}
@@ -227,6 +225,10 @@ public class RTPPlayer
                 {
                     return "Click to Play";
                 }
+                else if (col == 0)
+                {
+                    return String.format("0x%08x", rows.get(row)[col]);
+                }
                 else
                 {
                     return rows.get(row)[col];
@@ -301,7 +303,7 @@ public class RTPPlayer
                 { ssrc, packets, aPt });
             }
 
-            System.out.println(String.format("0x%S = %s packets\n PTs: %s",
+            System.out.println(String.format("0x%08x = %s packets\n PTs: %s",
                 ssrc, packets, ptList));
         }
         myTable.fireTableDataChanged();
