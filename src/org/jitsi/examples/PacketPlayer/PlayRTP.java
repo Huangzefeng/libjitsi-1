@@ -56,7 +56,7 @@ public class PlayRTP
 
 
         // connector
-        connector = new PCapStreamConnector(filename, ssrc);
+        connector = new PCapStreamConnector(filename, ssrc, dynamicRTPPayloadType);
         mediaStream.setConnector(connector);
         mediaStream.start();
 

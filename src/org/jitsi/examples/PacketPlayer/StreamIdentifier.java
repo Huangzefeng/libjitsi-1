@@ -84,7 +84,7 @@ public class StreamIdentifier
         return SSRC;
     }
 
-    private byte readPayloadType(ByteBuffer wrapped)
+    public static byte readPayloadType(ByteBuffer wrapped)
     {
         // This include the marker bit so mask the first bit
         byte payloadType = wrapped.get(1);
