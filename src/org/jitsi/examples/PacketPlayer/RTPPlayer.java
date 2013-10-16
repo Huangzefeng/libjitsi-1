@@ -263,7 +263,7 @@ public class RTPPlayer
 
         comboBox = new JComboBox();
         comboBox.setModel(new DefaultComboBoxModel(new String[]
-        { "SILK/8000", "SILK/16000" }));
+        { "SILK/8000", "SILK/16000","H264/90000" }));
         springLayout.putConstraint(SpringLayout.NORTH, comboBox, 0,
             SpringLayout.NORTH, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.WEST, comboBox, -152,

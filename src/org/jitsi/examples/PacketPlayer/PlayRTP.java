@@ -1,13 +1,36 @@
 package org.jitsi.examples.PacketPlayer;
 
+import java.awt.Component;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.*;
+
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
 import org.jitsi.examples.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.event.VideoEvent;
+import org.jitsi.util.event.VideoListener;
+import org.jitsi.util.swing.VideoContainer;
+
+class VideoFrame extends JFrame
+{
+    private static final long serialVersionUID = 1L;
+    private VideoContainer vc;
+
+    VideoFrame(Component video)
+    {
+        super("Video");
+        vc = new VideoContainer(video, false);
+        this.add(vc);
+        this.setSize(1000, 1000);
+    }
+}
 
 /**
  * Play RTP from a file.
@@ -17,6 +40,35 @@ public class PlayRTP
     private static boolean started;
 
     private MediaStream mediaStream;
+
+    boolean foundVideo;
+
+    private synchronized void checkForVideo()
+    {
+        if (!foundVideo)
+        {
+            System.out.println("Still finding video");
+
+            List<Component> videos = ((VideoMediaStream) mediaStream).getVisualComponents();
+            if (! videos.isEmpty())
+            {
+                System.out.println("Found Video!");
+
+                foundVideo = true;
+                final Component video = videos.get(0);
+                SwingUtilities.invokeLater(new Runnable(){
+
+                    @Override
+                    public void run() {
+                        System.out.println("Displaying Video!");
+
+                        VideoFrame videoFrame = new VideoFrame(video);
+                        videoFrame.setVisible(true);
+                    }
+                });
+            }
+        }
+    }
 
     private StreamConnector connector;
     /**
@@ -33,14 +85,53 @@ public class PlayRTP
          * MediaStream instances.
          */
         MediaService mediaService = LibJitsi.getMediaService();
-        MediaDevice device =
-            mediaService.getDefaultDevice(MediaType.AUDIO, MediaUseCase.CALL);
-        mediaStream = mediaService.createMediaStream(device);
-        mediaStream.setDirection(MediaDirection.RECVONLY);
-
         MediaFormat format =
             mediaService.getFormatFactory().createMediaFormat(encoding,
                 clockRate);
+
+        MediaDevice device =
+            mediaService.getDefaultDevice(format.getMediaType(), MediaUseCase.CALL);
+        mediaStream = mediaService.createMediaStream(device);
+        mediaStream.setDirection(MediaDirection.RECVONLY);
+
+        if (format.getMediaType().equals(MediaType.VIDEO))
+        {
+            foundVideo = false;
+
+            ((VideoMediaStream) mediaStream).addVideoListener(new VideoListener(){
+
+                @Override
+                public void videoAdded(VideoEvent event)
+                {
+                    checkForVideo();
+                }
+
+                @Override
+                public void videoRemoved(VideoEvent event)
+                {
+                    checkForVideo();
+                }
+
+                @Override
+                public void videoUpdate(VideoEvent event)
+                {
+                    checkForVideo();
+                }
+            });
+
+            PropertyChangeListener pchange = new PropertyChangeListener(){
+                @Override
+                public synchronized void propertyChange(PropertyChangeEvent evt)
+                {
+                    System.out.println("Change event: " + evt);
+                    checkForVideo();
+                }
+            };
+
+            mediaStream.addPropertyChangeListener(pchange);
+            pchange.propertyChange(null);
+        }
+
 
         /*
          * The MediaFormat instances which do not have a static RTP payload type
