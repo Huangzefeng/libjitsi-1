@@ -137,21 +137,21 @@ public class RTPPlayer
 
         JButton btnChooseFile = new JButton("Choose File");
         btnChooseFile.setDropTarget(new DropTarget() {
-        	public synchronized void drop(DropTargetDropEvent evt) {
-        		try {
-        			evt.acceptDrop(DnDConstants.ACTION_COPY);
-        			List<File> droppedFiles = (List<File>)
-        					evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+          public synchronized void drop(DropTargetDropEvent evt) {
+            try {
+              evt.acceptDrop(DnDConstants.ACTION_COPY);
+              List<File> droppedFiles = (List<File>)
+                  evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
 
-        			if (droppedFiles.size() == 1)
-        			{
-        				loadFile(droppedFiles.get(0));
-        			}
+              if (droppedFiles.size() == 1)
+              {
+                loadFile(droppedFiles.get(0));
+              }
 
-        		} catch (Exception ex) {
-        			ex.printStackTrace();
-        		}
-        	}
+            } catch (Exception ex) {
+              ex.printStackTrace();
+            }
+          }
         });
         btnChooseFile.addActionListener(new ActionListener()
         {
