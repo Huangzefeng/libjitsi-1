@@ -28,5 +28,10 @@ public enum SrtpControlType
     /**
      * Multimedia Internet KEYing (RFC 3830)
      */
-    MIKEY
+    MIKEY,
+
+    /**
+     * Null implementation
+     */
+    NULL_IMPL
 }

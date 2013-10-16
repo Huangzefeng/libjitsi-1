@@ -27,6 +27,7 @@ import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.dtmf.*;
 import org.jitsi.impl.neomedia.transform.pt.*;
 import org.jitsi.impl.neomedia.transform.rtcp.*;
+import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.control.*;
@@ -290,8 +291,7 @@ public class MediaStreamImpl
         // CallPeerMediaHandler.initStream function.
         this.srtpControl
                 = (srtpControl == null)
-                    ? NeomediaServiceUtils.getMediaServiceImpl()
-                            .createZrtpControl()
+                    ? new SrtpControlNullImpl()
                     : srtpControl;
 
         if (connector != null)
@@ -368,7 +368,7 @@ public class MediaStreamImpl
     private TransformEngineChain createTransformEngineChain()
     {
         ArrayList<TransformEngine> engineChain
-            = new ArrayList<TransformEngine>(4);
+            = new ArrayList<TransformEngine>(3);
 
         // CSRCs and audio levels
         if (csrcEngine == null)
@@ -393,7 +393,9 @@ public class MediaStreamImpl
         engineChain.add(ptTransformEngine);
 
         // SRTP
-        engineChain.add(srtpControl.getTransformEngine());
+        TransformEngine srtpTransformEngine = srtpControl.getTransformEngine();
+        if (srtpTransformEngine != null)
+            engineChain.add(srtpTransformEngine);
 
         return
             new TransformEngineChain(
