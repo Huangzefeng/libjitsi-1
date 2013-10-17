@@ -780,6 +780,6 @@ public class MacCoreaudioSystem
     @Override
     public String toString()
     {
-        return "MacCoreaudio";
+        return "Core Audio";
     }
 }
