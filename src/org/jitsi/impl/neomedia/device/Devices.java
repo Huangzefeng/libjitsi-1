@@ -205,7 +205,7 @@ public abstract class Devices
 
                 if (!devicePreferences.contains(activeDevice.getName()))
                 {
-                    logger.debug("Device preferences does not contain model");
+                    logger.debug("Device preferences does not contain: " + activeDevice.getName());
 
                     // By default, select automatically the USB devices.
                     boolean isSelected
@@ -220,8 +220,6 @@ public abstract class Devices
                     {
                         isSelected = false;
                     }
-
-                    logger.debug("Is selected " + isSelected);
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected.
@@ -244,7 +242,7 @@ public abstract class Devices
                         // device.
                         if (devicePreference.equals(activeDevice.getName()))
                         {
-                            logger.debug("Found a preferred active device");
+                            logger.debug("Selected device: " + activeDevice.getName());
                             return activeDevice;
                         }
                         // If the "none" device is the "preferred" device among
@@ -419,6 +417,10 @@ public abstract class Devices
         String selectedDeviceIdentifier
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
                 device.getName();
+
+        logger.info("Saving: " + device +
+                    " to: " + property +
+                    " selected: " + isSelected);
 
         // Sorts the user preferences to put the selected device on top.
         addToDevicePreferences(
