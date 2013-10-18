@@ -10,11 +10,19 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
     // It's the amount of time to add to the media time to make it system time.
     long mediaTimeOffset = Long.MIN_VALUE;
     int ssrc;
+    int pt;
 
     public TimedPCapDatagramSocket(String xiFilename, int ssrc) throws IOException
     {
         super(xiFilename);
         this.ssrc = ssrc;
+        this.pt = -1;
+    }
+
+    public TimedPCapDatagramSocket(String xiFilename, int ssrc, int pt) throws IOException
+    {
+        this(xiFilename, ssrc);
+        this.pt = pt;
     }
 
     @Override
@@ -25,7 +33,7 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
         {
             timeStampNanoSeconds = super.receiveWithTimeStamp(p);
         }
-        while (!isInterestingSSRC(p));
+        while ((!isInterestingSSRC(p)) || (!isInterestingPT(p)));
 
         try
         {
@@ -62,6 +70,21 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
             e.printStackTrace();
         }
     }
+
+    private boolean isInterestingPT(DatagramPacket p)
+    {
+        if (pt == -1)
+        {
+            return true;
+        }
+        int readSSRC = StreamIdentifier.readPayloadType(ByteBuffer.wrap(p.getData()));
+        if (readSSRC == pt)
+        {
+          return true;
+        }
+        return false;
+    }
+
 
     private boolean isInterestingSSRC(DatagramPacket p)
     {

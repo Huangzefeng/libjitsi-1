@@ -205,7 +205,7 @@ public abstract class Devices
 
                 if (!devicePreferences.contains(activeDevice.getName()))
                 {
-                    logger.debug("Device preferences does not contain model");
+                    logger.debug("Device preferences does not contain: " + activeDevice.getName());
 
                     // By default, select automatically the USB devices.
                     boolean isSelected
@@ -220,8 +220,6 @@ public abstract class Devices
                     {
                         isSelected = false;
                     }
-
-                    logger.debug("Is selected " + isSelected);
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected.
@@ -244,7 +242,7 @@ public abstract class Devices
                         // device.
                         if (devicePreference.equals(activeDevice.getName()))
                         {
-                            logger.debug("Found a preferred active device");
+                            logger.debug("Selected device: " + activeDevice.getName());
                             return activeDevice;
                         }
                         // If the "none" device is the "preferred" device among
@@ -358,45 +356,48 @@ public abstract class Devices
     private void renameToDeviceNames(
             List<CaptureDeviceInfo2> activeDevices)
     {
-        for (CaptureDeviceInfo2 activeDevice : activeDevices)
+        if (activeDevices != null)
         {
-            String name = activeDevice.getName();
-            String id = activeDevice.getModelIdentifier();
-
-            // If the name and identifier for the device don't match and the
-            // identifier is currently used in the device preferences, replace
-            // it with the name.
-            if (!name.equals(id))
+            for (CaptureDeviceInfo2 activeDevice : activeDevices)
             {
-                synchronized (devicePreferences)
+                String name = activeDevice.getName();
+                String id = activeDevice.getModelIdentifier();
+
+                // If the name and identifier for the device don't match and the
+                // identifier is currently used in the device preferences, replace
+                // it with the name.
+                if (!name.equals(id))
                 {
-                    do
+                    synchronized (devicePreferences)
                     {
-                        int idIndex = devicePreferences.indexOf(id);
-                        if (idIndex == -1)
+                        do
                         {
-                            // Not in device preferences so nothing to do.
-                            break;
-                        }
-                        else
-                        {
-                            // The id is in the preferences.  We need to either
-                            // remove it (if the name is also in there) or
-                            // replace it (if the name isn't there).
-                            int nameIndex = devicePreferences.indexOf(name);
-                            if (nameIndex == -1)
+                            int idIndex = devicePreferences.indexOf(id);
+                            if (idIndex == -1)
                             {
-                                // No name, replace id with name.
-                                devicePreferences.set(idIndex, name);
+                                // Not in device preferences so nothing to do.
+                                break;
                             }
                             else
                             {
-                                // Name exists, just remove id.
-                                devicePreferences.remove(idIndex);
+                                // The id is in the preferences.  We need to either
+                                // remove it (if the name is also in there) or
+                                // replace it (if the name isn't there).
+                                int nameIndex = devicePreferences.indexOf(name);
+                                if (nameIndex == -1)
+                                {
+                                    // No name, replace id with name.
+                                    devicePreferences.set(idIndex, name);
+                                }
+                                else
+                                {
+                                    // Name exists, just remove id.
+                                    devicePreferences.remove(idIndex);
+                                }
                             }
                         }
+                        while (true);
                     }
-                    while (true);
                 }
             }
         }
@@ -419,6 +420,10 @@ public abstract class Devices
         String selectedDeviceIdentifier
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
                 device.getName();
+
+        logger.info("Saving: " + device +
+                    " to: " + property +
+                    " selected: " + isSelected);
 
         // Sorts the user preferences to put the selected device on top.
         addToDevicePreferences(

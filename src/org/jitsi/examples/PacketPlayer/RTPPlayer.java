@@ -24,9 +24,9 @@ public class RTPPlayer
             int row = mtable.rowAtPoint(event.getPoint());
             int col = mtable.columnAtPoint(event.getPoint());
 
-            if (col == 3)
+            if (col == 4)
             {
-                // This is the play col
+                // This is the play column
                 playRow(row);
             }
 
@@ -86,8 +86,8 @@ public class RTPPlayer
 
     public void playRow(int row)
     {
-        final int ssrc = (Integer) (rows.get(row)[0]);
-        final byte pt = (Byte) rows.get(row)[2];
+        final int ssrc = (Integer) (rows.get(row)[1]);
+        final byte pt = (Byte) rows.get(row)[3];
         Thread myThead = new Thread()
         {
 
@@ -137,21 +137,21 @@ public class RTPPlayer
 
         JButton btnChooseFile = new JButton("Choose File");
         btnChooseFile.setDropTarget(new DropTarget() {
-        	public synchronized void drop(DropTargetDropEvent evt) {
-        		try {
-        			evt.acceptDrop(DnDConstants.ACTION_COPY);
-        			List<File> droppedFiles = (List<File>)
-        					evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+          public synchronized void drop(DropTargetDropEvent evt) {
+            try {
+              evt.acceptDrop(DnDConstants.ACTION_COPY);
+              List<File> droppedFiles = (List<File>)
+                  evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
 
-        			if (droppedFiles.size() == 1)
-        			{
-        				loadFile(droppedFiles.get(0));
-        			}
+              if (droppedFiles.size() == 1)
+              {
+                loadFile(droppedFiles.get(0));
+              }
 
-        		} catch (Exception ex) {
-        			ex.printStackTrace();
-        		}
-        	}
+            } catch (Exception ex) {
+              ex.printStackTrace();
+            }
+          }
         });
         btnChooseFile.addActionListener(new ActionListener()
         {
@@ -202,7 +202,7 @@ public class RTPPlayer
         myTable = new AbstractTableModel()
         {
             String[] columnNames =
-            { "SSRC", "Packets", "PT", "Play" };
+            { "SSRC", "SSRC", "Packets", "PT", "Play" };
 
             public String getColumnName(int col)
             {
@@ -221,7 +221,7 @@ public class RTPPlayer
 
             public Object getValueAt(int row, int col)
             {
-                if (col == 3)
+                if (col == 4)
                 {
                     return "Click to Play";
                 }
@@ -263,7 +263,7 @@ public class RTPPlayer
 
         comboBox = new JComboBox();
         comboBox.setModel(new DefaultComboBoxModel(new String[]
-        { "SILK/8000", "SILK/16000" }));
+        { "SILK/8000", "SILK/16000","H264/90000" }));
         springLayout.putConstraint(SpringLayout.NORTH, comboBox, 0,
             SpringLayout.NORTH, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.WEST, comboBox, -152,
@@ -300,7 +300,7 @@ public class RTPPlayer
             for (Byte aPt : ptList)
             {
                 rows.add(new Object[]
-                { ssrc, packets, aPt });
+                { String.format("%X", ssrc), ssrc, packets, aPt });
             }
 
             System.out.println(String.format("0x%08x = %s packets\n PTs: %s",
