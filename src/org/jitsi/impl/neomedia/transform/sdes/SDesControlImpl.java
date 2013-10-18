@@ -189,8 +189,8 @@ public class SDesControlImpl
 
     /**
      * Chooses a supported crypto attribute from the peer's list of supplied
-     * attributes and creates the local crypto attribute. Used when the control
-     * is running in the role as responder.
+     * attributes and uses the corresponding local crypto attribute. Used when
+     * the control is running in the role as responder.
      *
      * @param peerAttributes The peer's crypto attribute offering.
      *
@@ -200,15 +200,17 @@ public class SDesControlImpl
     public SrtpCryptoAttribute responderSelectAttribute(
             Iterable<SrtpCryptoAttribute> peerAttributes)
     {
+        initAttributes();
+
         for (SrtpCryptoAttribute ea : peerAttributes)
         {
-            for (String suite : enabledCryptoSuites)
+            for (int ii = 0; ii < enabledCryptoSuites.size(); ii++)
             {
+                String suite = enabledCryptoSuites.get(ii);
                 if (suite.equals(ea.getCryptoSuite().encode()))
                 {
+                    selectedOutAttribute = attributes[ii];
                     selectedInAttribute = ea;
-                    selectedOutAttribute
-                        = sdesFactory.createCryptoAttribute(1, suite);
                     return selectedOutAttribute;
                 }
             }
