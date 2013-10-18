@@ -1769,4 +1769,12 @@ public class WASAPIRenderer
             Thread.currentThread().interrupt();
         }
     }
+
+    protected void finalize() throws Throwable
+    {
+        // We should have closed this renderer by now but try to do so here
+        // just in case.
+        logger.debug("Called dispose on WASAPI renderer " + this.hashCode());
+        close();
+    }
 }
