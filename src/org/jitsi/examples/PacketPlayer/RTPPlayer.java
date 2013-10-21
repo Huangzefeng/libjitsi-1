@@ -225,10 +225,6 @@ public class RTPPlayer
                 {
                     return "Click to Play";
                 }
-                else if (col == 0)
-                {
-                    return String.format("0x%08x", rows.get(row)[col]);
-                }
                 else
                 {
                     return rows.get(row)[col];

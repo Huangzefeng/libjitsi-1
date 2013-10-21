@@ -1543,19 +1543,22 @@ public class MediaServiceImpl
         }
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
-        for(String prop : cfg.getPropertyNamesByPrefix("net.java.sip."
-                + "communicator.impl.neomedia.adaptive_jitter_buffer", true))
+        if (cfg != null)
         {
-            String suffix
-                    = prop.substring(prop.lastIndexOf(".") + 1 ,prop.length());
-            Registry.set("adaptive_jitter_buffer_" + suffix, cfg.getString(prop));
-        }
+            for(String prop : cfg.getPropertyNamesByPrefix("net.java.sip."
+                    + "communicator.impl.neomedia.adaptive_jitter_buffer", true))
+            {
+                String suffix
+                        = prop.substring(prop.lastIndexOf(".") + 1 ,prop.length());
+                Registry.set("adaptive_jitter_buffer_" + suffix, cfg.getString(prop));
+            }
 
-        String jitterBufferPrefix = "net.java.sip.communicator.impl.neomedia.jitterbuffer";
-        for(String prop : cfg.getPropertyNamesByPrefix(jitterBufferPrefix, false))
-        {
-            String suffix = prop.substring(jitterBufferPrefix.length() +1, prop.length());
-            Registry.set("jitterbuffer_" + suffix, cfg.getString(prop));
+            String jitterBufferPrefix = "net.java.sip.communicator.impl.neomedia.jitterbuffer";
+            for(String prop : cfg.getPropertyNamesByPrefix(jitterBufferPrefix, false))
+            {
+                String suffix = prop.substring(jitterBufferPrefix.length() +1, prop.length());
+                Registry.set("jitterbuffer_" + suffix, cfg.getString(prop));
+            }
         }
 
         FMJPlugInConfiguration.registerCustomPackages();

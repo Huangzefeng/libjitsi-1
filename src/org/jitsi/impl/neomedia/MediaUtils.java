@@ -154,14 +154,16 @@ public class MediaUtils
             Constants.TELEPHONE_EVENT,
             8000);
 
+        Map<String,String> silkFormatParams = new HashMap<String, String>();
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        boolean advertiseFEC
+        if (cfg != null)
+        {
+            boolean advertiseFEC
                 = cfg.getBoolean(Constants.PROP_SILK_ADVERSISE_FEC, false);
-        Map<String,String> silkFormatParams = new HashMap<String, String>();
-        if(advertiseFEC)
-            silkFormatParams.put("useinbandfec", "1");
+            if(advertiseFEC)
+                silkFormatParams.put("useinbandfec", "1");
+        }
         addMediaFormats(
                 MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                 "SILK",
@@ -172,12 +174,15 @@ public class MediaUtils
                 8000, 12000, 16000, 24000);
 
         Map<String, String> opusFormatParams = new HashMap<String,String>();
-        boolean opusFec = cfg.getBoolean(Constants.PROP_OPUS_FEC, true);
-        if(!opusFec)
-            opusFormatParams.put("useinbandfec", "0");
-        boolean opusDtx = cfg.getBoolean(Constants.PROP_OPUS_DTX, true);
-        if(opusDtx)
-            opusFormatParams.put("usedtx", "1");
+        if (cfg != null)
+        {
+            boolean opusFec = cfg.getBoolean(Constants.PROP_OPUS_FEC, true);
+            if(!opusFec)
+                opusFormatParams.put("useinbandfec", "0");
+            boolean opusDtx = cfg.getBoolean(Constants.PROP_OPUS_DTX, true);
+            if(opusDtx)
+                opusFormatParams.put("usedtx", "1");
+        }
         addMediaFormats(
             MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
             "opus",
