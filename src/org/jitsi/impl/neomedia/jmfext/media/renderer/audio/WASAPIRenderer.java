@@ -1323,9 +1323,10 @@ public class WASAPIRenderer
                         }
 
                         // Pad with silence in order to avoid underflows.
-                        int toWrite = numFramesRequested * srcFrameSize;
+                        int toWrite =
+                            Math.min((numFramesRequested * srcFrameSize),
+                                     remainder.length);
                         int silence = toWrite - remainderLength;
-
                         if (silence > 0)
                         {
                             Arrays.fill(
