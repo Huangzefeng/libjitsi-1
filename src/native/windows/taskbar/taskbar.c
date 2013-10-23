@@ -21,6 +21,10 @@
 #include <stdint.h> /* intptr_t */
 #include <string.h>
 #include <shobjidl.h>
+#include <propkey.h>
+#include <propvarutil.h>
+#include <shlobj.h>
+#include <shellapi.h>
 #include <windows.h> /* LoadLibrary, GetProcAddress */
 #include <jni.h>
 
@@ -29,13 +33,8 @@
 
 ITaskbarList3* getTaskBar()
 {
-	HRESULT hr;
 	ITaskbarList3 *taskBar;
-	//CoInitialize(NULL);
-	hr = CoCreateInstance(__uuidof(CLSID_TaskbarList), NULL, CLSCTX_ALL, __uuidof(IID_ITaskbarList3), (void**)&taskBar);
-	if (SUCCEEDED(hr)) {
-		ITaskbarList3_Release(taskBar);
-	}
+	CoCreateInstance(__uuidof(CLSID_TaskbarList), NULL, CLSCTX_ALL, __uuidof(IID_ITaskbarList3), (void**)&taskBar);
 	return taskBar;
 }
 
@@ -52,11 +51,16 @@ JNIEXPORT jint JNICALL Java_net_java_sip_communicator_service_taskbar_TaskbarIco
 	{
 		HRESULT hr;
 		HICON hIcon = NULL;
-		hIcon = LoadIcon(NULL, MAKEINTRESOURCE(32516));
+		int id = IDI_AVAILABLE_ICON;
+		HINSTANCE hInst = GetModuleHandle(NULL);
+		hIcon = LoadIcon(hInst, MAKEINTRESOURCE(id));
 
-		// Set the window's overlay icon, possibly NULL value
-		hr = ITaskbarList3_SetOverlayIcon(taskBar, hwnd, hIcon, NULL);
 		CloseWindow(hwnd);
+		OpenIcon(hwnd);
+
+		// Set the window's overlay icon
+		hr = ITaskbarList3_SetOverlayIcon(taskBar, hwnd, hIcon, NULL);
+
 		if (hIcon) 
 		{
 			// Need to clean up the icon as we no longer need it
