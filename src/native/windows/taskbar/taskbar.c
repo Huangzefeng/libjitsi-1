@@ -31,6 +31,17 @@
 #include "HResultException.h"
 #include "Typecasting.h"
 
+HINSTANCE hInst;
+
+BOOL APIENTRY DllMain( HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpvReserverd)
+{	 
+	switch (ul_reason_for_call) {
+		case DLL_PROCESS_ATTACH:
+			hInst = (HINSTANCE)hModule;
+	}
+	return TRUE;
+}
+
 ITaskbarList3* getTaskBar()
 {
 	ITaskbarList3 *taskBar;
@@ -51,12 +62,9 @@ JNIEXPORT jint JNICALL Java_net_java_sip_communicator_service_taskbar_TaskbarIco
 	{
 		HRESULT hr;
 		HICON hIcon = NULL;
-		int id = IDI_AVAILABLE_ICON;
-		HINSTANCE hInst = GetModuleHandle(NULL);
-		hIcon = LoadIcon(hInst, MAKEINTRESOURCE(id));
 
-		CloseWindow(hwnd);
-		OpenIcon(hwnd);
+		// Load the requested icon
+		hIcon = LoadIcon(hInst, MAKEINTRESOURCE(iconid));
 
 		// Set the window's overlay icon
 		hr = ITaskbarList3_SetOverlayIcon(taskBar, hwnd, hIcon, NULL);

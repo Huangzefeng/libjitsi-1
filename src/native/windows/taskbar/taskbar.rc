@@ -3,8 +3,6 @@
 // http://www.resedit.net
 
 #include <windows.h>
-//include <commctrl.h>
-//include <richedit.h>
 #include "resource.h"
 
 
@@ -16,10 +14,35 @@
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDI_AVAILABLE_ICON          ICON           "Available.ico"
 
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_AWAY_ICON          ICON           "Away.ico"
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
-IDI_ICON2          ICON           "Away.ico"
-
+IDI_FORWARDING_ICON          ICON           "Forwarding.ico"
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
-IDI_ICON3          ICON           "Offline.ico"
+IDI_DND_ICON          ICON           "DND.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_ONTHEPHONE_ICON          ICON           "OnThePhone.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_OFFLINE_ICON          ICON           "Offline.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_AVAILABLE_MWI_ICON          ICON           "Available_MWI.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_AWAY_MWI_ICON          ICON           "Away_MWI.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_FORWARDING_MWI_ICON          ICON           "Forwarding_MWI.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_DND_MWI_ICON          ICON           "DND_MWI.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_ONTHEPHONE_MWI_ICON          ICON           "OnThePhone_MWI.ico"
+
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+IDI_OFFLINE_MWI_ICON          ICON           "Offline_MWI.ico"
