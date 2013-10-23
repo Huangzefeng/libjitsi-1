@@ -426,6 +426,13 @@
       description="Build taskbar shared library for Windows Vista, 7 and 8"
       if="is.running.windows"
       name="taskbar">
+    
+    <exec executable="windres">
+        <arg value="--target=pe-i386"/>
+        <arg value="${src}/native/windows/taskbar/taskbar.rc"/>
+        <arg value="${obj}/taskbar_rc.o"/>
+    </exec>
+      
     <cc
         name="gcc"
         objdir="${obj}"
@@ -454,6 +461,8 @@
       <linkerarg value="-Wl,--kill-at" />
 
       <fileset dir="${src}/native/windows/taskbar" includes="*.c"/>
+      <fileset dir="${obj}" includes="taskbar_rc.o"/>
+
     </cc>
   </target>
 
