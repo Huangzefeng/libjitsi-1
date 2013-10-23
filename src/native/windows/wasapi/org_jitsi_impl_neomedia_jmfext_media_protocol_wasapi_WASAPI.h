@@ -479,6 +479,9 @@ JNIEXPORT void JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi
 JNIEXPORT jint JNICALL Java_org_jitsi_impl_neomedia_jmfext_media_protocol_wasapi_WASAPI_WAVEFORMATEX_1sizeof
   (JNIEnv *, jclass);
 
+JNIEXPORT jint JNICALL Java_net_java_sip_communicator_service_taskbar_TaskbarIconOverlay_SetOverlayIcon
+	(JNIEnv *, jclass, jint, jstring);
+
 #ifdef __cplusplus
 }
 #endif
