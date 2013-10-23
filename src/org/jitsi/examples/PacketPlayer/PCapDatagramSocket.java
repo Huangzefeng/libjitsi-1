@@ -67,8 +67,18 @@ public class PCapDatagramSocket extends DatagramSocket
         //  next 4 bytes are just the last four repeated
         fis.skip(4);
 
-        //  skip 14 bytes for ethernet header
-        fis.skip(14);
+        // Skip the ethernet header. The easiest way of doing this is to sniff
+        // the 'ethernet type' field, which will end with 0x0800.
+        fis.skip(2); // Ethernet header is not a whole number of words.
+        boolean isInEthHeader = true;
+        while (isInEthHeader)
+        {
+            fis.read(intByteArray);
+            if (intByteArray[2] == 8 && intByteArray[3] == 0)
+            {
+                isInEthHeader = false;
+            }
+        }
 
         //  skip 20 bytes for IP header
         fis.skip(20);
