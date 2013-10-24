@@ -481,7 +481,6 @@ public class MacCoreaudioRenderer
                 long timeout = 500;
                 long startTime = System.currentTimeMillis();
                 long currentTime = startTime;
-                long startNbData = nbBufferData;
                 // Wait at most 500 ms to render the already received data.
                 while(nbBufferData > 0
                         && (currentTime - startTime) < timeout)
@@ -493,13 +492,7 @@ public class MacCoreaudioRenderer
                     catch(InterruptedException ex)
                     {
                     }
-
                     currentTime = System.currentTimeMillis();
-                    if(startNbData > nbBufferData)
-                    {
-                        startTime = currentTime;
-                        startNbData = nbBufferData;
-                    }
                 }
 
                 stopLock.lock();
