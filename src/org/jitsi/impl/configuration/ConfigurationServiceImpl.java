@@ -831,7 +831,8 @@ public class ConfigurationServiceImpl
             getScHomeDirName();
         }
 
-        if (failSafeTransaction == null)
+        if ((failSafeTransaction == null) &&
+            (faService != null))
         {
             failSafeTransaction =
                     faService.createFailSafeTransaction(this.configurationFile);
