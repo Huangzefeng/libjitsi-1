@@ -1,22 +1,20 @@
 package org.jitsi.examples.PacketPlayer;
 
-import java.awt.Component;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
+import java.awt.*;
+import java.beans.*;
 import java.io.*;
 import java.util.*;
+import java.util.List;
 
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 import org.jitsi.examples.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
-import org.jitsi.util.event.VideoEvent;
-import org.jitsi.util.event.VideoListener;
-import org.jitsi.util.swing.VideoContainer;
+import org.jitsi.util.event.*;
+import org.jitsi.util.swing.*;
 
 class VideoFrame extends JFrame
 {
@@ -42,6 +40,11 @@ public class PlayRTP
     private MediaStream mediaStream;
 
     boolean foundVideo;
+
+    public PlayRTP()
+    {
+        initIfRequired();
+    }
 
     private synchronized void checkForVideo()
     {
@@ -77,24 +80,21 @@ public class PlayRTP
      * @return <tt>true</tt> if this instance has been successfully initialized
      * @throws Exception if anything goes wrong while initializing this instance
      */
-    private boolean playMedia(String filename, String encoding,
-        double clockRate, byte dynamicRTPPayloadType, int ssrc) throws Exception
+    private boolean playMedia(String filename, MediaFormat initialFormat,
+        List<Byte> dynamicRTPPayloadTypes,
+        MediaFormat dynamicFormat,int ssrc) throws Exception
     {
         /*
          * Prepare for the start of the transmission i.e. initialize the
          * MediaStream instances.
          */
         MediaService mediaService = LibJitsi.getMediaService();
-        MediaFormat format =
-            mediaService.getFormatFactory().createMediaFormat(encoding,
-                clockRate);
-
-        MediaDevice device =
-            mediaService.getDefaultDevice(format.getMediaType(), MediaUseCase.CALL);
+        MediaDevice device = mediaService.getDefaultDevice(
+            initialFormat.getMediaType(), MediaUseCase.CALL);
         mediaStream = mediaService.createMediaStream(device);
         mediaStream.setDirection(MediaDirection.RECVONLY);
 
-        if (format.getMediaType().equals(MediaType.VIDEO))
+        if (initialFormat.getMediaType().equals(MediaType.VIDEO))
         {
             foundVideo = false;
 
@@ -138,16 +138,15 @@ public class PlayRTP
          * number association must be explicitly assigned a dynamic RTP payload
          * type number.
          */
-        if (dynamicRTPPayloadType != -1)
+        for (byte dynamicPT : dynamicRTPPayloadTypes)
         {
-            mediaStream.addDynamicRTPPayloadType(dynamicRTPPayloadType, format);
+            mediaStream.addDynamicRTPPayloadType(dynamicPT, dynamicFormat);
         }
 
-        mediaStream.setFormat(format);
-
+        mediaStream.setFormat(initialFormat);
 
         // connector
-        connector = new PCapStreamConnector(filename, ssrc, dynamicRTPPayloadType);
+        connector = new PCapStreamConnector(filename, ssrc);
         mediaStream.setConnector(connector);
         mediaStream.start();
 
@@ -187,15 +186,16 @@ public class PlayRTP
     /*
      * Blocking
      */
-    public void playFile(String filename, String encoding, double clockRate,
-        byte dynamicRTPPayloadType, int ssrc)
+    public void playFile(String filename, MediaFormat initialFormat,
+        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc)
     {
         close();
         initIfRequired();
 
         try
         {
-            playMedia(filename, encoding, clockRate, dynamicRTPPayloadType, ssrc);
+            playMedia(filename, initialFormat, dynamicRTPPayloadTypes,
+                dynamicFormat, ssrc);
             while (connector.getDataSocket().isConnected())
             {
                 Thread.sleep(100);
@@ -227,8 +227,10 @@ public class PlayRTP
             try
             {
                 PlayRTP playRTP = new PlayRTP();
-                playRTP.playFile(argMap.get(FILENAME), "SILK", 8000,
-                    (byte) 96, -1);
+                List<Byte> pts = Arrays.asList((byte) 96);
+                MediaFormat format = LibJitsi.getMediaService()
+                    .getFormatFactory().createMediaFormat("SILK", (double)8000);
+                playRTP.playFile(argMap.get(FILENAME), format, pts, format, -1);
             }
             finally
             {

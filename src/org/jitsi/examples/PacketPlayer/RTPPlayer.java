@@ -13,6 +13,9 @@ import javax.sdp.*;
 import javax.swing.*;
 import javax.swing.table.*;
 
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.neomedia.format.*;
+
 public class RTPPlayer
 {
     private final class TableMouseListener
@@ -80,37 +83,54 @@ public class RTPPlayer
         });
     }
 
-    final PlayRTP playRTP = new PlayRTP();
-
     private JComboBox comboBox;
 
     public void playRow(int row)
     {
         final int ssrc = (Integer) (rows.get(row)[1]);
-        final byte pt = (Byte) rows.get(row)[3];
+        List<Byte> payloadList = (List<Byte>) rows.get(row)[3];
+        final byte initialPT = payloadList.get(0);
+        final List<Byte> dynamicPayloadTypes = new LinkedList<Byte>();
+        for (byte pt : payloadList)
+        {
+            if (pt > 34)
+            {
+                dynamicPayloadTypes.add(pt);
+            }
+        }
+
         Thread myThead = new Thread()
         {
 
             @Override
             public void run()
             {
-                String codec = "";
-                double frequency = 8000; // g711 and 722 using 8K always
-                if (pt > 34)
+                PlayRTP playRTP = new PlayRTP();
+
+                // Get the codec we should use for dynamic payload types from
+                // the drop down box.
+                String codec =
+                    ((String) comboBox.getSelectedItem()).split("/")[0];
+                double frequency = Double.parseDouble(
+                    ((String) comboBox.getSelectedItem()).split("/")[1]);
+                MediaFormat dynamicFormat = LibJitsi.getMediaService()
+                    .getFormatFactory().createMediaFormat(codec, frequency);
+
+                // Set the initial format of this stream from the initial
+                // payload type - it's either a standard payload type or the
+                // same as the dynamic format we just calculated.
+                MediaFormat initialFormat = dynamicFormat;
+                if (initialPT <= 34)
                 {
-                    codec = ((String) comboBox.getSelectedItem()).split("/")[0];
-                    frequency =
-                        Double
-                            .parseDouble(((String) comboBox.getSelectedItem())
-                                .split("/")[1]);
-                }
-                else
-                {
-                    codec = SdpConstants.avpTypeNames[pt];
+                    codec = SdpConstants.avpTypeNames[initialPT];
+                    initialFormat = LibJitsi.getMediaService()
+                        .getFormatFactory().createMediaFormat(codec,
+                            (double)8000); // g711 and 722 using 8K always
                 }
 
-                playRTP.playFile(lblFileName.getText(), codec, frequency, pt,
-                    ssrc);
+                // Now play the stream
+                playRTP.playFile(lblFileName.getText(), initialFormat,
+                    dynamicPayloadTypes, dynamicFormat, ssrc);
             }
 
         };
@@ -225,10 +245,6 @@ public class RTPPlayer
                 {
                     return "Click to Play";
                 }
-                else if (col == 0)
-                {
-                    return String.format("0x%08x", rows.get(row)[col]);
-                }
                 else
                 {
                     return rows.get(row)[col];
@@ -297,11 +313,8 @@ public class RTPPlayer
             List<Byte> ptList =
                 streamIdentifier.ssrcPayloadTypes.get(entry.getKey());
 
-            for (Byte aPt : ptList)
-            {
-                rows.add(new Object[]
-                { String.format("%X", ssrc), ssrc, packets, aPt });
-            }
+            rows.add(new Object[]
+                { String.format("0x%08X", ssrc), ssrc, packets, ptList });
 
             System.out.println(String.format("0x%08x = %s packets\n PTs: %s",
                 ssrc, packets, ptList));
