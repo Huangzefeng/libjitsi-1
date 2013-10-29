@@ -369,31 +369,37 @@ public class MediaStreamImpl
             = new ArrayList<TransformEngine>(3);
 
         // CSRCs and audio levels
+        logger.error("About to create CSRC transform engine");
         if (csrcEngine == null)
             csrcEngine = new CsrcTransformEngine(this);
         engineChain.add(csrcEngine);
 
         // DTMF
+        logger.error("About to create DTMF transform engine");
         DtmfTransformEngine dtmfEngine = createDtmfTransformEngine();
 
         if (dtmfEngine != null)
             engineChain.add(dtmfEngine);
 
         // RTCP Statistics
+        logger.error("About to create RTCP transform engine");
         if (statisticsEngine == null)
             statisticsEngine = new StatisticsEngine(this);
         engineChain.add(statisticsEngine);
 
         // here comes the override payload type transformer
         // as it changes headers of packets, need to go before encryption
+        logger.error("About to create PT type transform engine");
         if(ptTransformEngine == null)
             ptTransformEngine = new PayloadTypeTransformEngine();
         engineChain.add(ptTransformEngine);
 
         // SRTP
+        logger.error("About to create SRTP transform engine");
         TransformEngine srtpTransformEngine = srtpControl.getTransformEngine();
         if (srtpTransformEngine != null)
             engineChain.add(srtpTransformEngine);
+        logger.error("Created SRTP transform engine");
 
         return
             new TransformEngineChain(
@@ -1432,7 +1438,9 @@ public class MediaStreamImpl
             AbstractRTPConnector oldValue,
             AbstractRTPConnector newValue)
     {
+        logger.error("About to set connector on SRTP control");
         srtpControl.setConnector(newValue);
+        logger.error("Set connector on SRTP control");
 
         if (newValue != null)
         {
@@ -1441,14 +1449,22 @@ public class MediaStreamImpl
              * stream.
              */
             if(newValue instanceof RTPTransformUDPConnector)
+            {
+                logger.error("About to create transform engine chain");
                 ((RTPTransformUDPConnector)newValue)
                     .setEngine(createTransformEngineChain());
+                logger.error("Created transform engine chain");
+            }
             else if(newValue instanceof RTPTransformTCPConnector)
                 ((RTPTransformTCPConnector)newValue)
                     .setEngine(createTransformEngineChain());
 
             if (rtpConnectorTarget != null)
+            {
+                logger.error("About to do set target");
                 doSetTarget(rtpConnectorTarget);
+                logger.error("Done set target");
+            }
         }
     }
 
@@ -1513,6 +1529,7 @@ public class MediaStreamImpl
         switch (connector.getProtocol())
         {
         case UDP:
+            logger.error("About to create RTPTransformUDPConnector");
             rtpConnector
                 = new RTPTransformUDPConnector(connector)
                 {
@@ -1552,6 +1569,7 @@ public class MediaStreamImpl
                         return s;
                     }
                 };
+            logger.error("Created RTPTransformUDPConnector");
             break;
         case TCP:
             rtpConnector
@@ -2460,9 +2478,12 @@ public class MediaStreamImpl
                     // and starting again the DataSource
                     try
                     {
-                        transcodingDataSource.disconnect();
-                        transcodingDataSource.connect();
-                        transcodingDataSource.start();
+                        if (transcodingDataSource != null)
+                        {
+                            transcodingDataSource.disconnect();
+                            transcodingDataSource.connect();
+                            transcodingDataSource.start();
+                        }
 
                         // as output streams of the DataSource
                         // are recreated we need to update
