@@ -267,13 +267,12 @@ public class MacCoreaudioSystem
             boolean input,
             String deviceUID)
     {
-        double supportedSampleRate = MacCoreAudioDevice.DEFAULT_SAMPLE_RATE;
-        double defaultSampleRate
+        double supportedSampleRate
             = MacCoreAudioDevice.getNominalSampleRate(deviceUID);
 
-        if (defaultSampleRate >= MediaUtils.MAX_AUDIO_SAMPLE_RATE)
+        if(supportedSampleRate >= MediaUtils.MAX_AUDIO_SAMPLE_RATE)
         {
-            supportedSampleRate = defaultSampleRate;
+            supportedSampleRate = MacCoreAudioDevice.DEFAULT_SAMPLE_RATE;
         }
 
         return supportedSampleRate;

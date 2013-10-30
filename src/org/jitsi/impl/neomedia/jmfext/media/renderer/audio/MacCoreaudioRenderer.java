@@ -332,6 +332,12 @@ public class MacCoreaudioRenderer
                         throw new ResourceUnavailableException(
                                 "No locator/MediaLocator is set.");
                     }
+
+                    if (inputFormat == null)
+                    {
+                        throw new ResourceUnavailableException(
+                                "inputFormat not set");
+                    }
                 }
                 finally
                 {
