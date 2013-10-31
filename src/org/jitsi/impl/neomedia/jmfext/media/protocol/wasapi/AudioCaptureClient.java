@@ -188,9 +188,9 @@ public class AudioCaptureClient
      * Initializes a new <tt>AudioCaptureClient</tt> instance.
      *
      * @param audioSystem the <tt>WASAPISystem</tt> instance which has
-     * contributed <tt>locator</tt> 
+     * contributed <tt>locator</tt>
      * @param locator a <tt>MediaLocator</tt> which identifies the audio
-     * endpoint device to be opened and read by the new instance 
+     * endpoint device to be opened and read by the new instance
      * @param dataFlow the <tt>AudioSystem.DataFlow</tt> of the audio endpoint
      * device identified by <tt>locator</tt>. If
      * <tt>AudioSystem.DataFlow.PLAYBACK</tt> and <tt>streamFlags</tt> includes
@@ -341,6 +341,8 @@ public class AudioCaptureClient
 
                     this.outFormat = outFormat;
                     this.transferHandler = transferHandler;
+                    logger.debug("Created AudioCaptureClient " +
+                        this.hashCode() + " (dataflow " + dataFlow + ")");
                 }
                 finally
                 {

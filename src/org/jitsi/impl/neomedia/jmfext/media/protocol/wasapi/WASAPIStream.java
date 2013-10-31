@@ -19,6 +19,7 @@ import javax.media.format.*;
 import javax.media.protocol.*;
 
 import org.jitsi.impl.neomedia.codec.*;
+import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
 import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
@@ -145,7 +146,7 @@ public class WASAPIStream
      *
      * @param formats the list of <tt>AudioFormat</tt>s into which an
      * <tt>AudioFormat</tt> as similar to the specified <tt>format</tt> as
-     * possible is to be found 
+     * possible is to be found
      * @param format the <tt>AudioFormat</tt> for which a similar
      * <tt>AudioFormat</tt> is to be found in <tt>formats</tt>
      * @param clazz the runtime type of the matches to be considered or
@@ -198,7 +199,7 @@ public class WASAPIStream
     /**
      * Sets the media type of an input or output stream of a specific
      * <tt>IMediaObject</tt>.
-     * 
+     *
      * @param iMediaObject the <tt>IMediaObject</tt> to set the media type of
      * @param inOrOut <tt>true</tt> if the media type of an input stream of the
      * specified <tt>iMediaObject</tt> is to be set or <tt>false</tt> if the
@@ -216,7 +217,7 @@ public class WASAPIStream
      * <tt>audioFormat</tt> is acceptable and/or whether it has been set
      * successfully
      * @throws HResultException if setting the media type of the specified
-     * stream of the specified <tt>iMediaObject</tt> fails 
+     * stream of the specified <tt>iMediaObject</tt> fails
      */
     private static int IMediaObject_SetXXXputType(
             long iMediaObject,
@@ -388,7 +389,7 @@ public class WASAPIStream
      * @param length the number of bytes in <tt>buffer</tt> starting at
      * <tt>offset</tt> to be pushed/written into the specified <tt>pBuffer</tt>
      * @return the number of bytes from the specified <tt>buffer</tt>
-     * pushed/written into the specified <tt>pBuffer</tt>  
+     * pushed/written into the specified <tt>pBuffer</tt>
      */
     private static int maybeMediaBufferPush(
             long pBuffer,
@@ -443,6 +444,18 @@ public class WASAPIStream
      * been connected with acoustic echo cancellation (AEC) enabled.
      */
     private boolean aec;
+
+    /**
+     * The time that we started the AEC (if we're using it).  This is used to
+     * determine how quickly the audio system starts supplying us with capture
+     * audio.
+     */
+    private long aecStartTime = -1;
+
+    /**
+     * Whether we've received some data from the AEC.
+     */
+    private boolean readFromAec = false;
 
     /**
      * The maximum capacity/number of bytes of {@link #iMediaBuffer}.
@@ -546,7 +559,7 @@ public class WASAPIStream
 
     /**
      * An array of <tt>byte</tt>s utilized by {@link #processInput(int, int)}
-     * and cached in order to reduce the effects of the garbage collector. 
+     * and cached in order to reduce the effects of the garbage collector.
      */
     private byte[] processInputBuffer;
 
@@ -558,7 +571,7 @@ public class WASAPIStream
      * i.e. delivers audio samples from the capture and render endpoint devices
      * into the voice capture DMO, invokes the acoustic echo cancellation and
      * stores the result/output in {@link #processed} so that it may later be
-     * read out of this instance via {@link #read(Buffer)}.  
+     * read out of this instance via {@link #read(Buffer)}.
      */
     private Thread processThread;
 
@@ -633,7 +646,7 @@ public class WASAPIStream
 
     /**
      * The <tt>MediaLocator</tt> of the rendering endpoint device used by this
-     * instance if any. 
+     * instance if any.
      */
     private MediaLocator renderDevice;
 
@@ -653,13 +666,13 @@ public class WASAPIStream
 
     /**
      * The indicator which determines whether no reading from {@link #render} is
-     * to be performed until it reaches a certain threshold of availability. 
+     * to be performed until it reaches a certain threshold of availability.
      */
     private boolean replenishRender;
 
     /**
      * The <tt>Codec</tt> which is to resample the <tt>Format</tt> of
-     * {@link #capture} or {@link #processed} into {@link #format} if necessary. 
+     * {@link #capture} or {@link #processed} into {@link #format} if necessary.
      */
     private Codec resampler;
 
@@ -682,6 +695,69 @@ public class WASAPIStream
      * without an intervening invocation of {@link #stop()}.
      */
     private boolean started;
+
+    /**
+     * The time in milliseconds at which reading from the AEC/capture device
+     * started malfunctioning.
+     */
+    private long readIsMalfunctioningSince = DiagnosticsControl.NEVER;
+
+    /**
+     * The <tt>DiagnosticsControl</tt> implementation of this instance which
+     * allows the diagnosis of the functional health of WASAPI devices.
+     */
+    private final DiagnosticsControl diagnosticsControl
+        = new DiagnosticsControl()
+        {
+            /**
+             * {@inheritDoc}
+             *
+             * <tt>WASAPIStream</tt>'s <tt>DiagnosticsControl</tt>
+             * implementation does not provide its own user interface and always
+             * returns <tt>null</tt>.
+             */
+            @Override
+            public java.awt.Component getControlComponent()
+            {
+                return null;
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public long getMalfunctioningSince()
+            {
+                return readIsMalfunctioningSince;
+            }
+
+            /**
+             * {@inheritDoc}
+             *
+             * Returns the identifier of the WASAPI device written through
+             * this <tt>WASAPIRenderer</tt>.
+             */
+            @Override
+            public String toString()
+            {
+                String name;
+
+                try
+                {
+                    WASAPISystem audioSystem = dataSource.audioSystem;
+                    CaptureDeviceInfo2 captureDevice = audioSystem.getDevice(
+                        AudioSystem.DataFlow.CAPTURE,
+                        getLocator());
+                    name = captureDevice.getName();
+                }
+                catch (Exception e)
+                {
+                    logger.error("Failed to find name for device:" + e);
+                    name = "";
+                }
+                return name;
+            }
+        };
 
     /**
      * Initializes a new <tt>WASAPIStream</tt> instance which is to have its
@@ -744,7 +820,7 @@ public class WASAPIStream
          * For example, use the IPropertyStore_SetValue methods of the
          * VoiceCaptureDSP class to set the MFPKEY_WMAAECMA_FEATURE_MODE
          * property to true and override the default settings on the
-         * MFPKEY_WMAAECMA_FEATR_XXX properties of the Voice Capture DSP. 
+         * MFPKEY_WMAAECMA_FEATR_XXX properties of the Voice Capture DSP.
          */
         try
         {
@@ -868,6 +944,7 @@ public class WASAPIStream
         }
         finally
         {
+            setReadIsMalfunctioning(false);
             uninitializeAEC();
             uninitializeRender();
             uninitializeCapture();
@@ -963,6 +1040,8 @@ public class WASAPIStream
                         }
 
                         this.sourceMode = sourceMode;
+                        logger.debug("Successfully initialized AEC in " +
+                            (sourceMode ? "source" : "filter") + " mode");
                     }
                 }
             }
@@ -979,6 +1058,10 @@ public class WASAPIStream
                 }
             }
         }
+
+        // If we failed to initialize the AEC above, we won't have an
+        // iMediaObject.  In which case, we set up the capture device directly
+        // without invoking AEC.
         if (iMediaObject == 0)
         {
             aec = false;
@@ -2183,7 +2266,34 @@ public class WASAPIStream
                                 processed, processedLength, toRead);
 
                     if (read > 0)
+                    {
+                        setReadIsMalfunctioning(false);
                         processedLength += read;
+                        if (!readFromAec)
+                        {
+                            logger.info("Read first bytes from AEC after " +
+                                (System.currentTimeMillis() - aecStartTime) + "ms");
+                            readFromAec = true;
+                        }
+                    }
+                    else
+                    {
+                        /*
+                         * We weren't able to read data out of the AEC - this
+                         * could indicate that it's malfunctioning if this
+                         * continues for a while.
+                         */
+                        setReadIsMalfunctioning(true);
+                    }
+                }
+                else
+                {
+                    /*
+                     * There's no data to read from the AEC - this might
+                     * indicate that it's malfunctioning if we don't get any
+                     * data for a while.
+                     */
+                    setReadIsMalfunctioning(true);
                 }
             }
             catch (HResultException hre)
@@ -2211,7 +2321,7 @@ public class WASAPIStream
     {
         /*
          * The propertyChangeListener this invokes the method will be added only
-         * when acoustic echo cancellation (AEC) is enabled. 
+         * when acoustic echo cancellation (AEC) is enabled.
          */
         String propertyName = ev.getPropertyName();
         boolean renderDeviceDidChange;
@@ -2402,8 +2512,6 @@ public class WASAPIStream
 
             if (!flush)
             {
-                BufferTransferHandler transferHandler = this.transferHandler;
-
                 if ((transferHandler != null)
                         && (processedLength >= bufferMaxLength))
                     return transferHandler;
@@ -2553,14 +2661,15 @@ public class WASAPIStream
             render.start();
         }
         started = true;
+
         /*
-         * We explicitly want to support the case in which the user has selected
-         * "none" for the playback/render endpoint device. Otherwise, we could
-         * have replaced the dataSource.aec check with (render != null).
+         * If we're using AEC and it's either in source mode or in filter mode
+         * with a capture device (because filter mode doesn't work without a
+         * capture device), start the process thread for this stream.
          */
-        if (aec
-                && ((capture != null) || sourceMode)
-                && (processThread == null))
+        if (aec &&
+            (sourceMode || (capture != null)) &&
+            (processThread == null))
         {
             /*
              * If the selected rendering device does not have an active stream,
@@ -2575,10 +2684,12 @@ public class WASAPIStream
                     @Override
                     public void run()
                     {
+                        logger.debug("Starting process thread");
                         runInProcessThread(this);
                     }
                 };
             processThread.setDaemon(true);
+            aecStartTime = System.currentTimeMillis();
             processThread.start();
         }
     }
@@ -2780,6 +2891,30 @@ public class WASAPIStream
         catch (InterruptedException ie)
         {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Indicates whether the reading from the AEC/capture device is
+     * malfunctioning. Keeps track of the time at which the malfunction has
+     * started.
+     *
+     * @param readIsMalfunctioning whether the reading from the audio
+     * system is (believed to be) malfunctioning
+     */
+    private void setReadIsMalfunctioning(boolean readIsMalfunctioning)
+    {
+        if (readIsMalfunctioning)
+        {
+            if (readIsMalfunctioningSince == DiagnosticsControl.NEVER)
+            {
+                readIsMalfunctioningSince = System.currentTimeMillis();
+                WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
+            }
+        }
+        else
+        {
+            readIsMalfunctioningSince = DiagnosticsControl.NEVER;
         }
     }
 }

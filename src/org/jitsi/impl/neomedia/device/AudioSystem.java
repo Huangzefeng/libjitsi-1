@@ -473,7 +473,7 @@ public abstract class AudioSystem
     /**
      * Gets the (full) name of the <tt>ConfigurationService</tt> property which
      * is associated with a (base) <tt>AudioSystem</tt>-specific property name.
-     * 
+     *
      * @param basePropertyName the (base) <tt>AudioSystem</tt>-specific property
      * name of which the associated (full) <tt>ConfigurationService</tt>
      * property name is to be returned
@@ -871,7 +871,7 @@ public abstract class AudioSystem
             /*
              * Display the list of malfunctioning audio devices to the user.
              */
-            String message
+            final String message
                 = r.getI18NString(
                         "impl.neomedia.device.audiosystem"
                             + ".diagnosticscontrolmonitor.MESSAGE",
@@ -896,6 +896,21 @@ public abstract class AudioSystem
                     }
                 }
             }
+
+            /*
+             * Slight hack :)  To ensure that we know when this has happened,
+             * throw an exception on a new thread, which will get caught by our
+             * error reporting code.
+             */
+            new Thread() {
+                public void run()
+                {
+                    // Just throw an exception with our malfunctioning message
+                    // in it.
+                    throw new RuntimeException(
+                        "Device has malfunctioned: " + message);
+                }
+            }.start();
         }
 
         /**

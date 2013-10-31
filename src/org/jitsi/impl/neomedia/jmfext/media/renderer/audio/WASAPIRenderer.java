@@ -1095,45 +1095,29 @@ public class WASAPIRenderer
             }
             else
             {
+                /*
+                 * The remainder buffer is full so it is possible that the
+                 * writing to the render endpoint buffer is malfunctioning.
+                 *
+                 * As well as calling the standard malfunctioning method, we
+                 * check how long we've been failing for and if it exceeds the
+                 * timeout, we return failed.
+                 *
+                 * Note we don't clear the existing data in remainder as that
+                 * would cause us to incorrectly think the device is working
+                 * again next time we come into this method.
+                 */
                 ret |= INPUT_BUFFER_NOT_CONSUMED;
                 sleep = devicePeriod;
-
-                /*
-                 * No writing from the input Buffer into remainder has occurred
-                 * so it is possible that the writing to the render endpoint
-                 * buffer is malfunctioning.
-                 */
                 setWriteIsMalfunctioning(true);
-            }
 
-            /*
-             * If the writing to the render endpoint buffer is malfunctioning,
-             * fail the processing of the input Buffer in order to avoid
-             * blocking of the Codec chain.
-             */
-            if (((ret & INPUT_BUFFER_NOT_CONSUMED)
-                        == INPUT_BUFFER_NOT_CONSUMED)
-                    && (writeIsMalfunctioningSince
-                            != DiagnosticsControl.NEVER))
-            {
                 long writeIsMalfunctioningDuration
                     = System.currentTimeMillis()
                         - writeIsMalfunctioningSince;
-
                 if (writeIsMalfunctioningDuration
                         > writeIsMalfunctioningTimeout)
                 {
-                    /*
-                     * The writing to the render endpoint buffer has taken
-                     * too long so whatever is in remainder is surely
-                     * out-of-date.
-                     */
-                    remainderLength = 0;
                     ret = BUFFER_PROCESSED_FAILED;
-                    logger.warn(
-                            "Audio endpoint device appears to be"
-                                + " malfunctioning: "
-                                + getLocator());
                 }
             }
         }
@@ -1643,7 +1627,7 @@ public class WASAPIRenderer
 
                 waitWhileEventHandleCmd();
 
-                writeIsMalfunctioningSince = DiagnosticsControl.NEVER;
+                setWriteIsMalfunctioning(false);
             }
             catch (HResultException hre)
             {
