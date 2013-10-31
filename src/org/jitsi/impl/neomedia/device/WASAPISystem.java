@@ -1232,6 +1232,18 @@ public class WASAPISystem
 
         try
         {
+            /*
+             * The Windows API function CoInitializeEx must be invoked on the
+             * current thread. Generally, the COM library must be initialized
+             * on a thread before calling any of the library functions (with a
+             * few exceptions) on that thread. Technically, that general
+             * requirement is not trivial to implement in the multi-threaded
+             * architecture of FMJ. Practically, we will perform the
+             * invocations where we have seen the return value
+             * CO_E_NOTINITIALIZED.
+             */
+            WASAPISystem.CoInitializeEx();
+
             iMediaObject
                 = CoCreateInstance(
                         CLSID_CWMAudioAEC,
