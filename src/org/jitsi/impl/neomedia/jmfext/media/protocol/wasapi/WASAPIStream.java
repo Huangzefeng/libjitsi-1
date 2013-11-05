@@ -753,7 +753,7 @@ public class WASAPIStream
                 catch (Exception e)
                 {
                     logger.error("Failed to find name for device:" + e);
-                    name = "";
+                    name = "Failed to find name for device";
                 }
                 return name;
             }
