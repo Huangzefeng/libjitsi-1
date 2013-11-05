@@ -355,7 +355,7 @@ public class AudioSystemClipImpl
                         }
 
                         if (System.currentTimeMillis() -
-                            rendererProcessStartTime > MAX_RENDER_TIME)
+                                     rendererProcessStartTime > MAX_RENDER_TIME)
                         {
                             logger.error("Failed to complete rendering in " +
                                 MAX_RENDER_TIME + "ms");
