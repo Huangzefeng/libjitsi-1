@@ -171,3 +171,4 @@ libjitsi.jar
 *.swp
 dist
 *.class
+/log

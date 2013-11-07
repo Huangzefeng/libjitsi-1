@@ -8,20 +8,18 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.List;
+import java.util.logging.*;
 
 import javax.sdp.*;
 import javax.swing.*;
 import javax.swing.table.*;
 
-import org.jitsi.impl.neomedia.MediaServiceImpl;
-import org.jitsi.impl.neomedia.MediaStreamImpl;
-import org.jitsi.impl.neomedia.device.AudioSystem;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.device.AudioSystem.DataFlow;
-import org.jitsi.impl.neomedia.device.CaptureDeviceInfo2;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.MediaService;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
-import org.jitsi.util.Logger;
 
 public class RTPPlayer
 {
@@ -66,6 +64,20 @@ public class RTPPlayer
      */
     public static void main(String[] args)
     {
+        System.setProperty("java.util.logging.config.file",
+            "logging.properties");
+        try
+        {
+            LogManager.getLogManager().readConfiguration();
+        }
+        catch (SecurityException e1)
+        {
+            e1.printStackTrace();
+        }
+        catch (IOException e1)
+        {
+            e1.printStackTrace();
+        }
 
         final String possibleInputFile = args.length > 0 ? args[0] : "";
 
@@ -114,7 +126,7 @@ public class RTPPlayer
             public void run()
             {
             	PlayRTP playRTP = new PlayRTP(); // Also initializes Libjitsi
-                
+
                 // Set the appropriate output device
 	            String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
 	            CaptureDeviceInfo2 selectedDevice = null;
@@ -127,7 +139,7 @@ public class RTPPlayer
 	            }
 	            System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
 	            audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
-            	
+
                 // Get the codec we should use for dynamic payload types from
                 // the drop down box.
                 String codec =
@@ -325,14 +337,14 @@ public class RTPPlayer
         springLayout.putConstraint(SpringLayout.EAST, lblAssumeCodecFor, -10,
             SpringLayout.WEST, codecComboBox);
         mframe.getContentPane().add(lblAssumeCodecFor);
-        
+
         // Choose the output audio device
         LibJitsi.start();
         MediaService mediaService = LibJitsi.getMediaService();
         final AudioSystem audioSystem = ((MediaServiceImpl)mediaService).getDeviceConfiguration().getAudioSystem();
         String [] deviceList = audioSystem.getAllDevices(DataFlow.PLAYBACK);
         LibJitsi.stop();
-        
+
         audioDeviceComboBox = new JComboBox<>();
         audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(deviceList));
         springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 24,
@@ -342,7 +354,7 @@ public class RTPPlayer
         springLayout.putConstraint(SpringLayout.WEST, audioDeviceComboBox, -152,
         		SpringLayout.EAST, audioDeviceComboBox);
         mframe.getContentPane().add(audioDeviceComboBox);
-        
+
         JLabel lblAudioDevice = new JLabel("Audio device:");
         springLayout.putConstraint(SpringLayout.NORTH, lblAudioDevice, 24,
             SpringLayout.NORTH, mframe.getContentPane());
