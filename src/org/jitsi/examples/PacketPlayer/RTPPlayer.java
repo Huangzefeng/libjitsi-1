@@ -149,25 +149,14 @@ public class RTPPlayer
                             (double)8000); // g711 and 722 using 8K always
                 }
 
-                for (int ix = 0; ix < 1; ix++)
-                {
-                    // Now play the stream
-                	makeLog("Play file, attempt: " + (ix+1));
-                    playRTP.playFile(lblFileName.getText(), initialFormat,
-                        dynamicPayloadTypes, dynamicFormat, ssrc);
-                }
-                makeLog("All attempts finished.");
+                playRTP.playFile(lblFileName.getText(), initialFormat,
+                        dynamicPayloadTypes, dynamicFormat, ssrc, 1);
             }
 
         };
 
         myThead.start();
     }
-
-    // TODO SGD - enhance this to log somewhere else
-    protected void makeLog(String string) {
-    	System.out.println(string);
-	}
 
 	/**
      * Create the application.
