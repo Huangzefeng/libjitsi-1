@@ -7,6 +7,7 @@
 package org.jitsi.impl.neomedia.codec.audio.silk;
 
 import java.awt.*;
+
 import javax.media.*;
 import javax.media.format.*;
 
@@ -195,6 +196,9 @@ public class JavaDecoder
         }
 
         AudioFormat inputFormat = (AudioFormat) getInputFormat();
+        logger.debug("Opening SILK decoder with format: " + inputFormat);
+        inputFormats = new AudioFormat[] {inputFormat};
+
         double sampleRate = inputFormat.getSampleRate();
         int channels = inputFormat.getChannels();
 
@@ -208,6 +212,8 @@ public class JavaDecoder
     @Override
     protected int doProcess(Buffer inBuffer, Buffer outBuffer)
     {
+        long seqNo = inBuffer.getSequenceNumber();
+        logger.trace("Libjitsi SILK decoder " + this.hashCode() + " processing packet " + seqNo);
         byte[] in = (byte[]) inBuffer.getData();
         int inOffset = inBuffer.getOffset();
         int inLength = inBuffer.getLength();
@@ -215,7 +221,6 @@ public class JavaDecoder
         short[] out = validateShortArraySize(outBuffer, frameLength);
         int outOffset = 0;
 
-        long seqNo = inBuffer.getSequenceNumber();
         /*
          * Check whether a packet has been lost. If a packet has more than one
          * frame, we go through each frame in a new call to the process method
