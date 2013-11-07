@@ -13,8 +13,15 @@ import javax.sdp.*;
 import javax.swing.*;
 import javax.swing.table.*;
 
+import org.jitsi.impl.neomedia.MediaServiceImpl;
+import org.jitsi.impl.neomedia.MediaStreamImpl;
+import org.jitsi.impl.neomedia.device.AudioSystem;
+import org.jitsi.impl.neomedia.device.AudioSystem.DataFlow;
+import org.jitsi.impl.neomedia.device.CaptureDeviceInfo2;
 import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.neomedia.MediaService;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.Logger;
 
 public class RTPPlayer
 {
@@ -83,7 +90,8 @@ public class RTPPlayer
         });
     }
 
-    private JComboBox comboBox;
+    private JComboBox<String> codecComboBox;
+    private JComboBox<String> audioDeviceComboBox;
 
     public void playRow(int row)
     {
@@ -105,14 +113,27 @@ public class RTPPlayer
             @Override
             public void run()
             {
-                PlayRTP playRTP = new PlayRTP();
-
+            	PlayRTP playRTP = new PlayRTP(); // Also initializes Libjitsi
+                
+                // Set the appropriate output device
+	            String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
+	            CaptureDeviceInfo2 selectedDevice = null;
+	            AudioSystem audioSystem = ((MediaServiceImpl)LibJitsi.getMediaService()).getDeviceConfiguration().getAudioSystem();
+	            for (CaptureDeviceInfo2 device : audioSystem.getDevices(DataFlow.PLAYBACK)) {
+	            	if (device.getName().equals(selectedDeviceStr)) {
+	            		selectedDevice = device;
+	            		break;
+	            	}
+	            }
+	            System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
+	            audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
+            	
                 // Get the codec we should use for dynamic payload types from
                 // the drop down box.
                 String codec =
-                    ((String) comboBox.getSelectedItem()).split("/")[0];
+                    ((String) codecComboBox.getSelectedItem()).split("/")[0];
                 double frequency = Double.parseDouble(
-                    ((String) comboBox.getSelectedItem()).split("/")[1]);
+                    ((String) codecComboBox.getSelectedItem()).split("/")[1]);
                 MediaFormat dynamicFormat = LibJitsi.getMediaService()
                     .getFormatFactory().createMediaFormat(codec, frequency);
 
@@ -128,9 +149,14 @@ public class RTPPlayer
                             (double)8000); // g711 and 722 using 8K always
                 }
 
-                // Now play the stream
-                playRTP.playFile(lblFileName.getText(), initialFormat,
-                    dynamicPayloadTypes, dynamicFormat, ssrc);
+                for (int ix = 0; ix < 1; ix++)
+                {
+                    // Now play the stream
+                	makeLog("Play file, attempt: " + (ix+1));
+                    playRTP.playFile(lblFileName.getText(), initialFormat,
+                        dynamicPayloadTypes, dynamicFormat, ssrc);
+                }
+                makeLog("All attempts finished.");
             }
 
         };
@@ -138,7 +164,12 @@ public class RTPPlayer
         myThead.start();
     }
 
-    /**
+    // TODO SGD - enhance this to log somewhere else
+    protected void makeLog(String string) {
+    	System.out.println(string);
+	}
+
+	/**
      * Create the application.
      */
     public RTPPlayer()
@@ -277,23 +308,48 @@ public class RTPPlayer
         scrollPane_1.setViewportView(mtable);
         mtable.setRowSelectionAllowed(false);
 
-        comboBox = new JComboBox();
-        comboBox.setModel(new DefaultComboBoxModel(new String[]
+        codecComboBox = new JComboBox<String>();
+        codecComboBox.setModel(new DefaultComboBoxModel<String>(new String[]
         { "SILK/8000", "SILK/16000","H264/90000" }));
-        springLayout.putConstraint(SpringLayout.NORTH, comboBox, 0,
+        springLayout.putConstraint(SpringLayout.NORTH, codecComboBox, 0,
             SpringLayout.NORTH, mframe.getContentPane());
-        springLayout.putConstraint(SpringLayout.WEST, comboBox, -152,
+        springLayout.putConstraint(SpringLayout.WEST, codecComboBox, -152,
             SpringLayout.EAST, mframe.getContentPane());
-        springLayout.putConstraint(SpringLayout.EAST, comboBox, 0,
+        springLayout.putConstraint(SpringLayout.EAST, codecComboBox, 0,
             SpringLayout.EAST, mframe.getContentPane());
-        mframe.getContentPane().add(comboBox);
+        mframe.getContentPane().add(codecComboBox);
 
         JLabel lblAssumeCodecFor = new JLabel("Assume codec for dynamic PT");
         springLayout.putConstraint(SpringLayout.NORTH, lblAssumeCodecFor, 0,
             SpringLayout.NORTH, btnChooseFile);
         springLayout.putConstraint(SpringLayout.EAST, lblAssumeCodecFor, -10,
-            SpringLayout.WEST, comboBox);
+            SpringLayout.WEST, codecComboBox);
         mframe.getContentPane().add(lblAssumeCodecFor);
+        
+        // Choose the output audio device
+        LibJitsi.start();
+        MediaService mediaService = LibJitsi.getMediaService();
+        final AudioSystem audioSystem = ((MediaServiceImpl)mediaService).getDeviceConfiguration().getAudioSystem();
+        String [] deviceList = audioSystem.getAllDevices(DataFlow.PLAYBACK);
+        LibJitsi.stop();
+        
+        audioDeviceComboBox = new JComboBox<>();
+        audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(deviceList));
+        springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 24,
+                SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.EAST, audioDeviceComboBox, 0,
+                SpringLayout.EAST, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.WEST, audioDeviceComboBox, -152,
+        		SpringLayout.EAST, audioDeviceComboBox);
+        mframe.getContentPane().add(audioDeviceComboBox);
+        
+        JLabel lblAudioDevice = new JLabel("Audio device:");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAudioDevice, 24,
+            SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.EAST, lblAudioDevice, -10,
+            SpringLayout.WEST, audioDeviceComboBox);
+        mframe.getContentPane().add(lblAudioDevice);
+
     }
 
     ArrayList<Object[]> rows = new ArrayList<Object[]>();
