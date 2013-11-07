@@ -12,6 +12,7 @@ import org.jitsi.examples.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
+import org.jitsi.service.neomedia.event.SimpleAudioLevelListener;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.event.*;
 import org.jitsi.util.swing.*;
@@ -38,6 +39,8 @@ public class PlayRTP
     private static boolean started;
 
     private MediaStream mediaStream;
+    
+    private int maxAudioLevel = Integer.MIN_VALUE; // Default to lowest possible
 
     boolean foundVideo;
 
@@ -148,6 +151,29 @@ public class PlayRTP
         // connector
         connector = new PCapStreamConnector(filename, ssrc);
         mediaStream.setConnector(connector);
+        
+        // New:
+        if (mediaStream instanceof AudioMediaStream) {
+        	System.out.println("This is an AudioMediaStream");
+        	((AudioMediaStream)mediaStream).setLocalUserAudioLevelListener(new SimpleAudioLevelListener(){
+				@Override
+				public void audioLevelChanged(int level) {
+					// TODO Auto-generated method stub
+					System.out.println("@@@ Audio level changed to: " + level);
+					
+					if (level > maxAudioLevel) {
+						maxAudioLevel = level;
+					}
+					
+					if (level > 0 /* ??? */) {
+						// We've got some audio, so skip and move onto the next one
+						System.out.println("Got some audio - move on to next iteration");
+						mediaStream.stop();
+					}
+				}});
+        }
+        //
+        
         mediaStream.start();
 
         return true;
@@ -207,7 +233,9 @@ public class PlayRTP
         }
         finally
         {
+        	System.out.println("Max audio level recorded: " + maxAudioLevel); // And do something clever if it was too low??
             close();
+            shutdown();
         }
     }
 
