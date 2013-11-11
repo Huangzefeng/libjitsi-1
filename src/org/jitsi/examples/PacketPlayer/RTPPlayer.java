@@ -105,6 +105,7 @@ public class RTPPlayer
     private JComboBox<String> codecComboBox;
     private JComboBox<String> audioDeviceComboBox;
     private JComboBox<Boolean> autoComboBox;
+    private JTextField autoItersInput;
     private JComboBox<Boolean> stopOnNoAudioComboBox;
 
     public void playRow(int row)
@@ -163,8 +164,20 @@ public class RTPPlayer
                             (double)8000); // g711 and 722 using 8K always
                 }
 
-                playRTP.playFile(lblFileName.getText(), initialFormat,
-                        dynamicPayloadTypes, dynamicFormat, ssrc, 10);
+                if ((Boolean)autoComboBox.getSelectedItem() == true)
+                {
+                	// Auto mode - loop round a bunch of times.
+                	playRTP.playFileInAutoMode(lblFileName.getText(),
+                	    initialFormat, dynamicPayloadTypes, dynamicFormat, ssrc,
+                	    Integer.parseInt(autoItersInput.getText()),
+                	    (Boolean)stopOnNoAudioComboBox.getSelectedItem());
+                }
+                else
+                {
+                	// Regular mode - play once.
+                	playRTP.playFile(lblFileName.getText(), initialFormat,
+                			          dynamicPayloadTypes, dynamicFormat, ssrc);
+                }
             }
 
         };
@@ -380,7 +393,7 @@ public class RTPPlayer
                 SpringLayout.WEST, lblIters);
             mframe.getContentPane().add(lblIters2);
             
-        JTextField autoItersInput = new JTextField();
+        autoItersInput = new JTextField();
         autoItersInput.setText("1");
         springLayout.putConstraint(SpringLayout.NORTH, autoItersInput, 0,
                 SpringLayout.NORTH, lblIters);

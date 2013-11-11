@@ -40,7 +40,6 @@ public class PlayRTP
 
     private MediaStream mediaStream;
     
-    //private int maxLocalAudioLevel = SimpleAudioLevelListener.MIN_LEVEL; // Default to lowest possible
     final ValueBox<Integer> maxStreamAudioLevel = new ValueBox<Integer>(SimpleAudioLevelListener.MIN_LEVEL); // Default to lowest possible
 
     boolean foundVideo;
@@ -81,12 +80,13 @@ public class PlayRTP
     /**
      * Initializes the receipt of audio.
      *
-     * @return The stream connector that can be used to check if the wotsit is still doobering.
+     * @return The stream connector that can be used to check if the socket is
+     * still connected.
      * @throws Exception if anything goes wrong while initializing this instance
      */
     private StreamConnector playMedia(String filename, MediaFormat initialFormat,
-        List<Byte> dynamicRTPPayloadTypes,
-        MediaFormat dynamicFormat,int ssrc) throws Exception
+        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat,
+        int ssrc, boolean auto) throws Exception
     {
         /*
          * Prepare for the start of the transmission i.e. initialize the
@@ -152,36 +152,18 @@ public class PlayRTP
         // connector
         final StreamConnector connector = new PCapStreamConnector(filename, ssrc);
         mediaStream.setConnector(connector);
-        final MediaStream fMediaStream = mediaStream;// hahahahahha
         
-        // New:
-        if (mediaStream instanceof AudioMediaStream) {
+        if ((mediaStream instanceof AudioMediaStream) && auto) {
         	System.out.println("This is an AudioMediaStream");
         	AudioMediaStream audioMediaStream = (AudioMediaStream)mediaStream;
-        	/*audioMediaStream.setLocalUserAudioLevelListener(new SimpleAudioLevelListener(){
-				@Override
-				public void audioLevelChanged(int level) {
-					// TODO Auto-generated method stub
-					System.out.println("@@@ Local Audio level changed to: " + level);
-					
-					if (level > maxLocalAudioLevel) {
-						maxLocalAudioLevel = level;
-					}
-					
-					if (level > SimpleAudioLevelListener.MIN_LEVEL) {
-						// We've got some audio, so skip and move onto the next one
-						System.out.println("Got some local audio - move on to next iteration");
-						//mediaStream.stop();
-					}
-				}});*/
         	audioMediaStream.setStreamAudioLevelListener(new SimpleAudioLevelListener(){
 				@Override
 				public void audioLevelChanged(int level) {
-					// TODO Auto-generated method stub
 					if (level > maxStreamAudioLevel.get()) {
 						maxStreamAudioLevel.set(level);
 						System.out.println("-- Max Stream Audio level increased to: " + level);
 					}
+					// If we got some audio 
 					if (level > SimpleAudioLevelListener.MIN_LEVEL){
 						System.out.println("Got some audio - this one works, so move on to the next.");
 						connector.getDataSocket().close();
@@ -237,46 +219,85 @@ public class PlayRTP
      * Blocking
      */
     public void playFile(String filename, MediaFormat initialFormat,
-        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc, int attempts)
+        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc)
     {
-    	int ix;
-        for (ix = 0; ix < attempts; ix++)
+        playFile(filename, initialFormat, dynamicRTPPayloadTypes, dynamicFormat,
+        		ssrc, false);
+    }
+    
+    /**
+     * Internal version.
+     */
+    private void playFile(String filename, MediaFormat initialFormat,
+        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc, boolean auto)
+    {
+        // Now play the stream
+    	maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
+    	
+        close();
+        initIfRequired();
+        
+        try
+        {
+            StreamConnector connector = playMedia(filename, initialFormat,
+            		dynamicRTPPayloadTypes, dynamicFormat, ssrc, auto);
+            while (connector.getDataSocket().isConnected())
+            {
+                Thread.sleep(100);
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        finally
+        {
+            close();
+            shutdown();
+        }
+        
+        System.out.println("Finshed playing file.");
+    }
+
+    /**
+     * Run RTPPlayer in automatic mode.
+     * @param filename
+     * @param initialFormat
+     * @param dynamicPayloadTypes
+     * @param dynamicFormat
+     * @param ssrc
+     * @param n_iterations - how many times to replay the audio sample. 0=infinite.
+     * @param stop_if_iter_had_no_audio - true if the loop should quit as soon
+     * as no audio was heard for that iteration (so that the diags are preserved)
+     */
+	public void playFileInAutoMode(String filename, MediaFormat initialFormat,
+			List<Byte> dynamicPayloadTypes, MediaFormat dynamicFormat,
+			int ssrc, int n_iterations, boolean stop_if_iter_had_no_audio)
+	{
+    	int ix = 0;
+    	while ((ix < n_iterations) || (n_iterations == 0))
         {
             // Now play the stream
         	makeLog("Play file, attempt: " + (ix+1)); 
         	maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
-        	
-            close();
-            initIfRequired();
+        	playFile(filename, initialFormat, dynamicPayloadTypes,
+        			dynamicFormat, ssrc, true);
             
-            try
-            {
-                StreamConnector connector = playMedia(filename, initialFormat, dynamicRTPPayloadTypes,
-                    dynamicFormat, ssrc);
-                while (connector.getDataSocket().isConnected())
-                {
-                    Thread.sleep(100);
-                }
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-            finally
-            {
-            	int audioLevel = maxStreamAudioLevel.get(); 
-            	System.out.println("Max local audio level recorded: " + audioLevel); // And do something clever if it was too low??
-            	if (audioLevel <= SimpleAudioLevelListener.MIN_LEVEL) {
-            		System.out.print("\n!!  No audio on this loop !!\n\n");
-            		break;
-            	}
-                close();
-                shutdown();
-            }
+        	int audioLevel = maxStreamAudioLevel.get(); 
+        	System.out.println("Max local audio level recorded: " + audioLevel);
+        	if (audioLevel <= SimpleAudioLevelListener.MIN_LEVEL) {
+        		System.out.print("\n!!  No audio on loop " + (ix+1) + " !!\n\n");
+        		if (stop_if_iter_had_no_audio) {
+        		    break;
+        		}
+        	}
+        	ix++;
         }
-        makeLog("Finished - stopped after attempt " + (ix+1) + " of " + attempts);
-
-    }
+        makeLog((ix < n_iterations) ?
+        		"Finished - stopped during attempt " + (ix+1) + " of " + n_iterations
+        		: "Finshed after completing " + n_iterations + " attempts");
+		
+	}
 
     public static void main(String[] args) throws Exception
     {
@@ -297,7 +318,7 @@ public class PlayRTP
                 List<Byte> pts = Arrays.asList((byte) 96);
                 MediaFormat format = LibJitsi.getMediaService()
                     .getFormatFactory().createMediaFormat("SILK", (double)8000);
-                playRTP.playFile(argMap.get(FILENAME), format, pts, format, -1, 1);
+                playRTP.playFile(argMap.get(FILENAME), format, pts, format, -1);
             }
             finally
             {
