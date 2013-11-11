@@ -40,7 +40,8 @@ public class PlayRTP
 
     private MediaStream mediaStream;
     
-    private int maxAudioLevel = Integer.MIN_VALUE; // Default to lowest possible
+    //private int maxLocalAudioLevel = SimpleAudioLevelListener.MIN_LEVEL; // Default to lowest possible
+    final ValueBox<Integer> maxStreamAudioLevel = new ValueBox<Integer>(SimpleAudioLevelListener.MIN_LEVEL); // Default to lowest possible
 
     boolean foundVideo;
 
@@ -76,14 +77,14 @@ public class PlayRTP
         }
     }
 
-    private StreamConnector connector;
+    //private StreamConnector connector;
     /**
      * Initializes the receipt of audio.
      *
-     * @return <tt>true</tt> if this instance has been successfully initialized
+     * @return The stream connector that can be used to check if the wotsit is still doobering.
      * @throws Exception if anything goes wrong while initializing this instance
      */
-    private boolean playMedia(String filename, MediaFormat initialFormat,
+    private StreamConnector playMedia(String filename, MediaFormat initialFormat,
         List<Byte> dynamicRTPPayloadTypes,
         MediaFormat dynamicFormat,int ssrc) throws Exception
     {
@@ -149,34 +150,52 @@ public class PlayRTP
         mediaStream.setFormat(initialFormat);
 
         // connector
-        connector = new PCapStreamConnector(filename, ssrc);
+        final StreamConnector connector = new PCapStreamConnector(filename, ssrc);
         mediaStream.setConnector(connector);
+        final MediaStream fMediaStream = mediaStream;// hahahahahha
         
         // New:
         if (mediaStream instanceof AudioMediaStream) {
         	System.out.println("This is an AudioMediaStream");
-        	((AudioMediaStream)mediaStream).setLocalUserAudioLevelListener(new SimpleAudioLevelListener(){
+        	AudioMediaStream audioMediaStream = (AudioMediaStream)mediaStream;
+        	/*audioMediaStream.setLocalUserAudioLevelListener(new SimpleAudioLevelListener(){
 				@Override
 				public void audioLevelChanged(int level) {
 					// TODO Auto-generated method stub
-					System.out.println("@@@ Audio level changed to: " + level);
+					System.out.println("@@@ Local Audio level changed to: " + level);
 					
-					if (level > maxAudioLevel) {
-						maxAudioLevel = level;
+					if (level > maxLocalAudioLevel) {
+						maxLocalAudioLevel = level;
 					}
 					
-					if (level > 0 /* ??? */) {
+					if (level > SimpleAudioLevelListener.MIN_LEVEL) {
 						// We've got some audio, so skip and move onto the next one
-						System.out.println("Got some audio - move on to next iteration");
-						mediaStream.stop();
+						System.out.println("Got some local audio - move on to next iteration");
+						//mediaStream.stop();
 					}
-				}});
+				}});*/
+        	audioMediaStream.setStreamAudioLevelListener(new SimpleAudioLevelListener(){
+				@Override
+				public void audioLevelChanged(int level) {
+					// TODO Auto-generated method stub
+					if (level > maxStreamAudioLevel.get()) {
+						maxStreamAudioLevel.set(level);
+						System.out.println("-- Max Stream Audio level increased to: " + level);
+					}
+					if (level > SimpleAudioLevelListener.MIN_LEVEL){
+						System.out.println("Got some audio - this one works, so move on to the next.");
+						connector.getDataSocket().close();
+						try {
+							Thread.sleep(110); // Give the socket time to close so we don't get a bunch of new callbacks
+						} catch (InterruptedException e) { e.printStackTrace(); }
+						System.out.println("...end of sleep");
+					}
+        	}});
         }
-        //
         
         mediaStream.start();
 
-        return true;
+        return connector;
     }
 
     /**
@@ -209,34 +228,54 @@ public class PlayRTP
         LibJitsi.stop();
     }
 
+	private static void makeLog(String str)
+	{
+		System.out.println(str);
+	}
+	
     /*
      * Blocking
      */
     public void playFile(String filename, MediaFormat initialFormat,
-        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc)
+        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc, int attempts)
     {
-        close();
-        initIfRequired();
-
-        try
+    	int ix;
+        for (ix = 0; ix < attempts; ix++)
         {
-            playMedia(filename, initialFormat, dynamicRTPPayloadTypes,
-                dynamicFormat, ssrc);
-            while (connector.getDataSocket().isConnected())
+            // Now play the stream
+        	makeLog("Play file, attempt: " + (ix+1)); 
+        	maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
+        	
+            close();
+            initIfRequired();
+            
+            try
             {
-                Thread.sleep(100);
+                StreamConnector connector = playMedia(filename, initialFormat, dynamicRTPPayloadTypes,
+                    dynamicFormat, ssrc);
+                while (connector.getDataSocket().isConnected())
+                {
+                    Thread.sleep(100);
+                }
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+            finally
+            {
+            	int audioLevel = maxStreamAudioLevel.get(); 
+            	System.out.println("Max local audio level recorded: " + audioLevel); // And do something clever if it was too low??
+            	if (audioLevel <= SimpleAudioLevelListener.MIN_LEVEL) {
+            		System.out.print("\n!!  No audio on this loop !!\n\n");
+            		break;
+            	}
+                close();
+                shutdown();
             }
         }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        finally
-        {
-        	System.out.println("Max audio level recorded: " + maxAudioLevel); // And do something clever if it was too low??
-            close();
-            shutdown();
-        }
+        makeLog("Finished - stopped after attempt " + (ix+1) + " of " + attempts);
+
     }
 
     public static void main(String[] args) throws Exception
@@ -258,7 +297,7 @@ public class PlayRTP
                 List<Byte> pts = Arrays.asList((byte) 96);
                 MediaFormat format = LibJitsi.getMediaService()
                     .getFormatFactory().createMediaFormat("SILK", (double)8000);
-                playRTP.playFile(argMap.get(FILENAME), format, pts, format, -1);
+                playRTP.playFile(argMap.get(FILENAME), format, pts, format, -1, 1);
             }
             finally
             {
