@@ -14,6 +14,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.SimpleAudioLevelListener;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.util.swing.*;
 
@@ -40,10 +41,14 @@ public class PlayRTP
 
     private MediaStream mediaStream;
     
-    final ValueBox<Integer> maxStreamAudioLevel = new ValueBox<Integer>(SimpleAudioLevelListener.MIN_LEVEL); // Default to lowest possible
+    final ValueBox<Integer> maxStreamAudioLevel =
+    		new ValueBox<Integer>(SimpleAudioLevelListener.MIN_LEVEL); // Default to lowest possible
 
     boolean foundVideo;
-
+    
+    private static final Logger logger
+        = Logger.getLogger(PlayRTP.class);
+    
     public PlayRTP()
     {
         initIfRequired();
@@ -154,23 +159,23 @@ public class PlayRTP
         mediaStream.setConnector(connector);
         
         if ((mediaStream instanceof AudioMediaStream) && auto) {
-        	System.out.println("This is an AudioMediaStream");
+        	logger.info("Auto mode, with an AudioMediaStream");
         	AudioMediaStream audioMediaStream = (AudioMediaStream)mediaStream;
         	audioMediaStream.setStreamAudioLevelListener(new SimpleAudioLevelListener(){
 				@Override
 				public void audioLevelChanged(int level) {
 					if (level > maxStreamAudioLevel.get()) {
 						maxStreamAudioLevel.set(level);
-						System.out.println("-- Max Stream Audio level increased to: " + level);
+						logger.debug("-- Max Stream Audio level increased to: " + level);
 					}
 					// If we got some audio 
 					if (level > SimpleAudioLevelListener.MIN_LEVEL){
-						System.out.println("Got some audio - this one works, so move on to the next.");
+						logger.info("Got some audio - this one works, so move on to the next.");
 						connector.getDataSocket().close();
 						try {
 							Thread.sleep(110); // Give the socket time to close so we don't get a bunch of new callbacks
 						} catch (InterruptedException e) { e.printStackTrace(); }
-						System.out.println("...end of sleep");
+						logger.debug("...end of sleep");
 					}
         	}});
         }
@@ -210,12 +215,7 @@ public class PlayRTP
         LibJitsi.stop();
     }
 
-	private static void makeLog(String str)
-	{
-		System.out.println(str);
-	}
-	
-    /*
+	/*
      * Blocking
      */
     public void playFile(String filename, MediaFormat initialFormat,
@@ -278,22 +278,22 @@ public class PlayRTP
     	while ((ix < n_iterations) || (n_iterations == 0))
         {
             // Now play the stream
-        	makeLog("Play file, attempt: " + (ix+1)); 
+        	logger.debug("Play file, attempt: " + (ix+1)); 
         	maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
         	playFile(filename, initialFormat, dynamicPayloadTypes,
         			dynamicFormat, ssrc, true);
             
         	int audioLevel = maxStreamAudioLevel.get(); 
-        	System.out.println("Max local audio level recorded: " + audioLevel);
+        	logger.info("Max local audio level recorded: " + audioLevel);
         	if (audioLevel <= SimpleAudioLevelListener.MIN_LEVEL) {
-        		System.out.print("\n!!  No audio on loop " + (ix+1) + " !!\n\n");
+        		logger.warn("!!  No audio on loop " + (ix+1) + " !!");
         		if (stop_if_iter_had_no_audio) {
         		    break;
         		}
         	}
         	ix++;
         }
-        makeLog((ix < n_iterations) ?
+        logger.info((ix < n_iterations) ?
         		"Finished - stopped during attempt " + (ix+1) + " of " + n_iterations
         		: "Finshed after completing " + n_iterations + " attempts");
 		
