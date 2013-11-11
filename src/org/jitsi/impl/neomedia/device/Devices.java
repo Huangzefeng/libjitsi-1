@@ -194,6 +194,8 @@ public abstract class Devices
 
             loadDevicePreferences(property);
 
+            boolean isEmptyList = devicePreferences.isEmpty();
+
             // Search if an active device is a new one (is not stored in the
             // preferences yet). If true, then active this device and set it as
             // default device (only for USB devices since the user has
@@ -220,6 +222,18 @@ public abstract class Devices
                     {
                         isSelected = false;
                     }
+
+                    // When initiates the first list (when there is no user
+                    // preferences yet), set the Bluetooh and Airplay to the end
+                    // of the list (this corresponds to move all other type
+                    // of devices on top of the preference list).
+                    if(isEmptyList
+                            && !activeDevice.isSameTransportType("Bluetooth")
+                            && !activeDevice.isSameTransportType("AirPlay"))
+                    {
+                        isSelected = true;
+                    }
+                    logger.debug("Is selected " + isSelected);
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected.
