@@ -103,7 +103,7 @@ public class RTPConnectorUDPInputStream
             // And log to the media buffer
              byte[] data = new byte[p.getLength()];
              System.arraycopy(p.getData(), p.getOffset(), data, 0, p.getLength());
-             packetLogging.mediaBuffer(data, System.currentTimeMillis());
+             packetLogging.bufferMedia(data, System.currentTimeMillis());
         }
     }
 

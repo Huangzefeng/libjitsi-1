@@ -139,5 +139,5 @@ public interface PacketLoggingService
      * @param packetContent The full bytes of the UDP Datagram
      * @param timeStamp The exact time at which the packet arrived
      */
-    public void mediaBuffer(byte[] packetContent, long timeStamp);
+    public void bufferMedia(byte[] packetContent, long timeStamp);
 }
