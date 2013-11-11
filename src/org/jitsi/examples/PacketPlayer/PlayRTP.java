@@ -168,7 +168,9 @@ public class PlayRTP
 						maxStreamAudioLevel.set(level);
 						logger.debug("-- Max Stream Audio level increased to: " + level);
 					}
-					// If we got some audio 
+					// If we got some audio when in auto mode, we can just skip
+					// and carry on with the next iteration (we're looking for
+					// the case where there was no audio).
 					if (level > SimpleAudioLevelListener.MIN_LEVEL){
 						logger.info("Got some audio - this one works, so move on to the next.");
 						connector.getDataSocket().close();
