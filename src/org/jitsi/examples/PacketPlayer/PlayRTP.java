@@ -234,7 +234,7 @@ public class PlayRTP
         List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc, boolean auto)
     {
         // Now play the stream
-      maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
+        maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
       
         close();
         initIfRequired();
@@ -254,7 +254,6 @@ public class PlayRTP
         }
         finally
         {
-          System.out.println("Max audio level recorded: " + maxAudioLevel); // And do something clever if it was too low??
             close();
             shutdown();
         }
