@@ -103,6 +103,7 @@ public class RTPPlayer
     }
 
     private JComboBox<String> codecComboBox;
+    private JComboBox<String> codecComboBox2;
     private JComboBox<String> audioDeviceComboBox;
 
     public void playRow(int row)
@@ -111,13 +112,30 @@ public class RTPPlayer
         List<Byte> payloadList = (List<Byte>) rows.get(row)[3];
         final byte initialPT = payloadList.get(0);
         final List<Byte> dynamicPayloadTypes = new LinkedList<Byte>();
+        final List<MediaFormat> dynamicFormats = new LinkedList<MediaFormat>();
+        boolean first = true;
+        LibJitsi.start();
         for (byte pt : payloadList)
         {
             if (pt > 34)
             {
                 dynamicPayloadTypes.add(pt);
+
+                // Get the codec we should use for dynamic payload types from
+                // the drop down box.
+
+                JComboBox<String> thisBox = first ? codecComboBox : codecComboBox2;
+                first = false;
+                String codec =
+                    ((String) thisBox.getSelectedItem()).split("/")[0];
+                double frequency = Double.parseDouble(
+                    ((String) thisBox.getSelectedItem()).split("/")[1]);
+                MediaFormat dynamicFormat = LibJitsi.getMediaService()
+                    .getFormatFactory().createMediaFormat(codec, frequency);
+                dynamicFormats.add(dynamicFormat);
             }
         }
+        LibJitsi.stop();
 
         Thread myThead = new Thread()
         {
@@ -140,22 +158,13 @@ public class RTPPlayer
 	            System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
 	            audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
 
-                // Get the codec we should use for dynamic payload types from
-                // the drop down box.
-                String codec =
-                    ((String) codecComboBox.getSelectedItem()).split("/")[0];
-                double frequency = Double.parseDouble(
-                    ((String) codecComboBox.getSelectedItem()).split("/")[1]);
-                MediaFormat dynamicFormat = LibJitsi.getMediaService()
-                    .getFormatFactory().createMediaFormat(codec, frequency);
-
                 // Set the initial format of this stream from the initial
                 // payload type - it's either a standard payload type or the
                 // same as the dynamic format we just calculated.
-                MediaFormat initialFormat = dynamicFormat;
+                MediaFormat initialFormat = dynamicFormats.get(0);
                 if (initialPT <= 34)
                 {
-                    codec = SdpConstants.avpTypeNames[initialPT];
+                    String codec = SdpConstants.avpTypeNames[initialPT];
                     initialFormat = LibJitsi.getMediaService()
                         .getFormatFactory().createMediaFormat(codec,
                             (double)8000); // g711 and 722 using 8K always
@@ -166,7 +175,7 @@ public class RTPPlayer
                     // Now play the stream
                 	makeLog("Play file, attempt: " + (ix+1));
                     playRTP.playFile(lblFileName.getText(), initialFormat,
-                        dynamicPayloadTypes, dynamicFormat, ssrc);
+                        dynamicPayloadTypes, dynamicFormats, ssrc);
                 }
                 makeLog("All attempts finished.");
             }
@@ -305,7 +314,7 @@ public class RTPPlayer
         };
 
         JScrollPane scrollPane_1 = new JScrollPane();
-        springLayout.putConstraint(SpringLayout.NORTH, scrollPane_1, 49,
+        springLayout.putConstraint(SpringLayout.NORTH, scrollPane_1, 73,
             SpringLayout.NORTH, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.WEST, scrollPane_1, 0,
             SpringLayout.WEST, btnChooseFile);
@@ -331,12 +340,30 @@ public class RTPPlayer
             SpringLayout.EAST, mframe.getContentPane());
         mframe.getContentPane().add(codecComboBox);
 
-        JLabel lblAssumeCodecFor = new JLabel("Assume codec for dynamic PT");
+        JLabel lblAssumeCodecFor = new JLabel("Dynamic PT 1");
         springLayout.putConstraint(SpringLayout.NORTH, lblAssumeCodecFor, 0,
             SpringLayout.NORTH, btnChooseFile);
         springLayout.putConstraint(SpringLayout.EAST, lblAssumeCodecFor, -10,
             SpringLayout.WEST, codecComboBox);
         mframe.getContentPane().add(lblAssumeCodecFor);
+
+        codecComboBox2 = new JComboBox<String>();
+        codecComboBox2.setModel(new DefaultComboBoxModel<String>(new String[]
+        { "SILK/8000", "SILK/16000","H264/90000" }));
+        springLayout.putConstraint(SpringLayout.NORTH, codecComboBox2, 24,
+            SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.WEST, codecComboBox2, -152,
+            SpringLayout.EAST, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.EAST, codecComboBox2, 0,
+            SpringLayout.EAST, mframe.getContentPane());
+        mframe.getContentPane().add(codecComboBox2);
+
+        JLabel lblAssumeCodecFor2 = new JLabel("Dynamic PT 2");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAssumeCodecFor2, 24,
+            SpringLayout.NORTH, btnChooseFile);
+        springLayout.putConstraint(SpringLayout.EAST, lblAssumeCodecFor2, -10,
+            SpringLayout.WEST, codecComboBox);
+        mframe.getContentPane().add(lblAssumeCodecFor2);
 
         // Choose the output audio device
         LibJitsi.start();
@@ -347,7 +374,7 @@ public class RTPPlayer
 
         audioDeviceComboBox = new JComboBox<>();
         audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(deviceList));
-        springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 24,
+        springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 48,
                 SpringLayout.NORTH, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.EAST, audioDeviceComboBox, 0,
                 SpringLayout.EAST, mframe.getContentPane());
@@ -356,7 +383,7 @@ public class RTPPlayer
         mframe.getContentPane().add(audioDeviceComboBox);
 
         JLabel lblAudioDevice = new JLabel("Audio device:");
-        springLayout.putConstraint(SpringLayout.NORTH, lblAudioDevice, 24,
+        springLayout.putConstraint(SpringLayout.NORTH, lblAudioDevice, 48,
             SpringLayout.NORTH, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.EAST, lblAudioDevice, -10,
             SpringLayout.WEST, audioDeviceComboBox);

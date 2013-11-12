@@ -12,7 +12,7 @@ import org.jitsi.examples.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
-import org.jitsi.service.neomedia.event.SimpleAudioLevelListener;
+import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.event.*;
 import org.jitsi.util.swing.*;
@@ -39,7 +39,7 @@ public class PlayRTP
     private static boolean started;
 
     private MediaStream mediaStream;
-    
+
     private int maxAudioLevel = Integer.MIN_VALUE; // Default to lowest possible
 
     boolean foundVideo;
@@ -85,7 +85,7 @@ public class PlayRTP
      */
     private boolean playMedia(String filename, MediaFormat initialFormat,
         List<Byte> dynamicRTPPayloadTypes,
-        MediaFormat dynamicFormat,int ssrc) throws Exception
+        List<MediaFormat> dynamicFormats,int ssrc) throws Exception
     {
         /*
          * Prepare for the start of the transmission i.e. initialize the
@@ -143,9 +143,10 @@ public class PlayRTP
          * number association must be explicitly assigned a dynamic RTP payload
          * type number.
          */
-        for (byte dynamicPT : dynamicRTPPayloadTypes)
+        for (int ii = 0; ii < dynamicRTPPayloadTypes.size(); ii++)
         {
-            mediaStream.addDynamicRTPPayloadType(dynamicPT, dynamicFormat);
+            mediaStream.addDynamicRTPPayloadType(dynamicRTPPayloadTypes.get(ii),
+                                                 dynamicFormats.get(ii));
         }
 
         mediaStream.setFormat(initialFormat);
@@ -211,7 +212,8 @@ public class PlayRTP
      * Blocking
      */
     public void playFile(String filename, MediaFormat initialFormat,
-        List<Byte> dynamicRTPPayloadTypes, MediaFormat dynamicFormat, int ssrc)
+        List<Byte> dynamicRTPPayloadTypes, List<MediaFormat> dynamicFormats,
+        int ssrc)
     {
         close();
         initIfRequired();
@@ -219,7 +221,7 @@ public class PlayRTP
         try
         {
             playMedia(filename, initialFormat, dynamicRTPPayloadTypes,
-                dynamicFormat, ssrc);
+                dynamicFormats, ssrc);
             while (connector.getDataSocket().isConnected())
             {
                 Thread.sleep(100);
@@ -256,7 +258,8 @@ public class PlayRTP
                 List<Byte> pts = Arrays.asList((byte) 96);
                 MediaFormat format = LibJitsi.getMediaService()
                     .getFormatFactory().createMediaFormat("SILK", (double)8000);
-                playRTP.playFile(argMap.get(FILENAME), format, pts, format, -1);
+                playRTP.playFile(argMap.get(FILENAME), format, pts,
+                    Arrays.asList(format), -1);
             }
             finally
             {
