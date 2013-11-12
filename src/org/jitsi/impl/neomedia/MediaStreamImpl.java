@@ -2480,6 +2480,8 @@ public class MediaStreamImpl
                     {
                         if (transcodingDataSource != null)
                         {
+                            logger.debug("Restarting transcoding data source " +
+                                transcodingDataSource.hashCode());
                             transcodingDataSource.disconnect();
                             transcodingDataSource.connect();
                             transcodingDataSource.start();
@@ -2491,7 +2493,7 @@ public class MediaStreamImpl
                         deviceSession.playbackDataSourceChanged(
                             receiveStream.getDataSource());
                     }
-                    catch(IOException e)
+                    catch(Exception e)
                     {
                         logger.error("Error re-creating processor in " +
                             "transcoding DataSource", e);
