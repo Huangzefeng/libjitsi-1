@@ -248,7 +248,6 @@ public class PlayRTP
     {
         // Now play the stream
         maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
-
         close();
         initIfRequired();
 
