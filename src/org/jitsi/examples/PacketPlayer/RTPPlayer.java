@@ -103,7 +103,11 @@ public class RTPPlayer
     }
 
     private JComboBox<String> codecComboBox;
+    private JComboBox<String> codecComboBox2;
     private JComboBox<String> audioDeviceComboBox;
+    private JComboBox<Boolean> autoComboBox;
+    private JTextField autoItersInput;
+    private JComboBox<Boolean> stopOnNoAudioComboBox;
 
     public void playRow(int row)
     {
@@ -111,13 +115,30 @@ public class RTPPlayer
         List<Byte> payloadList = (List<Byte>) rows.get(row)[3];
         final byte initialPT = payloadList.get(0);
         final List<Byte> dynamicPayloadTypes = new LinkedList<Byte>();
+        final List<MediaFormat> dynamicFormats = new LinkedList<MediaFormat>();
+        boolean first = true;
+        LibJitsi.start();
         for (byte pt : payloadList)
         {
             if (pt > 34)
             {
                 dynamicPayloadTypes.add(pt);
+
+                // Get the codec we should use for dynamic payload types from
+                // the drop down box.
+
+                JComboBox<String> thisBox = first ? codecComboBox : codecComboBox2;
+                first = false;
+                String codec =
+                    ((String) thisBox.getSelectedItem()).split("/")[0];
+                double frequency = Double.parseDouble(
+                    ((String) thisBox.getSelectedItem()).split("/")[1]);
+                MediaFormat dynamicFormat = LibJitsi.getMediaService()
+                    .getFormatFactory().createMediaFormat(codec, frequency);
+                dynamicFormats.add(dynamicFormat);
             }
         }
+        LibJitsi.stop();
 
         Thread myThead = new Thread()
         {
@@ -125,50 +146,47 @@ public class RTPPlayer
             @Override
             public void run()
             {
-            	PlayRTP playRTP = new PlayRTP(); // Also initializes Libjitsi
+              PlayRTP playRTP = new PlayRTP(); // Also initializes Libjitsi
 
                 // Set the appropriate output device
-	            String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
-	            CaptureDeviceInfo2 selectedDevice = null;
-	            AudioSystem audioSystem = ((MediaServiceImpl)LibJitsi.getMediaService()).getDeviceConfiguration().getAudioSystem();
-	            for (CaptureDeviceInfo2 device : audioSystem.getDevices(DataFlow.PLAYBACK)) {
-	            	if (device.getName().equals(selectedDeviceStr)) {
-	            		selectedDevice = device;
-	            		break;
-	            	}
-	            }
-	            System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
-	            audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
-
-                // Get the codec we should use for dynamic payload types from
-                // the drop down box.
-                String codec =
-                    ((String) codecComboBox.getSelectedItem()).split("/")[0];
-                double frequency = Double.parseDouble(
-                    ((String) codecComboBox.getSelectedItem()).split("/")[1]);
-                MediaFormat dynamicFormat = LibJitsi.getMediaService()
-                    .getFormatFactory().createMediaFormat(codec, frequency);
+              String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
+              CaptureDeviceInfo2 selectedDevice = null;
+              AudioSystem audioSystem = ((MediaServiceImpl)LibJitsi.getMediaService()).getDeviceConfiguration().getAudioSystem();
+              for (CaptureDeviceInfo2 device : audioSystem.getDevices(DataFlow.PLAYBACK)) {
+                if (device.getName().equals(selectedDeviceStr)) {
+                  selectedDevice = device;
+                  break;
+                }
+              }
+              System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
+              audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
 
                 // Set the initial format of this stream from the initial
                 // payload type - it's either a standard payload type or the
                 // same as the dynamic format we just calculated.
-                MediaFormat initialFormat = dynamicFormat;
+                MediaFormat initialFormat = dynamicFormats.get(0);
                 if (initialPT <= 34)
                 {
-                    codec = SdpConstants.avpTypeNames[initialPT];
+                    String codec = SdpConstants.avpTypeNames[initialPT];
                     initialFormat = LibJitsi.getMediaService()
                         .getFormatFactory().createMediaFormat(codec,
                             (double)8000); // g711 and 722 using 8K always
                 }
 
-                for (int ix = 0; ix < 1; ix++)
+                if ((Boolean)autoComboBox.getSelectedItem() == true)
                 {
-                    // Now play the stream
-                	makeLog("Play file, attempt: " + (ix+1));
-                    playRTP.playFile(lblFileName.getText(), initialFormat,
-                        dynamicPayloadTypes, dynamicFormat, ssrc);
+                  // Auto mode - loop round a bunch of times.
+                  playRTP.playFileInAutoMode(lblFileName.getText(),
+                      initialFormat, dynamicPayloadTypes, dynamicFormats, ssrc,
+                      Integer.parseInt(autoItersInput.getText()),
+                      (Boolean)stopOnNoAudioComboBox.getSelectedItem());
                 }
-                makeLog("All attempts finished.");
+                else
+                {
+                  // Regular mode - play once.
+                  playRTP.playFile(lblFileName.getText(), initialFormat,
+                                dynamicPayloadTypes, dynamicFormats, ssrc);
+                }
             }
 
         };
@@ -176,12 +194,7 @@ public class RTPPlayer
         myThead.start();
     }
 
-    // TODO SGD - enhance this to log somewhere else
-    protected void makeLog(String string) {
-    	System.out.println(string);
-	}
-
-	/**
+  /**
      * Create the application.
      */
     public RTPPlayer()
@@ -245,8 +258,8 @@ public class RTPPlayer
         mframe.getContentPane().add(btnChooseFile);
 
         JLabel lblCurrentFile = new JLabel("Current File:");
-        springLayout.putConstraint(SpringLayout.NORTH, lblCurrentFile, 24,
-            SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.NORTH, lblCurrentFile, 2,
+            SpringLayout.SOUTH, btnChooseFile);
         springLayout.putConstraint(SpringLayout.WEST, lblCurrentFile, 0,
             SpringLayout.WEST, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.EAST, lblCurrentFile, 113,
@@ -254,8 +267,8 @@ public class RTPPlayer
         mframe.getContentPane().add(lblCurrentFile);
 
         lblFileName = new JLabel("");
-        springLayout.putConstraint(SpringLayout.NORTH, lblFileName, 34,
-            SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.NORTH, lblFileName, 2,
+            SpringLayout.SOUTH, lblCurrentFile);
         springLayout.putConstraint(SpringLayout.WEST, lblFileName, 10,
             SpringLayout.WEST, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.EAST, lblFileName, 434,
@@ -304,21 +317,7 @@ public class RTPPlayer
             }
         };
 
-        JScrollPane scrollPane_1 = new JScrollPane();
-        springLayout.putConstraint(SpringLayout.NORTH, scrollPane_1, 49,
-            SpringLayout.NORTH, mframe.getContentPane());
-        springLayout.putConstraint(SpringLayout.WEST, scrollPane_1, 0,
-            SpringLayout.WEST, btnChooseFile);
-        springLayout.putConstraint(SpringLayout.SOUTH, scrollPane_1, 0,
-            SpringLayout.SOUTH, mframe.getContentPane());
-        springLayout.putConstraint(SpringLayout.EAST, scrollPane_1, 0,
-            SpringLayout.EAST, mframe.getContentPane());
-        mframe.getContentPane().add(scrollPane_1);
-
-        mtable = new JTable(myTable);
-        mtable.addMouseListener(new TableMouseListener());
-        scrollPane_1.setViewportView(mtable);
-        mtable.setRowSelectionAllowed(false);
+        // Table is added to view after the other items so it can be located properly
 
         codecComboBox = new JComboBox<String>();
         codecComboBox.setModel(new DefaultComboBoxModel<String>(new String[]
@@ -331,12 +330,30 @@ public class RTPPlayer
             SpringLayout.EAST, mframe.getContentPane());
         mframe.getContentPane().add(codecComboBox);
 
-        JLabel lblAssumeCodecFor = new JLabel("Assume codec for dynamic PT");
+        JLabel lblAssumeCodecFor = new JLabel("Dynamic PT 1");
         springLayout.putConstraint(SpringLayout.NORTH, lblAssumeCodecFor, 0,
             SpringLayout.NORTH, btnChooseFile);
         springLayout.putConstraint(SpringLayout.EAST, lblAssumeCodecFor, -10,
             SpringLayout.WEST, codecComboBox);
         mframe.getContentPane().add(lblAssumeCodecFor);
+
+        codecComboBox2 = new JComboBox<String>();
+        codecComboBox2.setModel(new DefaultComboBoxModel<String>(new String[]
+        { "SILK/8000", "SILK/16000","H264/90000" }));
+        springLayout.putConstraint(SpringLayout.NORTH, codecComboBox2, 0,
+            SpringLayout.SOUTH, codecComboBox);
+        springLayout.putConstraint(SpringLayout.WEST, codecComboBox2, -152,
+            SpringLayout.EAST, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.EAST, codecComboBox2, 0,
+            SpringLayout.EAST, mframe.getContentPane());
+        mframe.getContentPane().add(codecComboBox2);
+
+        JLabel lblAssumeCodecFor2 = new JLabel("Dynamic PT 2");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAssumeCodecFor2, 24,
+            SpringLayout.NORTH, btnChooseFile);
+        springLayout.putConstraint(SpringLayout.EAST, lblAssumeCodecFor2, -10,
+            SpringLayout.WEST, codecComboBox);
+        mframe.getContentPane().add(lblAssumeCodecFor2);
 
         // Choose the output audio device
         LibJitsi.start();
@@ -347,21 +364,113 @@ public class RTPPlayer
 
         audioDeviceComboBox = new JComboBox<>();
         audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(deviceList));
-        springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 24,
-                SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 0,
+                SpringLayout.SOUTH, codecComboBox2);
         springLayout.putConstraint(SpringLayout.EAST, audioDeviceComboBox, 0,
                 SpringLayout.EAST, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.WEST, audioDeviceComboBox, -152,
-        		SpringLayout.EAST, audioDeviceComboBox);
+            SpringLayout.EAST, audioDeviceComboBox);
         mframe.getContentPane().add(audioDeviceComboBox);
 
         JLabel lblAudioDevice = new JLabel("Audio device:");
-        springLayout.putConstraint(SpringLayout.NORTH, lblAudioDevice, 24,
-            SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.NORTH, lblAudioDevice, 0,
+            SpringLayout.NORTH, audioDeviceComboBox);
         springLayout.putConstraint(SpringLayout.EAST, lblAudioDevice, -10,
             SpringLayout.WEST, audioDeviceComboBox);
         mframe.getContentPane().add(lblAudioDevice);
 
+        // Automation settings. Is auto-mode on? How many iterations? Stop on no audio?
+        JLabel lblAutoHeading = new JLabel("Parameters for automatic mode:");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAutoHeading, 6,
+            SpringLayout.SOUTH, lblAudioDevice);
+        springLayout.putConstraint(SpringLayout.WEST, lblAutoHeading, 2,
+            SpringLayout.WEST, mframe.getContentPane());
+        mframe.getContentPane().add(lblAutoHeading);
+
+        // 1) Is automation mode on? lblAuto, autoComboBox (true/false)
+        JLabel lblAuto = new JLabel("Run in auto-mode?");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAuto, 6,
+            SpringLayout.SOUTH, lblAutoHeading);
+        springLayout.putConstraint(SpringLayout.WEST, lblAuto, 2,
+            SpringLayout.WEST, mframe.getContentPane());
+        mframe.getContentPane().add(lblAuto);
+
+        autoComboBox = new JComboBox<>();
+        autoComboBox.setModel(new DefaultComboBoxModel<>(new Boolean[]
+                                                             {false,true}));
+        springLayout.putConstraint(SpringLayout.NORTH, autoComboBox, 0,
+                SpringLayout.NORTH, lblAuto);
+        springLayout.putConstraint(SpringLayout.WEST, autoComboBox, 2,
+                SpringLayout.EAST, lblAuto);
+        springLayout.putConstraint(SpringLayout.EAST, autoComboBox, 55,
+            SpringLayout.WEST, autoComboBox);
+        mframe.getContentPane().add(autoComboBox);
+
+        // 2) How many iterations should we run? lblAutoIters[2], autoItersInput
+        JLabel lblIters = new JLabel("N iterations");
+        springLayout.putConstraint(SpringLayout.NORTH, lblIters, 0,
+                SpringLayout.NORTH, lblAuto);
+        springLayout.putConstraint(SpringLayout.WEST, lblIters, 10,
+                SpringLayout.EAST, autoComboBox);
+        mframe.getContentPane().add(lblIters);
+        JLabel lblIters2 = new JLabel("(0=infinite)");
+        springLayout.putConstraint(SpringLayout.NORTH, lblIters2, 2,
+                SpringLayout.SOUTH, lblIters);
+            springLayout.putConstraint(SpringLayout.WEST, lblIters2, 2,
+                SpringLayout.WEST, lblIters);
+            mframe.getContentPane().add(lblIters2);
+
+        autoItersInput = new JTextField();
+        autoItersInput.setText("1");
+        springLayout.putConstraint(SpringLayout.NORTH, autoItersInput, 0,
+                SpringLayout.NORTH, lblIters);
+        springLayout.putConstraint(SpringLayout.WEST, autoItersInput, 2,
+                SpringLayout.EAST, lblIters);
+        springLayout.putConstraint(SpringLayout.EAST, autoItersInput, 60,
+                SpringLayout.WEST, autoItersInput);
+        mframe.getContentPane().add(autoItersInput);
+
+        // 3) Stop if an iteration has no audio? lblAutoStopOnNoAudio[2], stopOnNoAudioComboBox
+        JLabel lblAutoStopOnNoAudio = new JLabel("Stop if iter");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAutoStopOnNoAudio, 0,
+                SpringLayout.NORTH, lblAuto);
+        springLayout.putConstraint(SpringLayout.WEST, lblAutoStopOnNoAudio, 10,
+                SpringLayout.EAST, autoItersInput);
+        mframe.getContentPane().add(lblAutoStopOnNoAudio);
+        JLabel lblAutoStopOnNoAudio2 = new JLabel("has no audio");
+        springLayout.putConstraint(SpringLayout.NORTH, lblAutoStopOnNoAudio2, 2,
+                SpringLayout.SOUTH, lblAutoStopOnNoAudio);
+        springLayout.putConstraint(SpringLayout.WEST, lblAutoStopOnNoAudio2, 2,
+                SpringLayout.WEST, lblAutoStopOnNoAudio);
+        mframe.getContentPane().add(lblAutoStopOnNoAudio2);
+
+        stopOnNoAudioComboBox = new JComboBox<>();
+        stopOnNoAudioComboBox.setModel(new DefaultComboBoxModel<>(new Boolean[]
+                                                             {true,false}));
+        springLayout.putConstraint(SpringLayout.NORTH, stopOnNoAudioComboBox, 0,
+                SpringLayout.NORTH, lblAuto);
+        springLayout.putConstraint(SpringLayout.WEST, stopOnNoAudioComboBox, 2,
+                SpringLayout.EAST, lblAutoStopOnNoAudio2);
+        springLayout.putConstraint(SpringLayout.EAST, stopOnNoAudioComboBox, 55,
+            SpringLayout.WEST, stopOnNoAudioComboBox);
+        mframe.getContentPane().add(stopOnNoAudioComboBox);
+
+        // Now add the table of streams.
+        JScrollPane scrollPane_1 = new JScrollPane();
+        springLayout.putConstraint(SpringLayout.NORTH, scrollPane_1, 10,
+            SpringLayout.SOUTH, autoComboBox);
+        springLayout.putConstraint(SpringLayout.WEST, scrollPane_1, 0,
+            SpringLayout.WEST, btnChooseFile);
+        springLayout.putConstraint(SpringLayout.SOUTH, scrollPane_1, 0,
+            SpringLayout.SOUTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.EAST, scrollPane_1, 0,
+            SpringLayout.EAST, mframe.getContentPane());
+        mframe.getContentPane().add(scrollPane_1);
+
+        mtable = new JTable(myTable);
+        mtable.addMouseListener(new TableMouseListener());
+        scrollPane_1.setViewportView(mtable);
+        mtable.setRowSelectionAllowed(false);
     }
 
     ArrayList<Object[]> rows = new ArrayList<Object[]>();
