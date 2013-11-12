@@ -769,22 +769,24 @@ public class AudioMixer
         {
             for (InDataSourceDesc inDataSourceDesc : inDataSources)
             {
-                boolean got
-                    = getInStreamsFromInDataSource(
-                            inDataSourceDesc,
+                boolean alreadySeen = getInStreamsFromInDataSource(
+                    inDataSourceDesc,
+                    outFormat,
+                    existingInStreams,
+                    inStreams);
+
+                if (!alreadySeen)
+                {
+                    logger.debug("Not yet got this data source: " + inDataSourceDesc.inDataSource.hashCode());
+                    if (createTranscodingDataSource(inDataSourceDesc, outFormat))
+                    {
+                        logger.debug("Created new transcoding data source");
+                        getInStreamsFromInDataSource(inDataSourceDesc,
                             outFormat,
                             existingInStreams,
                             inStreams);
-
-                if (!got
-                        && createTranscodingDataSource(
-                                inDataSourceDesc,
-                                outFormat))
-                    getInStreamsFromInDataSource(
-                        inDataSourceDesc,
-                        outFormat,
-                        existingInStreams,
-                        inStreams);
+                    }
+                }
             }
         }
         return inStreams;

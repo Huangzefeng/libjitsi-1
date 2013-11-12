@@ -14,6 +14,8 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
+import net.sf.fmj.media.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 
@@ -68,6 +70,7 @@ public class TranscodingDataSource
         Format outputFormat)
     {
         super(inputDataSource.getLocator());
+        Log.objectCreated(this, "TranscodingDataSource");
 
         this.inputDataSource = inputDataSource;
         this.outputFormat = outputFormat;
@@ -87,6 +90,7 @@ public class TranscodingDataSource
     public synchronized void connect()
         throws IOException
     {
+        Log.annotate(this, "Connect");
         if (outputDataSource != null)
             return;
 
@@ -170,6 +174,7 @@ public class TranscodingDataSource
     @Override
     public synchronized void disconnect()
     {
+        Log.annotate(this, "Disconnect");
         if (outputDataSource == null)
             return;
 
@@ -296,6 +301,7 @@ public class TranscodingDataSource
          * method without being connected and by that time we should have the
          * outputDataSource.
          */
+        Log.annotate(this, "Start");
         outputDataSource.start();
         transcodingProcessor.start();
     }
@@ -310,6 +316,7 @@ public class TranscodingDataSource
     public synchronized void stop()
         throws IOException
     {
+        Log.annotate(this, "Stop");
         if (outputDataSource != null)
         {
             transcodingProcessor.stop();
