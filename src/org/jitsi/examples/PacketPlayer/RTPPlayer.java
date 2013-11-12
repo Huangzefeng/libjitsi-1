@@ -340,8 +340,8 @@ public class RTPPlayer
         codecComboBox2 = new JComboBox<String>();
         codecComboBox2.setModel(new DefaultComboBoxModel<String>(new String[]
         { "SILK/8000", "SILK/16000","H264/90000" }));
-        springLayout.putConstraint(SpringLayout.NORTH, codecComboBox2, 24,
-            SpringLayout.NORTH, mframe.getContentPane());
+        springLayout.putConstraint(SpringLayout.NORTH, codecComboBox2, 0,
+            SpringLayout.SOUTH, codecComboBox);
         springLayout.putConstraint(SpringLayout.WEST, codecComboBox2, -152,
             SpringLayout.EAST, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.EAST, codecComboBox2, 0,
@@ -365,7 +365,7 @@ public class RTPPlayer
         audioDeviceComboBox = new JComboBox<>();
         audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(deviceList));
         springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 0,
-                SpringLayout.SOUTH, codecComboBox);
+                SpringLayout.SOUTH, codecComboBox2);
         springLayout.putConstraint(SpringLayout.EAST, audioDeviceComboBox, 0,
                 SpringLayout.EAST, mframe.getContentPane());
         springLayout.putConstraint(SpringLayout.WEST, audioDeviceComboBox, -152,
@@ -382,7 +382,7 @@ public class RTPPlayer
         // Automation settings. Is auto-mode on? How many iterations? Stop on no audio?
         JLabel lblAutoHeading = new JLabel("Parameters for automatic mode:");
         springLayout.putConstraint(SpringLayout.NORTH, lblAutoHeading, 6,
-            SpringLayout.SOUTH, lblFileName);
+            SpringLayout.SOUTH, lblAudioDevice);
         springLayout.putConstraint(SpringLayout.WEST, lblAutoHeading, 2,
             SpringLayout.WEST, mframe.getContentPane());
         mframe.getContentPane().add(lblAutoHeading);
