@@ -94,8 +94,10 @@ public class PlayRTP
         MediaService mediaService = LibJitsi.getMediaService();
         MediaDevice device = mediaService.getDefaultDevice(
             initialFormat.getMediaType(), MediaUseCase.CALL);
-        mediaStream = mediaService.createMediaStream(device);
-        mediaStream.setDirection(MediaDirection.RECVONLY);
+        MediaDevice mixer = mediaService.createMixer(device);
+        connector = new PCapStreamConnector(filename, ssrc);
+        mediaStream = mediaService.createMediaStream(connector, mixer);
+        mediaStream.setDirection(MediaDirection.SENDRECV);
 
         if (initialFormat.getMediaType().equals(MediaType.VIDEO))
         {
@@ -148,10 +150,6 @@ public class PlayRTP
 
         mediaStream.setFormat(initialFormat);
 
-        // connector
-        connector = new PCapStreamConnector(filename, ssrc);
-        mediaStream.setConnector(connector);
-        
         // New:
         if (mediaStream instanceof AudioMediaStream) {
         	System.out.println("This is an AudioMediaStream");
