@@ -871,6 +871,7 @@ public class PortAudioSystem
     @Override
     public String toString()
     {
-        return "PortAudio";
+        return "Speakers";
+//        return "PortAudio";
     }
 }
