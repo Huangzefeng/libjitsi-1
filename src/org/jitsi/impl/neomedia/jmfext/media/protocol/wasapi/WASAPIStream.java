@@ -2831,6 +2831,7 @@ public class WASAPIStream
             if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
                 logger.error("Wait is deadlocked - continue");
+                logger.dumpThreads();
                 break;
             }
 
@@ -2851,6 +2852,7 @@ public class WASAPIStream
             if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
                 logger.error("waitWhileProcessThread is deadlocked - continue");
+                logger.dumpThreads();
                 break;
             }
 
@@ -2871,6 +2873,7 @@ public class WASAPIStream
             if (System.currentTimeMillis() - waitStartTime > MAX_WAIT_TIME)
             {
                 logger.error("waitWhileRenderIsBusy is deadlocked - continue");
+                logger.dumpThreads();
                 break;
             }
 

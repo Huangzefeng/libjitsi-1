@@ -900,6 +900,7 @@ public class AudioCaptureClient
             if (System.currentTimeMillis() - waitStartTime > WASAPIStream.MAX_WAIT_TIME)
             {
                 logger.error("waitWhileBusy is deadlocked - continue");
+                logger.dumpThreads();
                 break;
             }
 
@@ -925,6 +926,7 @@ public class AudioCaptureClient
             if (System.currentTimeMillis() - waitStartTime > WASAPIStream.MAX_WAIT_TIME)
             {
                 logger.error("waitWhileEventHandleCmd is deadlocked - continue");
+                logger.dumpThreads();
                 break;
             }
 

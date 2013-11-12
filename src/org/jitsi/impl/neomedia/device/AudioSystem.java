@@ -884,6 +884,7 @@ public abstract class AudioSystem
                         new String[] { param.toString() });
             logger.warn("Reporting device as malfunctioning: " + message);
             showWarningPopup(message);
+            logger.dumpThreads();
 
             /*
              * Once a device is reported to be malfunctioning, do not report it

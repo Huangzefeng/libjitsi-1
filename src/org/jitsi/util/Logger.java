@@ -6,6 +6,9 @@
  */
 package org.jitsi.util;
 
+import static java.lang.String.*;
+
+import java.util.*;
 import java.util.logging.*;
 
 /**
@@ -375,6 +378,24 @@ public class Logger
         catch (Exception e)
         {
             loggerDelegate.log(Level.INFO, "Failed to reinit logger.", e);
+        }
+    }
+
+    /**
+     * Log out the current stacks of all threads in our process.
+     */
+    public void dumpThreads()
+    {
+        Map<Thread, StackTraceElement[]> stackTraces =
+            Thread.getAllStackTraces();
+        for (Thread thread : stackTraces.keySet())
+        {
+            loggerDelegate.info(format("Thread %s@%d: (state = %s)",
+                thread.getName(), thread.getId(), thread.getState()));
+            for (StackTraceElement stackTraceElement : stackTraces.get(thread))
+            {
+                loggerDelegate.info(format(" - %s", stackTraceElement.toString()));
+            }
         }
     }
 }
