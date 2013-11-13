@@ -416,7 +416,10 @@ public class AudioMixingPushBufferDataSource
      */
     public void updateInDataSource(DataSource inDataSource)
     {
-        // just update the input streams
-        audioMixer.getOutStream();
+        // Update the input streams if we have an output steam.  If not, we
+        // don't want to implicitly create an outStream here and the input
+        // streams will be updated anyway when the output stream is created.
+        if (outStream != null)
+            audioMixer.getOutStream();
     }
 }
