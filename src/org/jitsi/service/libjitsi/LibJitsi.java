@@ -168,6 +168,7 @@ public abstract class LibJitsi
      */
     public static void start()
     {
+        logger.info("Starting libjitsi");
         start(null);
     }
 

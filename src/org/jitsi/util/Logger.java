@@ -24,6 +24,12 @@ public class Logger
     private final java.util.logging.Logger loggerDelegate;
 
     /**
+     * The line separator to use for separating log lines on this system.
+     */
+    private static final String lineSeparator = System
+        .getProperty("line.separator");
+
+    /**
      * Base constructor
      *
      * @param logger the implementation specific logger delegate that this
@@ -386,16 +392,24 @@ public class Logger
      */
     public void dumpThreads()
     {
+        StringBuffer buffer = new StringBuffer();
+        buffer.append("Dumping current threads:");
         Map<Thread, StackTraceElement[]> stackTraces =
             Thread.getAllStackTraces();
         for (Thread thread : stackTraces.keySet())
         {
-            loggerDelegate.info(format("Thread %s@%d: (state = %s)",
+            buffer.append(lineSeparator);
+            buffer.append(format("Thread %s@%d: (state = %s)",
                 thread.getName(), thread.getId(), thread.getState()));
             for (StackTraceElement stackTraceElement : stackTraces.get(thread))
             {
-                loggerDelegate.info(format(" - %s", stackTraceElement.toString()));
+                buffer.append(lineSeparator);
+                buffer.append(format(" - %s", stackTraceElement.toString()));
             }
+
+            buffer.append(lineSeparator);
         }
+
+        loggerDelegate.info(buffer.toString());
     }
 }
