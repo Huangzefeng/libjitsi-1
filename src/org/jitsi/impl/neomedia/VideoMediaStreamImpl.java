@@ -846,34 +846,23 @@ public class VideoMediaStreamImpl
                 String key = attr.getKey();
                 String value = attr.getValue();
 
-                if(key.equals("rtcp-fb"))
-                {
-//                    if (value.equals("nack pli"))
-//                        USE_PLI = true;
-                }
-                else if(key.equals("imageattr"))
+                if (key.equals(MediaUtils.H264_FMT_PROFILE_LEVEL_ID))
                 {
                     /*
-                     * If the width and height attributes have been collected
-                     * into outputSize, do not override the Dimension they have
-                     * specified.
+                     * We've got an H.264 profile level.  Set the device
+                     * session to have the resolution corresponding to that
+                     * profile so that we send what the remote party is asking
+                     * for.
                      */
-                    if((attrs.containsKey("width")
-                                || attrs.containsKey("height"))
-                            && (outputSize != null))
+                    logger.debug("Got a " +
+                        MediaUtils.H264_FMT_PROFILE_LEVEL_ID +
+                        " format param: " + value);
+                    Dimension res = MediaUtils.h264ProfileToDimension(value);
+                    if ((res != null) &&
+                        ((outputSize == null) ||
+                         (!outputSize.equals(res))))
                     {
-                        continue;
-                    }
-
-                    Dimension res[] = parseSendRecvResolution(value);
-
-                    if(res != null)
-                    {
-                        setOutputSize(res[1]);
-
-                        qualityControl.setRemoteSendMaxPreset(
-                                new QualityPreset(res[0]));
-                        qualityControl.setRemoteReceiveResolution(outputSize);
+                        setOutputSize(res);
                         ((VideoMediaDeviceSession)getDeviceSession())
                             .setOutputSize(outputSize);
                     }

@@ -6,11 +6,14 @@
  */
 package org.jitsi.impl.neomedia.format;
 
+import static java.lang.String.*;
+
 import java.awt.*;
 import java.util.*;
 
 import javax.media.format.*;
 
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
@@ -272,8 +275,11 @@ public class VideoMediaFormatImpl
     /**
      * Determines whether two sets of format parameters match in the context of
      * a specific encoding. A set of compatible format parameters is counted
-     * as a match - e.g. the packetization-mode offered is higher than what is
-     * supported.
+     * as a match if:
+     * <ul>
+     * <li>the packetization-mode offered is higher than what is supported</li>
+     * <li>the H.264 profile levels match</li>
+     * </ul>
      *
      * @param encoding the encoding (name) related to the two sets of format
      * parameters to be matched.
@@ -326,6 +332,27 @@ public class VideoMediaFormatImpl
               // Error parsing SDP packetization mode
               logger.error("Could not parse SDP packetization mode");
               return false;
+            }
+
+            /*
+             * Check the H.264 profiles.  If we have profiles for both, they
+             * must be the same profile in order to match.  Otherwise, assume a
+             * match.
+             */
+            if (fmtps1 != null && fmtps2 != null)
+            {
+                String strProfile1 =
+                    fmtps1.get(MediaUtils.H264_FMT_PROFILE_LEVEL_ID);
+                String strProfile2 =
+                    fmtps2.get(MediaUtils.H264_FMT_PROFILE_LEVEL_ID);
+                if ((strProfile1 != null) &&
+                    (strProfile2 != null) &&
+                    (!MediaUtils.h264ProfilesMatch(strProfile1, strProfile2)))
+                {
+                    logger.trace(format("H.264 profiles didn't match: %s != %s",
+                        strProfile1, strProfile2));
+                    return false;
+                }
             }
         }
 

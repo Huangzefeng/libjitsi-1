@@ -6,7 +6,11 @@
  */
 package org.jitsi.impl.neomedia;
 
+import static java.lang.String.*;
+
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -14,13 +18,11 @@ import javax.sdp.*;
 
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.codec.video.h264.*;
-import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 
@@ -33,6 +35,8 @@ import org.jitsi.util.*;
  */
 public class MediaUtils
 {
+    private static final Logger logger = Logger.getLogger(MediaUtils.class);
+
     /**
      * An empty array with <tt>MediaFormat</tt> element type. Explicitly defined
      * in order to reduce unnecessary allocations, garbage collection.
@@ -65,6 +69,35 @@ public class MediaUtils
     public static final int MAX_AUDIO_SAMPLE_SIZE_IN_BITS;
 
     /**
+     * The string used in H.264 SDP format attribute for H.264 profile level.
+     */
+    public static final String H264_FMT_PROFILE_LEVEL_ID = "profile-level-id";
+
+    /**
+     * H.264 profile level IDC 1.1 (default for Accession Mobile).
+     * Supports video resolution up to 176x144.
+     */
+    private static final byte H264_PROFILE_IDC_1_1 = 0x0b;
+
+    /**
+     * H.264 profile level IDC 2.1.
+     * Supports video resolution up to 352x288.
+     */
+    private static final byte H264_PROFILE_IDC_2_1 = 0x15;
+
+    /**
+     * H.264 profile level IDC 3.1 (default for Accession Desktop).
+     * Supports video resolution up to 720x576.
+     */
+    private static final byte H264_PROFILE_IDC_3_1 = 0x1f;
+
+    /**
+     * The values of the level IDC byte in the H.264 profile that we support.
+     */
+    private static final byte[] SUPPORTED_H264_PROFILE_IDCS =
+        {H264_PROFILE_IDC_3_1, H264_PROFILE_IDC_2_1, H264_PROFILE_IDC_1_1};
+
+    /**
      * The <tt>MediaFormat</tt>s which do not have RTP payload types assigned by
      * RFC 3551 and are thus referred to as having dynamic RTP payload types.
      */
@@ -81,15 +114,34 @@ public class MediaUtils
 
     static
     {
+        /*
+         * CREATE ALL SUPPORTED MEDIA FORMATS
+         */
+
+        /* G.711 */
         addMediaFormats(
             (byte) SdpConstants.PCMU,
             "PCMU",
             MediaType.AUDIO,
             AudioFormat.ULAW_RTP,
             8000);
+        addMediaFormats(
+            (byte) SdpConstants.PCMA,
+            "PCMA",
+            MediaType.AUDIO,
+            Constants.ALAW_RTP,
+            8000);
+
+        /* G.722 */
+        addMediaFormats(
+            (byte) SdpConstants.G722,
+            "G722",
+            MediaType.AUDIO,
+            Constants.G722_RTP,
+            8000);
 
         /*
-         * Some codecs depend on JMF native libraries which are only available
+         * G.723 depends on JMF native libraries which are only available
          * on 32-bit Linux and 32-bit Windows.
          */
         if(OSUtils.IS_LINUX32 || OSUtils.IS_WINDOWS32)
@@ -108,17 +160,12 @@ public class MediaUtils
                     8000);
         }
 
+        /* A load of other random audio codecs */
         addMediaFormats(
             (byte) SdpConstants.GSM,
             "GSM",
             MediaType.AUDIO,
             AudioFormat.GSM_RTP,
-            8000);
-        addMediaFormats(
-            (byte) SdpConstants.PCMA,
-            "PCMA",
-            MediaType.AUDIO,
-            Constants.ALAW_RTP,
             8000);
         addMediaFormats(
             MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
@@ -132,12 +179,6 @@ public class MediaUtils
             MediaType.AUDIO,
             Constants.SPEEX_RTP,
             8000, 16000, 32000);
-        addMediaFormats(
-            (byte) SdpConstants.G722,
-            "G722",
-            MediaType.AUDIO,
-            Constants.G722_RTP,
-            8000);
         if (EncodingConfigurationImpl.G729)
         {
             addMediaFormats(
@@ -147,6 +188,8 @@ public class MediaUtils
                 AudioFormat.G729_RTP,
                 8000);
         }
+
+        /* Telephone events */
         addMediaFormats(
             MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
             "telephone-event",
@@ -154,9 +197,8 @@ public class MediaUtils
             Constants.TELEPHONE_EVENT,
             8000);
 
-
+        /* SILK */
         ConfigurationService cfg = LibJitsi.getConfigurationService();
-
         boolean advertiseFEC
                 = cfg.getBoolean(Constants.PROP_SILK_ADVERSISE_FEC, false);
         Map<String,String> silkFormatParams = new HashMap<String, String>();
@@ -171,6 +213,7 @@ public class MediaUtils
                 null,
                 8000, 12000, 16000, 24000);
 
+        /* OPUS */
         Map<String, String> opusFormatParams = new HashMap<String,String>();
         boolean opusFec = cfg.getBoolean(Constants.PROP_OPUS_FEC, true);
         if(!opusFec)
@@ -188,129 +231,72 @@ public class MediaUtils
             null,
             48000);
 
-        /*
-         * We don't really support these.
-         *
-        addMediaFormats(
-            (byte) SdpConstants.JPEG,
-            "JPEG",
-            MediaType.VIDEO,
-            VideoFormat.JPEG_RTP);
-        addMediaFormats(
-            (byte) SdpConstants.H263,
-            "H263",
-            MediaType.VIDEO,
-            VideoFormat.H263_RTP);
-        addMediaFormats(
-            (byte) SdpConstants.H261,
-            "H261",
-            MediaType.VIDEO,
-            VideoFormat.H261_RTP);
-         */
-
         /* H264 */
-        Map<String, String> h264FormatParams
-            = new HashMap<String, String>();
-        String packetizationMode = "packetization-mode";
-        Map<String, String> h264AdvancedAttributes
-            = new HashMap<String, String>();
-
-        /*
-         * Disable PLI because the periodic intra-refresh feature of FFmpeg/x264
-         * is used.
-         */
-        // h264AdvancedAttributes.put("rtcp-fb", "nack pli");
-
-        /*
-         * XXX The initialization of MediaServiceImpl is very complex so it is
-         * wise to not reference it at the early stage of its initialization.
-         */
-        ScreenDevice screen = ScreenDeviceImpl.getDefaultScreenDevice();
-        java.awt.Dimension res = (screen == null) ? null : screen.getSize();
-
-        h264AdvancedAttributes.put("imageattr", createImageAttr(null, res));
-
-        if ((cfg == null)
-                || cfg
-                    .getString(
-                            "net.java.sip.communicator.impl.neomedia"
-                                + ".codec.video.h264.defaultProfile",
-                            JNIEncoder.MAIN_PROFILE)
-                        .equals(JNIEncoder.MAIN_PROFILE))
+        for (byte idc : SUPPORTED_H264_PROFILE_IDCS)
         {
-            // main profile, common features, HD capable level 3.1
-            h264FormatParams.put("profile-level-id", "4DE01f");
-        }
-        else
-        {
-            // baseline profile, common features, HD capable level 3.1
-            h264FormatParams.put("profile-level-id", "42E01f");
-        }
+            Map<String, String> h264FormatParams = new HashMap<String, String>();
+            String packetizationMode = "packetization-mode";
 
-        // By default, packetization-mode=1 is enabled.
-        if ((cfg == null)
-                || cfg.getBoolean(
-                        "net.java.sip.communicator.impl.neomedia"
-                            + ".codec.video.h264.packetization-mode-1.enabled",
-                        true))
-        {
-            // packetization-mode=1
-            h264FormatParams.put(packetizationMode, "1");
-            addMediaFormats(
+            if (cfg == null ||
+                cfg.getString("net.java.sip.communicator.impl.neomedia" +
+                       ".codec.video.h264.defaultProfile",
+                       JNIEncoder.MAIN_PROFILE).equals(JNIEncoder.MAIN_PROFILE))
+            {
+                // main profile, common features, HD capable level 3.1
+                h264FormatParams.put(H264_FMT_PROFILE_LEVEL_ID, format("4DE0%02X", idc));
+            }
+            else
+            {
+                // baseline profile, common features, HD capable level 3.1
+                h264FormatParams.put(H264_FMT_PROFILE_LEVEL_ID, format("42E0%02X", idc));
+            }
+
+            // By default, packetization-mode=1 is enabled.
+            if (cfg == null ||
+                cfg.getBoolean("net.java.sip.communicator.impl.neomedia" +
+                               ".codec.video.h264.packetization-mode-1.enabled",
+                               true))
+            {
+                // packetization-mode=1
+                h264FormatParams.put(packetizationMode, "1");
+                addMediaFormats(
                     MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                     "H264",
                     MediaType.VIDEO,
                     Constants.H264_RTP,
                     h264FormatParams,
-                    h264AdvancedAttributes);
-        }
-        /*
-         * XXX Android's current video CaptureDevice is based on MediaRecorder
-         * and provides support for packetization-mode=1 only.
-         */
-        if (!OSUtils.IS_ANDROID)
-        {
-            // packetization-mode=0
-            h264FormatParams.put(packetizationMode, "0");
-            addMediaFormats(
+                    null);
+            }
+
+            /*
+             * XXX Android's current video CaptureDevice is based on MediaRecorder
+             * and provides support for packetization-mode=1 only.
+             */
+            if (!OSUtils.IS_ANDROID)
+            {
+                // packetization-mode=0
+                h264FormatParams.put(packetizationMode, "0");
+                addMediaFormats(
                     MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                     "H264",
                     MediaType.VIDEO,
                     Constants.H264_RTP,
                     h264FormatParams,
-                    h264AdvancedAttributes);
+                    null);
+            }
         }
 
-        /* H263+ */
-        Map<String, String> h263FormatParams
-            = new HashMap<String, String>();
-        Map<String, String> h263AdvancedAttributes
-            = new LinkedHashMap<String, String>();
-
-        /*
-         * The maximum resolution we can receive is the size of our screen
-         * device.
-         */
-        if (res != null)
-            h263FormatParams.put("CUSTOM", res.width + "," + res.height + ",2");
-        h263FormatParams.put("VGA", "2");
-        h263FormatParams.put("CIF", "1");
-        h263FormatParams.put("QCIF", "1");
-
-        addMediaFormats(
-                MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
-                "H263-1998",
-                MediaType.VIDEO,
-                Constants.H263P_RTP,
-                h263FormatParams,
-                h263AdvancedAttributes);
-
+        /* VP8 */
         addMediaFormats(
                 MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                 "VP8",
                 MediaType.VIDEO,
                 Constants.VP8_RTP,
                 null, null);
+
+        /*
+         * DONE ADDING MEDIA FORMATS
+         */
 
         // Calculate the values of the MAX_AUDIO_* static fields of MediaUtils.
         List<MediaFormat> audioMediaFormats
@@ -559,82 +545,6 @@ public class MediaUtils
                         .getJMFEncoding(),
                     encoding);
         }
-    }
-
-    /**
-     * Creates value of an imgattr.
-     *
-     * http://tools.ietf.org/html/draft-ietf-mmusic-image-attributes-04
-     *
-     * @param sendSize maximum size peer can send
-     * @param maxRecvSize maximum size peer can display
-     * @return string that represent imgattr that can be encoded via SIP/SDP or
-     * XMPP/Jingle
-     */
-    public static String createImageAttr(
-            java.awt.Dimension sendSize,
-            java.awt.Dimension maxRecvSize)
-    {
-        StringBuffer img = new StringBuffer();
-
-        /* send width */
-        if(sendSize != null)
-        {
-            /* single value => send [x=width,y=height] */
-            /*img.append("send [x=");
-            img.append((int)sendSize.getWidth());
-            img.append(",y=");
-            img.append((int)sendSize.getHeight());
-            img.append("]");*/
-            /* send [x=[min-max],y=[min-max]] */
-            img.append("send [x=[0-");
-            img.append((int)sendSize.getWidth());
-            img.append("],y=[0-");
-            img.append((int)sendSize.getHeight());
-            img.append("]]");
-            /*
-            else
-            {
-                // range
-                img.append(" send [x=[");
-                img.append((int)minSendSize.getWidth());
-                img.append("-");
-                img.append((int)maxSendSize.getWidth());
-                img.append("],y=[");
-                img.append((int)minSendSize.getHeight());
-                img.append("-");
-                img.append((int)maxSendSize.getHeight());
-                img.append("]]");
-            }
-            */
-        }
-        else
-        {
-            /* can send "all" sizes */
-            img.append("send *");
-        }
-
-        /* receive size */
-        if(maxRecvSize != null)
-        {
-            /* basically we can receive any size up to our
-             * screen display size
-             */
-
-            /* recv [x=[min-max],y=[min-max]] */
-            img.append(" recv [x=[0-");
-            img.append((int)maxRecvSize.getWidth());
-            img.append("],y=[0-");
-            img.append((int)maxRecvSize.getHeight());
-            img.append("]]");
-        }
-        else
-        {
-            /* accept all sizes */
-            img.append(" recv *");
-        }
-
-        return img.toString();
     }
 
     /**
@@ -900,5 +810,112 @@ public class MediaUtils
     public static String jmfEncodingToEncoding(String jmfEncoding)
     {
         return jmfEncodingToEncodings.get(jmfEncoding);
+    }
+
+    /**
+     * Convert the input H.264 profile to the maximum supported resolution
+     * supported by that profile, or null if the locally-supported maximum
+     * resolution should be used.
+     *
+     * @param profile The H.264 profile to check
+     * @return The maximum supported resolution of that profile
+     */
+    public static Dimension h264ProfileToDimension(String profile)
+    {
+        if (!checkH264ProfileValid(profile))
+            return null;
+
+        Dimension dimension;
+        byte idc = (byte)((Character.digit(profile.charAt(4), 16) << 4) +
+                           Character.digit(profile.charAt(5), 16));
+        if (idc < H264_PROFILE_IDC_1_1)
+        {
+            // Less than level 1.1 - max dimension is 176x144
+            dimension = new java.awt.Dimension(176, 144);
+        }
+        else if (idc < H264_PROFILE_IDC_2_1)
+        {
+            // Less than level 2.2 - max dimension is 352x288
+            dimension = new java.awt.Dimension(352, 288);
+        }
+        else if (idc < H264_PROFILE_IDC_3_1)
+        {
+            // Less than level 3.1 - max dimension is 720x576
+            dimension = new java.awt.Dimension(720, 576);
+        }
+        else
+        {
+            // The level is at least as good as our maximum supported level, so
+            // just return null to indicate any locally-supported dimension is
+            // fine.
+            return null;
+        }
+
+        return dimension;
+    }
+
+    /**
+     * Convert the input H.264 profile to the maximum supported resolution
+     * supported by that profile, or null if the locally-supported maximum
+     * resolution should be used.
+     *
+     * @param profile The H.264 profile to check
+     * @return The maximum supported resolution of that profile
+     */
+    public static boolean h264ProfilesMatch(String profile1,
+                                            String profile2)
+    {
+        if (!checkH264ProfileValid(profile1) ||
+            !checkH264ProfileValid(profile2))
+            return false;
+
+        byte idc1 = (byte)((Character.digit(profile1.charAt(4), 16) << 4) +
+                            Character.digit(profile1.charAt(5), 16));
+        byte idc2 = (byte)((Character.digit(profile2.charAt(4), 16) << 4) +
+                            Character.digit(profile2.charAt(5), 16));
+        if (idc1 == idc2)
+        {
+            return true;
+        }
+        if (idc1 < H264_PROFILE_IDC_1_1)
+        {
+            // Less than level 1.1
+            return (idc2 < H264_PROFILE_IDC_1_1);
+        }
+        else if (idc1 < H264_PROFILE_IDC_2_1)
+        {
+            // Between levels 1.1 and 2.2
+            return ((idc2 < H264_PROFILE_IDC_2_1) &&
+                    (idc2 >= H264_PROFILE_IDC_1_1));
+        }
+        else if (idc1 < H264_PROFILE_IDC_3_1)
+        {
+            // Between levels 2.1 and 3.1
+            return ((idc2 < H264_PROFILE_IDC_3_1) &&
+                    (idc2 >= H264_PROFILE_IDC_2_1));
+        }
+
+        // The level is at least as good as our maximum supported level.
+        return (idc2 >= H264_PROFILE_IDC_3_1);
+    }
+
+    /**
+     * Check the passed in profile to confirm it's a valid format - it should
+     * be 3 bytes long, with the level IDC byte at the end, determining the
+     * supported resolution.
+     *
+     * @param profile The profile to check
+     * @return Whether it's valid
+     */
+    private static boolean checkH264ProfileValid(String profile)
+    {
+        if (StringUtils.isNullOrEmpty(profile) ||
+            profile.length() != 6)
+        {
+            logger.debug("Failed to parse H.264 profile: " + profile);
+            return false;
+        }
+
+        return true;
     }
 }

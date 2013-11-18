@@ -69,6 +69,11 @@ public class MediaDeviceSession
     private DataSource captureDevice;
 
     /**
+     * A lock for accessing the {@link #captureDevice} above.
+     */
+    private Object captureDeviceLock = new Object();
+
+    /**
      * The indicator which determines whether {@link DataSource#connect()} has
      * been successfully executed on {@link #captureDevice}.
      */
@@ -314,6 +319,7 @@ public class MediaDeviceSession
     {
         try
         {
+            logger.debug("Closing device session");
             stop(MediaDirection.SENDRECV);
         }
         finally
@@ -335,7 +341,10 @@ public class MediaDeviceSession
                 disposePlayer();
 
             processor = null;
-            captureDevice = null;
+            synchronized (captureDeviceLock)
+            {
+                captureDevice = null;
+            }
         }
     }
 
@@ -414,6 +423,7 @@ public class MediaDeviceSession
         if (captureDevice instanceof MuteDataSource)
             ((MuteDataSource) captureDevice).setMute(mute);
 
+        logger.debug("Created capture device: " + captureDevice);
         return captureDevice;
     }
 
@@ -500,6 +510,7 @@ public class MediaDeviceSession
      */
     protected Processor createProcessor()
     {
+        logger.debug("Creating processor for " + device);
         DataSource captureDevice = getConnectedCaptureDevice();
 
         if (captureDevice != null)
@@ -620,32 +631,35 @@ public class MediaDeviceSession
      */
     private void disconnectCaptureDevice()
     {
-        if (captureDevice != null)
+        synchronized (captureDeviceLock)
         {
-            /*
-             * As reported by Carlos Alexandre, stopping before disconnecting
-             * resolves a slow disconnect on Linux.
-             */
-            try
-            {
-                captureDevice.stop();
-            }
-            catch (IOException ioe)
+            if (captureDevice != null)
             {
                 /*
-                 * We cannot do much about the exception because we're not
-                 * really interested in the stopping but rather in calling
-                 * DataSource#disconnect() anyway.
+                 * As reported by Carlos Alexandre, stopping before
+                 * disconnecting resolves a slow disconnect on Linux.
                  */
-                logger
+                try
+                {
+                    captureDevice.stop();
+                }
+                catch (IOException ioe)
+                {
+                    /*
+                     * We cannot do much about the exception because we're not
+                     * really interested in the stopping but rather in calling
+                     * DataSource#disconnect() anyway.
+                     */
+                    logger
                     .error(
                         "Failed to properly stop captureDevice "
                             + captureDevice,
-                        ioe);
-            }
+                            ioe);
+                }
 
-            captureDevice.disconnect();
-            captureDeviceIsConnected = false;
+                captureDevice.disconnect();
+                captureDeviceIsConnected = false;
+            }
         }
     }
 
@@ -756,11 +770,14 @@ public class MediaDeviceSession
      * @return the <tt>DataSource</tt> that this instance uses to read captured
      * media from
      */
-    public synchronized DataSource getCaptureDevice()
+    public DataSource getCaptureDevice()
     {
-        if (captureDevice == null)
-            captureDevice = createCaptureDevice();
-        return captureDevice;
+        synchronized (captureDeviceLock)
+        {
+            if (captureDevice == null)
+                captureDevice = createCaptureDevice();
+            return captureDevice;
+        }
     }
 
     /**
@@ -1058,7 +1075,7 @@ public class MediaDeviceSession
      * </p>
      *
      * <p>createProcessor can take some time to return, so if two threads are
-     * trying to create two processors are around the sime time (which can
+     * trying to create two processors are around the same time (which can
      * happen with early media that is immediately renegotiated) then it can
      * return two different processors. The synchronized keyword solves this.
      *
@@ -1355,6 +1372,8 @@ public class MediaDeviceSession
 
             if (processor != null)
             {
+                logger.debug("Processor " + processor.hashCode() + " for " +
+                    device + " is now configured (format " + format + ")");
                 try
                 {
                     processor.setContentDescriptor(
@@ -1666,6 +1685,8 @@ public class MediaDeviceSession
         TrackControl[] trackControls = processor.getTrackControls();
         MediaType mediaType = getMediaType();
         Format format = mediaFormat.getFormat();
+        logger.debug(
+            "Setting processor " + processor.hashCode() + " to " + format);
 
         for (int trackIndex = 0;
                 trackIndex < trackControls.length;
@@ -1918,6 +1939,8 @@ public class MediaDeviceSession
     {
         if (this.processor != processor)
         {
+            logger.debug("Setting processor on " + device + " to " +
+                processor.hashCode());
             closeProcessor();
 
             this.processor = processor;

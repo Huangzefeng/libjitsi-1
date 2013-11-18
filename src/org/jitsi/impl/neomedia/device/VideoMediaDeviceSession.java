@@ -1555,6 +1555,28 @@ public class VideoMediaDeviceSession
         }
 
         /*
+         * Check for an H.264 profile level and set the output size to the
+         * corresponding maximum video resolution of that profile.
+         */
+        for (String key : mediaFormat.getFormatParameters().keySet())
+        {
+            if (MediaUtils.H264_FMT_PROFILE_LEVEL_ID.equalsIgnoreCase(key))
+            {
+                logger.debug("Found H.264 profile: " +
+                    mediaFormat.getFormatParameters().get(key));
+                Dimension maxSize = MediaUtils.h264ProfileToDimension(
+                    mediaFormat.getFormatParameters().get(key));
+                if (maxSize != null)
+                {
+                    logger.debug("Setting output video size to: " + maxSize);
+                    setOutputSize(maxSize);
+                }
+
+                break;
+            }
+        }
+
+        /*
          * Add a size in the output format. As VideoFormat has no setter, we
          * recreate the object. Also check whether capture device can output
          * such a size.
@@ -1567,9 +1589,9 @@ public class VideoMediaDeviceSession
                 = ((VideoFormat) getCaptureDeviceFormat()).getSize();
             Dimension videoFormatSize;
 
-            if ((deviceSize != null)
-                    && ((deviceSize.width > outputSize.width)
-                        || (deviceSize.height > outputSize.height)))
+            if ((deviceSize != null) &&
+                ((deviceSize.width > outputSize.width) ||
+                 (deviceSize.height > outputSize.height)))
             {
                 videoFormatSize = outputSize;
             }
@@ -1579,19 +1601,24 @@ public class VideoMediaDeviceSession
                 outputSize = null;
             }
 
-            VideoFormat videoFormat = (VideoFormat) format;
-
-            /*
-             * FIXME The assignment to the local variable format makes no
-             * difference because it is no longer user afterwards.
-             */
-            format
-                = new VideoFormat(
-                        videoFormat.getEncoding(),
-                        videoFormatSize,
-                        videoFormat.getMaxDataLength(),
-                        videoFormat.getDataType(),
-                        videoFormat.getFrameRate());
+            if (videoFormatSize != null)
+            {
+                // Create a new format with the desired video size and set the
+                // processor to have this new format.
+                VideoFormat videoFormat = (VideoFormat) format;
+                VideoFormat newVideoformat = new VideoFormat(
+                    videoFormat.getEncoding(),
+                    videoFormatSize,
+                    videoFormat.getMaxDataLength(),
+                    videoFormat.getDataType(),
+                    videoFormat.getFrameRate());
+                @SuppressWarnings("unchecked")
+                MediaFormatImpl<VideoFormat> newMediaFormat =
+                    (MediaFormatImpl<VideoFormat>)
+                        MediaFormatImpl.createInstance(newVideoformat);
+                super.setProcessorFormat(processor, newMediaFormat);
+                return;
+            }
         }
         else
             outputSize = null;
