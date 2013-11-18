@@ -849,10 +849,15 @@ public class VideoMediaStreamImpl
                 if (key.equals(MediaUtils.H264_FMT_PROFILE_LEVEL_ID))
                 {
                     /*
-                     * We've got an H.264 profile level.  Set the device
-                     * session to have the resolution corresponding to that
-                     * profile so that we send what the remote party is asking
-                     * for.
+                     * We've got an H.264 profile level.  That means the remote
+                     * device has asked for a specific profile level and we'd
+                     * better make sure we don't send video at a higher
+                     * resolution than they can cope with.
+                     *
+                     * Convert the profile provided into a resolution and use
+                     * that for this device session.  If we don't get a
+                     * resolution back from h264ProfileToDimension(), it means
+                     * we should just stick with our default.
                      */
                     logger.debug("Got a " +
                         MediaUtils.H264_FMT_PROFILE_LEVEL_ID +

@@ -69,33 +69,51 @@ public class MediaUtils
     public static final int MAX_AUDIO_SAMPLE_SIZE_IN_BITS;
 
     /**
+     * The string used in H.264 SDP format attribute for packetization mode.
+     */
+    private static final String H264_FMT_PACKETIZATION_MODE =
+        "packetization-mode";
+
+    /**
      * The string used in H.264 SDP format attribute for H.264 profile level.
      */
     public static final String H264_FMT_PROFILE_LEVEL_ID = "profile-level-id";
 
     /**
      * H.264 profile level IDC 1.1 (default for Accession Mobile).
-     * Supports video resolution up to 176x144.
+     * Supports video resolution up to 352x288 (note we're ignoring frame rate).
+     * Profiles below this level support video resolution up to 176x144.
      */
-    private static final byte H264_PROFILE_IDC_1_1 = 0x0b;
+    private static final byte H264_PROFILE_IDC_1_1 = 11;
 
     /**
      * H.264 profile level IDC 2.1.
-     * Supports video resolution up to 352x288.
+     * Supports video resolution up to 352x576 (note we're ignoring frame rate).
      */
-    private static final byte H264_PROFILE_IDC_2_1 = 0x15;
+    private static final byte H264_PROFILE_IDC_2_1 = 21;
+
+    /**
+     * H.264 profile level IDC 2.2.
+     * Supports video resolution up to 720x576 (note we're ignoring frame rate).
+     */
+    private static final byte H264_PROFILE_IDC_2_2 = 22;
 
     /**
      * H.264 profile level IDC 3.1 (default for Accession Desktop).
-     * Supports video resolution up to 720x576.
+     * Supports video resolution up to 1280x720 (aka 720p HD) (note we're
+     * ignoring frame rate).
      */
-    private static final byte H264_PROFILE_IDC_3_1 = 0x1f;
+    private static final byte H264_PROFILE_IDC_3_1 = 31;
 
     /**
-     * The values of the level IDC byte in the H.264 profile that we support.
+     * The values of the level IDC byte in the H.264 profile that we support in
+     * preference order.
      */
     private static final byte[] SUPPORTED_H264_PROFILE_IDCS =
-        {H264_PROFILE_IDC_3_1, H264_PROFILE_IDC_2_1, H264_PROFILE_IDC_1_1};
+        { H264_PROFILE_IDC_3_1,
+          H264_PROFILE_IDC_2_2,
+          H264_PROFILE_IDC_2_1,
+          H264_PROFILE_IDC_1_1 };
 
     /**
      * The <tt>MediaFormat</tt>s which do not have RTP payload types assigned by
@@ -231,11 +249,16 @@ public class MediaUtils
             null,
             48000);
 
-        /* H264 */
+        /*
+         * H264
+         *
+         * We support multiple H.264 profiles for different video resolutions.
+         * Loop through all the supported profiles and add media formats for
+         * each.
+         */
         for (byte idc : SUPPORTED_H264_PROFILE_IDCS)
         {
             Map<String, String> h264FormatParams = new HashMap<String, String>();
-            String packetizationMode = "packetization-mode";
 
             if (cfg == null ||
                 cfg.getString("net.java.sip.communicator.impl.neomedia" +
@@ -258,7 +281,7 @@ public class MediaUtils
                                true))
             {
                 // packetization-mode=1
-                h264FormatParams.put(packetizationMode, "1");
+                h264FormatParams.put(H264_FMT_PACKETIZATION_MODE, "1");
                 addMediaFormats(
                     MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                     "H264",
@@ -269,13 +292,13 @@ public class MediaUtils
             }
 
             /*
-             * XXX Android's current video CaptureDevice is based on MediaRecorder
+             * Android's current video CaptureDevice is based on MediaRecorder
              * and provides support for packetization-mode=1 only.
              */
             if (!OSUtils.IS_ANDROID)
             {
                 // packetization-mode=0
-                h264FormatParams.put(packetizationMode, "0");
+                h264FormatParams.put(H264_FMT_PACKETIZATION_MODE, "0");
                 addMediaFormats(
                     MediaFormat.RTP_PAYLOAD_TYPE_UNKNOWN,
                     "H264",
@@ -823,11 +846,17 @@ public class MediaUtils
     public static Dimension h264ProfileToDimension(String profile)
     {
         if (!checkH264ProfileValid(profile))
+        {
+            // The profile isn't valid so just use the local default - i.e.
+            // return null.
             return null;
+        }
 
-        Dimension dimension;
+        // The profile IDC is the 3rd byte of the profile string (i.e. the last
+        // two characters of the string converted to a byte).
         byte idc = (byte)((Character.digit(profile.charAt(4), 16) << 4) +
                            Character.digit(profile.charAt(5), 16));
+        Dimension dimension;
         if (idc < H264_PROFILE_IDC_1_1)
         {
             // Less than level 1.1 - max dimension is 176x144
@@ -835,8 +864,13 @@ public class MediaUtils
         }
         else if (idc < H264_PROFILE_IDC_2_1)
         {
-            // Less than level 2.2 - max dimension is 352x288
+            // Less than level 2.1 - max dimension is 352x288
             dimension = new java.awt.Dimension(352, 288);
+        }
+        else if (idc < H264_PROFILE_IDC_2_2)
+        {
+            // Less than level 2.2 - max dimension is 352x576
+            dimension = new java.awt.Dimension(352, 576);
         }
         else if (idc < H264_PROFILE_IDC_3_1)
         {
@@ -855,20 +889,27 @@ public class MediaUtils
     }
 
     /**
-     * Convert the input H.264 profile to the maximum supported resolution
-     * supported by that profile, or null if the locally-supported maximum
-     * resolution should be used.
+     * Check whether the input H.264 profiles are compatible, which means (for
+     * our purposes) that they share the same maximum supported resolution, so
+     * that we can send video to a remote with that resolution.
      *
-     * @param profile The H.264 profile to check
-     * @return The maximum supported resolution of that profile
+     * @param profile1 The first H.264 profile to check
+     * @param profile2 The second H.264 profile to check
+     * @return Whether the profiles match
      */
-    public static boolean h264ProfilesMatch(String profile1,
-                                            String profile2)
+    public static boolean h264ProfilesCompatible(String profile1,
+                                                 String profile2)
     {
         if (!checkH264ProfileValid(profile1) ||
             !checkH264ProfileValid(profile2))
+        {
+            // At least one of the profiles is invalid so assume they aren't
+            // compatible.
             return false;
+        }
 
+        // The profile IDC is the 3rd byte of the profile string (i.e. the last
+        // two characters of the string converted to a byte).
         byte idc1 = (byte)((Character.digit(profile1.charAt(4), 16) << 4) +
                             Character.digit(profile1.charAt(5), 16));
         byte idc2 = (byte)((Character.digit(profile2.charAt(4), 16) << 4) +
@@ -884,18 +925,25 @@ public class MediaUtils
         }
         else if (idc1 < H264_PROFILE_IDC_2_1)
         {
-            // Between levels 1.1 and 2.2
+            // Between levels 1.1 and 2.1
             return ((idc2 < H264_PROFILE_IDC_2_1) &&
                     (idc2 >= H264_PROFILE_IDC_1_1));
         }
-        else if (idc1 < H264_PROFILE_IDC_3_1)
+        else if (idc1 < H264_PROFILE_IDC_2_2)
         {
-            // Between levels 2.1 and 3.1
-            return ((idc2 < H264_PROFILE_IDC_3_1) &&
+            // Between levels 2.1 and 2.2
+            return ((idc2 < H264_PROFILE_IDC_2_2) &&
                     (idc2 >= H264_PROFILE_IDC_2_1));
         }
+        else if (idc1 < H264_PROFILE_IDC_3_1)
+        {
+            // Between levels 2.2 and 3.1
+            return ((idc2 < H264_PROFILE_IDC_3_1) &&
+                    (idc2 >= H264_PROFILE_IDC_2_2));
+        }
 
-        // The level is at least as good as our maximum supported level.
+        // The first level is at least as good as our maximum supported level,
+        // just check whether the second is too.
         return (idc2 >= H264_PROFILE_IDC_3_1);
     }
 

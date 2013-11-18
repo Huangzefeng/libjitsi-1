@@ -6,8 +6,6 @@
  */
 package org.jitsi.impl.neomedia.format;
 
-import static java.lang.String.*;
-
 import java.awt.*;
 import java.util.*;
 
@@ -335,9 +333,8 @@ public class VideoMediaFormatImpl
             }
 
             /*
-             * Check the H.264 profiles.  If we have profiles for both, they
-             * must be the same profile in order to match.  Otherwise, assume a
-             * match.
+             * Check the H.264 profiles.  If we have profiles for both, check
+             * whether they're compatible.  Otherwise, assume they are.
              */
             if (fmtps1 != null && fmtps2 != null)
             {
@@ -347,9 +344,10 @@ public class VideoMediaFormatImpl
                     fmtps2.get(MediaUtils.H264_FMT_PROFILE_LEVEL_ID);
                 if ((strProfile1 != null) &&
                     (strProfile2 != null) &&
-                    (!MediaUtils.h264ProfilesMatch(strProfile1, strProfile2)))
+                    (!MediaUtils.h264ProfilesCompatible(strProfile1, strProfile2)))
                 {
-                    logger.trace(format("H.264 profiles didn't match: %s != %s",
+                    logger.trace(String.format(
+                        "H.264 profiles didn't match: %s != %s",
                         strProfile1, strProfile2));
                     return false;
                 }

@@ -1612,10 +1612,12 @@ public class VideoMediaDeviceSession
                     videoFormat.getMaxDataLength(),
                     videoFormat.getDataType(),
                     videoFormat.getFrameRate());
+
                 @SuppressWarnings("unchecked")
                 MediaFormatImpl<VideoFormat> newMediaFormat =
                     (MediaFormatImpl<VideoFormat>)
                         MediaFormatImpl.createInstance(newVideoformat);
+
                 super.setProcessorFormat(processor, newMediaFormat);
                 return;
             }
