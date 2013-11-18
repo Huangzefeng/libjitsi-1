@@ -1207,8 +1207,8 @@ class AudioMixerPushBufferStream
         boolean valueIsChanged = !Arrays.equals(oldValue, newValue);
 
         logger.debug("setInputStreams called and valueIsChange=" + valueIsChanged);
-        logger.debug("setInputStreams oldValue=" + oldValue);
-        logger.debug("setInputStreams newValue=" + newValue);
+        logger.debug("setInputStreams oldValue=" + Arrays.toString(oldValue));
+        logger.debug("setInputStreams newValue=" + Arrays.toString(newValue));
 
         if (valueIsChanged)
         {
