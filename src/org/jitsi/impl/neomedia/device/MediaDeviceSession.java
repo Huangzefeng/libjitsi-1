@@ -1940,7 +1940,7 @@ public class MediaDeviceSession
         if (this.processor != processor)
         {
             logger.debug("Setting processor on " + device + " to " +
-                processor.hashCode());
+                ((processor == null) ? "null" : processor.hashCode()));
             closeProcessor();
 
             this.processor = processor;
