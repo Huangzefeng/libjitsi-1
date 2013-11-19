@@ -18,6 +18,8 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.device.*;
@@ -2546,7 +2548,10 @@ public class WASAPIStream
                 synchronized (this)
                 {
                     if (!processThread.equals(this.processThread))
-                        break;
+                    {
+                    	Log.error("Thread changed - old " + processThread.hashCode() + " new " + ((this.processThread != null) ? this.processThread.hashCode() : "null"));
+                    	break;
+                    }
                     /*
                      * We explicitly want to support the case in which the user
                      * has selected "none" for the playback/render endpoint
@@ -2556,7 +2561,13 @@ public class WASAPIStream
                     boolean connected = (capture != null) || sourceMode;
 
                     if (!connected || !started)
-                        break;
+                    {
+                    	// TODO improve comment
+                    	Log.annotate(this, "Thread has been stopped.");
+                        this.processThread = null;
+                        notifyAll();
+                    	break;
+                    }
 
                     waitWhileCaptureIsBusy();
                     waitWhileRenderIsBusy();
@@ -2612,6 +2623,7 @@ public class WASAPIStream
             {
                 if (processThread.equals(this.processThread))
                 {
+                	Log.annotate(this, "Set this.processThread to null");
                     this.processThread = null;
                     notifyAll();
                 }
@@ -2691,6 +2703,28 @@ public class WASAPIStream
             processThread.setDaemon(true);
             aecStartTime = System.currentTimeMillis();
             processThread.start();
+            
+            // @@ temp diags - dump the threads after 1s so we can see if anything is deadlocked
+            Thread threadDumper = new Thread() {
+            	@Override
+            	public void run() {
+            		try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						logger.error("## threadDumper unexpectedly interrupted", e);
+						//e.printStackTrace();
+					}
+            		logger.dumpThreads();
+            	}
+            };
+            threadDumper.start();
+        }
+        else
+        {
+        	Log.annotate(this, "Didn't start processThread in .start().  " +
+              "processThread: " + ((this.processThread) != null ?
+            		                   this.processThread.hashCode() : "null"));
         }
     }
 

@@ -293,7 +293,8 @@ public class PlayRTP
         while ((ix < n_iterations) || (n_iterations == 0))
         {
             // Now play the stream
-            logger.debug("Play file, attempt: " + (ix+1));
+            logger.info("Play file, attempt: " + (ix+1));
+            System.out.println("Play file, attempt: " + (ix+1));
             maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
             playFile(filename, initialFormat, dynamicPayloadTypes,
                 dynamicFormats, ssrc, true);

@@ -399,7 +399,7 @@ public class Logger
         for (Thread thread : stackTraces.keySet())
         {
             buffer.append(lineSeparator);
-            buffer.append(format("Thread %s@%d: (state = %s)",
+            buffer.append(format("Thread %s [%d]: (state = %s)",
                 thread.getName(), thread.getId(), thread.getState()));
             for (StackTraceElement stackTraceElement : stackTraces.get(thread))
             {
