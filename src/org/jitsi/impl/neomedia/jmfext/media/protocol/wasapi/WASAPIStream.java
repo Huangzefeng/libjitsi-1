@@ -2562,7 +2562,13 @@ public class WASAPIStream
 
                     if (!connected || !started)
                     {
-                    	// TODO improve comment
+                    	/*
+                    	 *  this.processThread must be set to null here while we
+                    	 *  are still in the synchronized block.  Otherwise if
+                    	 *  stop() and start() are called in quick succession,
+                    	 *  start() may not create a new processThread as it is
+                    	 *  intended to.
+                    	 */
                     	Log.annotate(this, "Thread has been stopped.");
                         this.processThread = null;
                         notifyAll();
@@ -2704,16 +2710,23 @@ public class WASAPIStream
             aecStartTime = System.currentTimeMillis();
             processThread.start();
             
-            // @@ temp diags - dump the threads after 1s so we can see if anything is deadlocked
+            /*
+             *  We sometimes see no audio after starting the process thread
+             *  above.  To help diagnose this, dump the threads one second after
+             *  the processThread is started - that should show if there has
+             *  been a deadlock.
+             */
             Thread threadDumper = new Thread() {
             	@Override
-            	public void run() {
-            		try {
+            	public void run()
+            	{
+            		try
+            		{
+            			logger.info("Sleep before dumping threads");
 						Thread.sleep(1000);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						logger.error("## threadDumper unexpectedly interrupted", e);
-						//e.printStackTrace();
+					} catch (InterruptedException e)
+					{
+						logger.error("threadDumper sleep interrupted", e);
 					}
             		logger.dumpThreads();
             	}
