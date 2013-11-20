@@ -114,7 +114,7 @@ public class DeviceConfiguration
     /**
      * The default video height.
      */
-    public static final int DEFAULT_VIDEO_HEIGHT = 240; // 480;
+    public static final int DEFAULT_VIDEO_HEIGHT = 720;
 
     /**
      * The default value for video maximum bandwidth.
@@ -124,7 +124,7 @@ public class DeviceConfiguration
     /**
      * The default video width.
      */
-    public static final int DEFAULT_VIDEO_WIDTH = 320; // 640;
+    public static final int DEFAULT_VIDEO_WIDTH = 1280;
 
     /**
      * The name of the <tt>long</tt> property which determines the filter length
@@ -198,12 +198,10 @@ public class DeviceConfiguration
                 new Dimension(320, 240),
                 //CIF
                 new Dimension(352, 288),
-             // Higher resolutions not supported on Accession Mobile and Desktop does not
-             // renegotiate as it should.
-//                             // VGA
-//                             new Dimension(640, 480),
-//                             // HD 720
-//                             new Dimension(1280, 720)
+                // VGA
+                new Dimension(640, 480),
+                // HD 720
+                new Dimension(1280, 720)
             };
 
     /**

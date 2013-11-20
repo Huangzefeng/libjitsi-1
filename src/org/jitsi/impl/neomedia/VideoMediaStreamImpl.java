@@ -846,34 +846,28 @@ public class VideoMediaStreamImpl
                 String key = attr.getKey();
                 String value = attr.getValue();
 
-                if(key.equals("rtcp-fb"))
-                {
-//                    if (value.equals("nack pli"))
-//                        USE_PLI = true;
-                }
-                else if(key.equals("imageattr"))
+                if (key.equals(MediaUtils.H264_FMT_PROFILE_LEVEL_ID))
                 {
                     /*
-                     * If the width and height attributes have been collected
-                     * into outputSize, do not override the Dimension they have
-                     * specified.
+                     * We've got an H.264 profile level.  That means the remote
+                     * device has asked for a specific profile level and we'd
+                     * better make sure we don't send video at a higher
+                     * resolution than they can cope with.
+                     *
+                     * Convert the profile provided into a resolution and use
+                     * that for this device session.  If we don't get a
+                     * resolution back from h264ProfileToDimension(), it means
+                     * we should just stick with our default.
                      */
-                    if((attrs.containsKey("width")
-                                || attrs.containsKey("height"))
-                            && (outputSize != null))
+                    logger.debug("Got a " +
+                        MediaUtils.H264_FMT_PROFILE_LEVEL_ID +
+                        " format param: " + value);
+                    Dimension res = MediaUtils.h264ProfileToDimension(value);
+                    if ((res != null) &&
+                        ((outputSize == null) ||
+                         (!outputSize.equals(res))))
                     {
-                        continue;
-                    }
-
-                    Dimension res[] = parseSendRecvResolution(value);
-
-                    if(res != null)
-                    {
-                        setOutputSize(res[1]);
-
-                        qualityControl.setRemoteSendMaxPreset(
-                                new QualityPreset(res[0]));
-                        qualityControl.setRemoteReceiveResolution(outputSize);
+                        setOutputSize(res);
                         ((VideoMediaDeviceSession)getDeviceSession())
                             .setOutputSize(outputSize);
                     }
