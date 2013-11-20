@@ -508,15 +508,11 @@ public class MediaDeviceImpl
                             = (screen == null) ? null : screen.getSize();
                     }
 
-                    h264AdvancedAttributes.put(
-                            "imageattr",
-                            MediaUtils.createImageAttr(sendSize, receiveSize));
-                    f
-                        = mediaServiceImpl.getFormatFactory().createMediaFormat(
-                                f.getEncoding(),
-                                f.getClockRate(),
-                                f.getFormatParameters(),
-                                h264AdvancedAttributes);
+                    f = mediaServiceImpl.getFormatFactory().createMediaFormat(
+                        f.getEncoding(),
+                        f.getClockRate(),
+                        f.getFormatParameters(),
+                        h264AdvancedAttributes);
                 }
 
                 if (f != null)
