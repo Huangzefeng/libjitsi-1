@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.List;
 import java.util.logging.*;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
 
 import javax.sdp.*;
 import javax.swing.*;
@@ -35,9 +37,20 @@ public class RTPPlayer
             if (col == 4)
             {
                 // This is the play column
-                playRow(row);
+                if (threads[row] == null)
+                {
+                    myTable.fireTableCellUpdated(row, col);
+                    playRow(row);
+                }
+                else
+                {
+                    // Stop playing
+                    System.out.println("Stop playing row");
+                    myTable.fireTableCellUpdated(row, col);
+                    threads[row].playRTP.stopPlaying();
+                    threads[row] = null;
+                }
             }
-
         }
 
         @Override
@@ -54,7 +67,7 @@ public class RTPPlayer
     }
 
     private final JFrame mframe = new JFrame();
-    private JFileChooser fc;
+    private final JFileChooser fc = new JFileChooser();
     private JLabel lblFileName;
     private JTable mtable;
     private AbstractTableModel myTable;
@@ -108,7 +121,9 @@ public class RTPPlayer
     private JComboBox<Boolean> autoComboBox;
     private JTextField autoItersInput;
     private JComboBox<Boolean> stopOnNoAudioComboBox;
-
+    
+    private org.jitsi.examples.PacketPlayer.PlayRTPThread[] threads;
+    
     public void playRow(int row)
     {
         final int ssrc = (Integer) (rows.get(row)[1]);
@@ -140,15 +155,15 @@ public class RTPPlayer
         }
         LibJitsi.stop();
 
-        Thread myThead = new Thread()
+        org.jitsi.examples.PacketPlayer.PlayRTPThread myThread = new PlayRTPThread()
         {
 
             @Override
             public void run()
             {
-              PlayRTP playRTP = new PlayRTP(); // Also initializes Libjitsi
+              playRTP = new PlayRTP(); // Also initializes Libjitsi
 
-                // Set the appropriate output device
+              // Set the appropriate output device
               String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
               CaptureDeviceInfo2 selectedDevice = null;
               AudioSystem audioSystem = ((MediaServiceImpl)LibJitsi.getMediaService()).getDeviceConfiguration().getAudioSystem();
@@ -191,7 +206,8 @@ public class RTPPlayer
 
         };
 
-        myThead.start();
+        myThread.start();
+        threads[row] = myThread;
     }
 
   /**
@@ -201,7 +217,7 @@ public class RTPPlayer
     {
         initialize();
     }
-
+    
     /**
      * Initialize the contents of the frame.
      */
@@ -233,7 +249,19 @@ public class RTPPlayer
         {
             public void actionPerformed(ActionEvent arg0)
             {
-                fc = new JFileChooser();
+                Preferences prefs = Preferences.userNodeForPackage(getClass());
+                
+                String lastLocation = prefs.get("location", "");
+                System.out.println("lastLocation: " + lastLocation);
+                if (!"".equals(lastLocation))
+                {
+                    File file = new File(lastLocation);
+                    if (file.exists())
+                    {
+                        fc.setCurrentDirectory(file);
+                    }
+                }
+                
                 int returnVal = fc.showOpenDialog(mframe);
                 if (returnVal == JFileChooser.APPROVE_OPTION)
                 {
@@ -241,6 +269,13 @@ public class RTPPlayer
                     System.out.println("Got " + file);
                     if (file.exists())
                     {
+                        fc.setCurrentDirectory(file);
+                        prefs.put("location", file.getAbsolutePath());
+                        try {
+                            prefs.flush();
+                        } catch (BackingStoreException e) {
+                            e.printStackTrace();
+                        }
 
                         loadFile(file);
                     }
@@ -299,7 +334,10 @@ public class RTPPlayer
             {
                 if (col == 4)
                 {
-                    return "Click to Play";
+                    if (threads[row] == null)
+                        return "Click to Play";
+                    else
+                        return "Click to Stop";
                 }
                 else
                 {
@@ -477,6 +515,8 @@ public class RTPPlayer
 
     protected void loadFile(File file)
     {
+        clearUpLastRun();
+        
         lblFileName.setText(file.toString());
         rows.clear();
 
@@ -497,5 +537,23 @@ public class RTPPlayer
                 ssrc, packets, ptList));
         }
         myTable.fireTableDataChanged();
+        
+        threads = new org.jitsi.examples.PacketPlayer.PlayRTPThread[rows.size()];
+    }
+    
+    private void clearUpLastRun()
+    {
+        if (threads != null)
+        {
+            for (org.jitsi.examples.PacketPlayer.PlayRTPThread thread : threads)
+            {
+                if (thread != null)
+                {
+                    thread.playRTP.stopPlaying();
+                }
+            }
+            
+            threads = null;
+        }
     }
 }
