@@ -2549,8 +2549,11 @@ public class WASAPIStream
                 {
                     if (!processThread.equals(this.processThread))
                     {
-                    	Log.error("Thread changed - old " + processThread.hashCode() + " new " + ((this.processThread != null) ? this.processThread.hashCode() : "null"));
-                    	break;
+                        Log.error("Thread changed - old " +
+                            processThread.hashCode() + " new " +
+                            ((this.processThread != null) ?
+                                       this.processThread.hashCode() : "null"));
+                        break;
                     }
                     /*
                      * We explicitly want to support the case in which the user
@@ -2562,17 +2565,17 @@ public class WASAPIStream
 
                     if (!connected || !started)
                     {
-                    	/*
-                    	 *  this.processThread must be set to null here while we
-                    	 *  are still in the synchronized block.  Otherwise if
-                    	 *  stop() and start() are called in quick succession,
-                    	 *  start() may not create a new processThread as it is
-                    	 *  intended to.
-                    	 */
-                    	Log.annotate(this, "Thread has been stopped.");
+                        /*
+                         *  this.processThread must be set to null here while we
+                         *  are still in the synchronized block.  Otherwise if
+                         *  stop() and start() are called in quick succession,
+                         *  start() may not create a new processThread as it is
+                         *  intended to.
+                         */
+                        Log.annotate(this, "Thread has been stopped.");
                         this.processThread = null;
                         notifyAll();
-                    	break;
+                        break;
                     }
 
                     waitWhileCaptureIsBusy();
@@ -2629,7 +2632,7 @@ public class WASAPIStream
             {
                 if (processThread.equals(this.processThread))
                 {
-                	Log.annotate(this, "Set this.processThread to null");
+                    Log.annotate(this, "Set this.processThread to null");
                     this.processThread = null;
                     notifyAll();
                 }
@@ -2710,26 +2713,29 @@ public class WASAPIStream
             aecStartTime = System.currentTimeMillis();
             processThread.start();
             
-            /*
+            /*  TODO Probably don't want to keep this in permanently
              *  We sometimes see no audio after starting the process thread
              *  above.  To help diagnose this, dump the threads one second after
              *  the processThread is started - that should show if there has
              *  been a deadlock.
              */
-            Thread threadDumper = new Thread() {
-            	@Override
-            	public void run()
-            	{
-            		try
-            		{
-            			logger.info("Sleep before dumping threads");
-						Thread.sleep(1000);
-					} catch (InterruptedException e)
-					{
-						logger.error("threadDumper sleep interrupted", e);
-					}
-            		logger.dumpThreads();
-            	}
+            Thread threadDumper = new Thread()
+            {
+                @Override
+                public void run()
+                {
+                    try
+                    {
+                        logger.info("Sleep before dumping threads");
+        			    Thread.sleep(1000);
+        			}
+                    catch (InterruptedException e)
+        			{
+        			    logger.error("threadDumper sleep interrupted", e);
+        			}
+                    
+                    logger.dumpThreads();
+                }
             };
             threadDumper.start();
         }

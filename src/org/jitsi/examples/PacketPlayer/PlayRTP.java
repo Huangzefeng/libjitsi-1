@@ -6,7 +6,10 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 
+import javax.media.ClockStartedError;
 import javax.swing.*;
+
+import net.sf.fmj.media.Log;
 
 import org.jitsi.examples.*;
 import org.jitsi.service.libjitsi.*;
@@ -30,6 +33,11 @@ class VideoFrame extends JFrame
         this.add(vc);
         this.setSize(1000, 1000);
     }
+}
+
+class PlayRTPThread extends Thread
+{
+    PlayRTP playRTP;
 }
 
 /**
@@ -81,7 +89,7 @@ public class PlayRTP
         }
     }
 
-    //private StreamConnector connector;
+    private StreamConnector mConnector;
     /**
      * Initializes the receipt of audio.
      *
@@ -211,8 +219,15 @@ public class PlayRTP
             }
             finally
             {
-                mediaStream.close();
-                mediaStream = null;
+                try
+                {
+                    mediaStream.close();
+                    mediaStream = null;
+                }
+                catch (ClockStartedError cse)
+                {
+                    Log.error("ClockStartedError caught and ignore on close");
+                }
             }
         }
     }
@@ -253,9 +268,9 @@ public class PlayRTP
 
         try
         {
-            StreamConnector connector = playMedia(filename, initialFormat,
+            mConnector = playMedia(filename, initialFormat,
                 dynamicRTPPayloadTypes, dynamicFormats, ssrc, auto);
-            while (connector.getDataSocket().isConnected())
+            while ((mConnector != null) && mConnector.getDataSocket().isConnected())
             {
                 Thread.sleep(100);
             }
@@ -296,6 +311,7 @@ public class PlayRTP
             logger.info("Play file, attempt: " + (ix+1));
             System.out.println("Play file, attempt: " + (ix+1));
             maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
+            
             playFile(filename, initialFormat, dynamicPayloadTypes,
                 dynamicFormats, ssrc, true);
 
@@ -313,6 +329,21 @@ public class PlayRTP
             "Finished - stopped during attempt " + (ix+1) + " of " + n_iterations
             : "Finshed after completing " + n_iterations + " attempts");
 
+    }
+    
+    public void stopPlaying()
+    {
+        logger.info("Stop playing the current file.");
+        mConnector.getDataSocket().close();
+        try
+        {
+            Thread.sleep(110); // Give the socket time to close so we don't get a bunch of new callbacks
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }
+        logger.debug("...end of sleep");
     }
 
     public static void main(String[] args) throws Exception
