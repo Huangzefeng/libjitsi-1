@@ -99,11 +99,11 @@ public class RTPConnectorUDPInputStream
                                              convertedPacket.getHeaderLength()),
                     convertedPacket.getOffset(),
                     convertedPacket.getHeaderLength());
-            
+
             // And log to the media buffer
-             byte[] data = new byte[p.getLength()];
-             System.arraycopy(p.getData(), p.getOffset(), data, 0, p.getLength());
-             packetLogging.bufferMedia(data, System.currentTimeMillis());
+            byte[] data = new byte[p.getLength()];
+            System.arraycopy(p.getData(), p.getOffset(), data, 0, p.getLength());
+            packetLogging.bufferMedia(data, System.currentTimeMillis());
         }
     }
 
