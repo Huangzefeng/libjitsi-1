@@ -77,6 +77,7 @@ public class RTPConnectorUDPOutputStream
         PacketLoggingService packetLogging = LibJitsi.getPacketLoggingService();
 
         if (packetLogging != null)
+        {
             packetLogging.logPacket(
                     PacketLoggingService.ProtocolName.RTP,
                     socket.getLocalAddress().getAddress(),
@@ -89,6 +90,16 @@ public class RTPConnectorUDPOutputStream
                                       packet.getHeaderLength()),
                     packet.getOffset(),
                     packet.getHeaderLength());
+
+            // And log to the media buffer
+            byte[] data = new byte[packet.getLength()];
+            System.arraycopy(packet.getBuffer(),
+                             packet.getOffset(),
+                             data,
+                             0,
+                             packet.getLength());
+            packetLogging.bufferMedia(data, System.currentTimeMillis());
+        }
     }
 
     /**
