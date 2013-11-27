@@ -16,6 +16,8 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.device.*;
@@ -987,7 +989,7 @@ public class AudioMixer
      * Allows extenders to tap into the reading and monitor and customize it.
      *
      * @param stream the <tt>PushBufferStream</tt> to read media from and known
-     * to belong to the specified <tt>DataSOurce</tt>
+     * to belong to the specified <tt>DataSource</tt>
      * @param buffer the output <tt>Buffer</tt> in which the media read from the
      * specified <tt>stream</tt> is to be written so that it gets returned to
      * the caller
@@ -1003,6 +1005,7 @@ public class AudioMixer
         throws IOException
     {
         stream.read(buffer);
+        /* TODO SGD */ Log.logRead(this);
     }
 
     /**

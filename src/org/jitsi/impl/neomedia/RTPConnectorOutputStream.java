@@ -14,6 +14,8 @@ import java.util.concurrent.locks.*;
 
 import javax.media.rtp.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
@@ -252,6 +254,7 @@ public abstract class RTPConnectorOutputStream
                                     PacketLoggingService.ProtocolName.RTP))
                         doLogPacket(packet, target);
                 }
+                /* TODO SGD */ Log.logReadBytes(this, packet.getLength());
             }
             catch (IOException ioe)
             {

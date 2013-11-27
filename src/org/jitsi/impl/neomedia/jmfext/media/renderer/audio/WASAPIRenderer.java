@@ -16,6 +16,7 @@ import java.util.concurrent.*;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
 import net.sf.fmj.utility.charting.*;
 
 import org.jitsi.impl.neomedia.*;
@@ -1338,6 +1339,7 @@ public class WASAPIRenderer
                         if (resampler == null)
                         {
                         	Charting.wroteToWasapi(toWrite);
+                            /* TODO SGD */ Log.logReadBytes(this, toWrite);
                             written
                                 = maybeIAudioRenderClientWrite(
                                         remainder, 0, toWrite,
@@ -1355,6 +1357,7 @@ public class WASAPIRenderer
                                         * resamplerFrameSize;
 
                                 Charting.wroteToWasapi(toWrite);
+                                /* TODO SGD */ Log.logReadBytes(this, toWrite);
                                 maybeIAudioRenderClientWrite(
                                         (byte[]) resamplerOutBuffer.getData(),
                                         resamplerOutBuffer.getOffset(),

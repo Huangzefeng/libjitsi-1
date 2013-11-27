@@ -8,7 +8,9 @@ package org.jitsi.impl.neomedia.codec.audio.opus;
 
 import javax.media.*;
 import javax.media.format.*;
+
 import net.sf.fmj.media.*;
+
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -333,6 +335,7 @@ public class JNIEncoder
 
         byte[] in = (byte[]) inBuffer.getData();
         int inLength = inBuffer.getLength();
+        /* TODO SGD */ Log.logReadBytes(this, inLength);
         int inOffset = inBuffer.getOffset();
 
         if ((prevIn != null) && (prevInLength > 0))

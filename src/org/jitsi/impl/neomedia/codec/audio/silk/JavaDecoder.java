@@ -11,6 +11,8 @@ import java.awt.*;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.neomedia.control.*;
 import org.jitsi.util.*;
@@ -217,6 +219,7 @@ public class JavaDecoder
         byte[] in = (byte[]) inBuffer.getData();
         int inOffset = inBuffer.getOffset();
         int inLength = inBuffer.getLength();
+        /* TODO SGD */ Log.logReadBytes(this, inLength);
 
         short[] out = validateShortArraySize(outBuffer, frameLength);
         int outOffset = 0;

@@ -235,6 +235,7 @@ public class JNIDecoder
 
         /* Read the encoded audio data from inputBuffer into the SpeexBits. */
         int inputLength = inputBuffer.getLength();
+        /* TODO SGD */ Log.logReadBytes(this, inputLength);
 
         if (inputLength > 0)
         {

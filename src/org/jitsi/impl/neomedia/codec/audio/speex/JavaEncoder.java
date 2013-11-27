@@ -142,6 +142,7 @@ public class JavaEncoder
             initConverter((AudioFormat) newFormat);
 
         int inputLength = inputBuffer.getLength();
+        /* TODO SGD */ Log.logReadBytes(this, inputLength);
 
         if (inputLength == 0)
             return OUTPUT_BUFFER_NOT_FILLED;

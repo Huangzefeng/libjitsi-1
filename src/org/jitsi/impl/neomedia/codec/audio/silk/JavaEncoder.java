@@ -9,6 +9,8 @@ package org.jitsi.impl.neomedia.codec.audio.silk;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -221,7 +223,9 @@ public class JavaEncoder
 
         if (inputLength > encControl.packetSize)
             inputLength = encControl.packetSize;
-
+        
+        /* TODO SGD */ Log.logReadBytes(this, inputLength);
+        
         byte[] outputData
             = validateByteArraySize(outputBuffer, MAX_BYTES_PER_FRAME, false);
         int outputOffset = 0;

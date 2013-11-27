@@ -14,6 +14,8 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.util.*;
 
 /**
@@ -478,6 +480,7 @@ public class CachingPushBufferStream
             {
                 int inputOffset = input.getOffset();
                 int inputLength = input.getLength();
+                /* TODO SGD */ Log.logReadBytes(this, inputLength);
                 byte[] outputBytes = (byte[]) outputData;
                 int outputLength
                     = outputBytes.length - outputOffset;

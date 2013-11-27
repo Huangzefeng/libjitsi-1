@@ -128,6 +128,7 @@ public class JavaDecoder
         byte[] input = (byte[]) inputBuffer.getData();
 
         int inputLength = inputBuffer.getLength();
+        /* TODO SGD */ Log.logReadBytes(this, inputLength);
 
         if (inputLength < INPUT_FRAME_SIZE_IN_BYTES)
         {
