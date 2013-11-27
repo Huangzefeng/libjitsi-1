@@ -108,7 +108,7 @@ public abstract class RTPConnectorInputStream
                                                     .RTP))
                                 doLogPacket(p);
                         }
-                        /* TODO SGD */ Log.logReadBytes(this, p.getLength());
+                        Log.logReadBytes(this, p.getLength());
 
                         return true;
                     }

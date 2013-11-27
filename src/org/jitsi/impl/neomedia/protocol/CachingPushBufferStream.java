@@ -480,7 +480,7 @@ public class CachingPushBufferStream
             {
                 int inputOffset = input.getOffset();
                 int inputLength = input.getLength();
-                /* TODO SGD */ Log.logReadBytes(this, inputLength);
+                Log.logReadBytes(this, inputLength);
                 byte[] outputBytes = (byte[]) outputData;
                 int outputLength
                     = outputBytes.length - outputOffset;

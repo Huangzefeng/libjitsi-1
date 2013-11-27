@@ -1005,7 +1005,7 @@ public class AudioMixer
         throws IOException
     {
         stream.read(buffer);
-        /* TODO SGD */ Log.logRead(this);
+        Log.logRead(this);
     }
 
     /**

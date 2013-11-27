@@ -219,7 +219,7 @@ public class JavaDecoder
         byte[] in = (byte[]) inBuffer.getData();
         int inOffset = inBuffer.getOffset();
         int inLength = inBuffer.getLength();
-        /* TODO SGD */ Log.logReadBytes(this, inLength);
+        Log.logReadBytes(this, inLength);
 
         short[] out = validateShortArraySize(outBuffer, frameLength);
         int outOffset = 0;

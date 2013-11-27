@@ -335,7 +335,7 @@ public class JNIEncoder
 
         byte[] in = (byte[]) inBuffer.getData();
         int inLength = inBuffer.getLength();
-        /* TODO SGD */ Log.logReadBytes(this, inLength);
+        Log.logReadBytes(this, inLength);
         int inOffset = inBuffer.getOffset();
 
         if ((prevIn != null) && (prevInLength > 0))

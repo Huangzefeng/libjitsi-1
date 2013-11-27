@@ -224,7 +224,7 @@ public class JavaEncoder
         if (inputLength > encControl.packetSize)
             inputLength = encControl.packetSize;
         
-        /* TODO SGD */ Log.logReadBytes(this, inputLength);
+        Log.logReadBytes(this, inputLength);
         
         byte[] outputData
             = validateByteArraySize(outputBuffer, MAX_BYTES_PER_FRAME, false);

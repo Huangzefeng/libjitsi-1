@@ -254,7 +254,7 @@ public abstract class RTPConnectorOutputStream
                                     PacketLoggingService.ProtocolName.RTP))
                         doLogPacket(packet, target);
                 }
-                /* TODO SGD */ Log.logReadBytes(this, packet.getLength());
+                Log.logReadBytes(this, packet.getLength());
             }
             catch (IOException ioe)
             {

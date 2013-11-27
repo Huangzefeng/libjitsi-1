@@ -94,7 +94,7 @@ public class JNIEncoder
     {
         int inputOffset = inputBuffer.getOffset();
         int inputLength = inputBuffer.getLength();
-        /* TODO SGD */ Log.logReadBytes(this, inputLength);
+        Log.logReadBytes(this, inputLength);
         byte[] input = (byte[]) inputBuffer.getData();
 
         int outputOffset = outputBuffer.getOffset();

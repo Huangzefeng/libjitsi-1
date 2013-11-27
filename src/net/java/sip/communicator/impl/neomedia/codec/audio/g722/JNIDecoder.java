@@ -107,7 +107,7 @@ public class JNIDecoder
     protected int doProcess(Buffer inputBuffer, Buffer outputBuffer)
     {
         byte[] input = (byte[]) inputBuffer.getData();
-        /* TODO SGD */ Log.logReadBytes(this, inputBuffer.getLength());
+        Log.logReadBytes(this, inputBuffer.getLength());
 
         int outputOffset = outputBuffer.getOffset();
         int outputLength = inputBuffer.getLength() * 4;

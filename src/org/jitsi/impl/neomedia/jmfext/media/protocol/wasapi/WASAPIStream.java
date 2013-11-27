@@ -2282,7 +2282,7 @@ public class WASAPIStream
                             readFromAec = true;
                         }
                         
-                        /* TODO SGD */ Log.logReadBytes(this, read);
+                        Log.logReadBytes(this, read);
                     }
                     else
                     {

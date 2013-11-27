@@ -191,7 +191,7 @@ public class JavaEncoder
     protected int doProcess(Buffer inputBuffer, Buffer outputBuffer)
     {
         int inputLength = inputBuffer.getLength();
-        /* TODO SGD */ Log.logReadBytes(this, inputLength);
+        Log.logReadBytes(this, inputLength);
         byte[] input = (byte[]) inputBuffer.getData();
         int inputOffset = inputBuffer.getOffset();
 
