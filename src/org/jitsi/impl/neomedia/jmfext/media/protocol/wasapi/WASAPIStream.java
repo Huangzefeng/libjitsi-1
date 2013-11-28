@@ -2281,6 +2281,8 @@ public class WASAPIStream
                                 (System.currentTimeMillis() - aecStartTime) + "ms");
                             readFromAec = true;
                         }
+                        
+                        Log.logReadBytes(this, read);
                     }
                     else
                     {

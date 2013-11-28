@@ -11,6 +11,8 @@ import java.net.*;
 
 import javax.media.protocol.*;
 
+import net.sf.fmj.media.Log;
+
 import org.ice4j.socket.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.packetlogging.*;
@@ -106,6 +108,7 @@ public abstract class RTPConnectorInputStream
                                                     .RTP))
                                 doLogPacket(p);
                         }
+                        Log.logReadBytes(this, p.getLength());
 
                         return true;
                     }
