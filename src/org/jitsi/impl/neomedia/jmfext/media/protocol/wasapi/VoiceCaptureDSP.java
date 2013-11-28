@@ -56,6 +56,22 @@ public class VoiceCaptureDSP
         = "{73647561-0000-0010-8000-00aa00389b71}";
 
     /**
+     * Specifies the processing mode for the Voice Capture DSP.
+     *
+     * @see #SINGLE_CHANNEL_AEC
+     */
+    public static final long MFPKEY_WMAAECMA_SYSTEM_MODE;
+
+    /**
+     * Specifies whether the Voice Capture DSP uses source mode (<tt>true</tt>)
+     * or filter mode (<tt>false</tt>). In source mode, the application does not
+     * need to send input data to the DSP, because the DSP automatically pulls
+     * data from the audio devices. In filter mode, the application must send
+     * the input data to the DSP.
+     */
+    public static final long MFPKEY_WMAAECMA_DMO_SOURCE_MODE;
+
+    /**
      * Specifies which audio devices the Voice Capture DSP uses for capturing
      * and rendering audio. Set this property if you are using the DSP in source
      * mode. The DSP ignores this property in filter mode. The value of the
@@ -69,51 +85,19 @@ public class VoiceCaptureDSP
     public static final long MFPKEY_WMAAECMA_DEVICE_INDEXES;
 
     /**
-     * Specifies whether the Voice Capture DSP uses source mode (<tt>true</tt>)
-     * or filter mode (<tt>false</tt>). In source mode, the application does not
-     * need to send input data to the DSP, because the DSP automatically pulls
-     * data from the audio devices. In filter mode, the application must send
-     * the input data to the DSP.
+     * Enables the application to override the default settings on various
+     * properties of the Voice Capture DSP. If this property is <tt>true</tt>,
+     * the application can set the <tt>MFPKEY_WMAAECMA_FEATR_XXX</tt> properties
+     * on the DSP. If this property is <tt>false</tt>, the DSP ignores these
+     * properties and uses its default settings. The default value of this
+     * property is <tt>false</tt>.
      */
-    public static final long MFPKEY_WMAAECMA_DMO_SOURCE_MODE;
+    public static final long MFPKEY_WMAAECMA_FEATURE_MODE;
 
     /**
-     * Specifies how many times the Voice Capture DSP performs acoustic echo
-     * suppression (AES) on the residual signal. The Voice Capture DSP can
-     * perform AES on the residual signal after echo cancellation. This
-     * <tt>int</tt> property can have the value <tt>0</tt>, <tt>1</tt>, or
-     * <tt>2</tt>. The default value is <tt>0</tt>. Before setting this
-     * property, you must set the {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property
-     * to <tt>true</tt>. The DSP uses this property only when AEC processing is
-     * enabled.
+     * Unused constant.
      */
-    public static final long MFPKEY_WMAAECMA_FEATR_AES;
-
-    /**
-     * Specifies whether the Voice Capture DSP performs automatic gain control.
-     * Automatic gain control is a digital signal processing (DSP) component
-     * that adjusts the gain so that the output level of the signal remains
-     * within the same approximate range. The default value of this property is
-     * <tt>false</tt> (i.e. disabled). Before setting this property, you must
-     * set the {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>.
-     */
-    public static final long MFPKEY_WMAAECMA_FEATR_AGC;
-
-    /**
-    * Mic gain bounder.
-    */
-    public static final long MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER;
-
-    /**
-     * Specifies whether the Voice Capture DSP performs center clipping. Center
-     * clipping is a process that removes small echo residuals that remain after
-     * AEC processing, in single-talk situations (when speech occurs only on one
-     * end of the line). The default value of this property is <tt>true</tt>
-     * (i.e. enabled). Before setting this property, you must set the
-     * {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>. The DSP
-     * uses this property only when AEC processing is enabled.
-     */
-    public static final long MFPKEY_WMAAECMA_FEATR_CENTER_CLIP;
+    public static final long MFPKEY_WMAAECMA_FEATR_FRAME_SIZE;
 
     /**
      * Specifies the duration of echo that the acoustic echo cancellation (AEC)
@@ -127,18 +111,6 @@ public class VoiceCaptureDSP
      * DSP uses this property only when AEC processing is enabled.
      */
     public static final long MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH;
-
-    /**
-     * Specifies whether the Voice Capture DSP performs noise filling. Noise
-     * filling adds a small amount of noise to portions of the signal where
-     * center clipping has removed the residual echoes. This results in a better
-     * experience for the user than leaving silent gaps in the signal. The
-     * default value of this property is <tt>true</tt> (i.e. enabled). Before
-     * setting this property, you must set the
-     * {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>. The DSP
-     * uses this property only when AEC processing is enabled.
-     */
-    public static final long MFPKEY_WMAAECMA_FEATR_NOISE_FILL;
 
     /**
      * Specifies whether the Voice Capture DSP performs noise suppression. Noise
@@ -155,21 +127,77 @@ public class VoiceCaptureDSP
     public static final long MFPKEY_WMAAECMA_FEATR_NS;
 
     /**
-     * Enables the application to override the default settings on various
-     * properties of the Voice Capture DSP. If this property is <tt>true</tt>,
-     * the application can set the <tt>MFPKEY_WMAAECMA_FEATR_XXX</tt> properties
-     * on the DSP. If this property is <tt>false</tt>, the DSP ignores these
-     * properties and uses its default settings. The default value of this
-     * property is <tt>false</tt>.
+     * Specifies whether the Voice Capture DSP performs automatic gain control.
+     * Automatic gain control is a digital signal processing (DSP) component
+     * that adjusts the gain so that the output level of the signal remains
+     * within the same approximate range. The default value of this property is
+     * <tt>false</tt> (i.e. disabled). Before setting this property, you must
+     * set the {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>.
      */
-    public static final long MFPKEY_WMAAECMA_FEATURE_MODE;
+    public static final long MFPKEY_WMAAECMA_FEATR_AGC;
 
     /**
-     * Specifies the processing mode for the Voice Capture DSP.
-     *
-     * @see #SINGLE_CHANNEL_AEC
+     * Specifies how many times the Voice Capture DSP performs acoustic echo
+     * suppression (AES) on the residual signal. The Voice Capture DSP can
+     * perform AES on the residual signal after echo cancellation. This
+     * <tt>int</tt> property can have the value <tt>0</tt>, <tt>1</tt>, or
+     * <tt>2</tt>. The default value is <tt>0</tt>. Before setting this
+     * property, you must set the {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property
+     * to <tt>true</tt>. The DSP uses this property only when AEC processing is
+     * enabled.
      */
-    public static final long MFPKEY_WMAAECMA_SYSTEM_MODE;
+    public static final long MFPKEY_WMAAECMA_FEATR_AES;
+
+    /**
+     * Specifies the type of voice activity detection that the Voice Capture
+     * DSP performs. The value of this property is a member of the
+     * AEC_VAD_MODE enumeration. The output from voice activity detection is a
+     * number from 0 to 3, calculated for each audio frame. The DSP encodes the
+     * result in the lowest bit of the first two audio samples in each audio
+     * frame. The meaning of the value depends on the specified mode.
+     */
+    public static final long MFPKEY_WMAAECMA_FEATR_VAD;
+
+    /**
+     * Specifies whether the Voice Capture DSP performs center clipping. Center
+     * clipping is a process that removes small echo residuals that remain after
+     * AEC processing, in single-talk situations (when speech occurs only on one
+     * end of the line). The default value of this property is <tt>true</tt>
+     * (i.e. enabled). Before setting this property, you must set the
+     * {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>. The DSP
+     * uses this property only when AEC processing is enabled.
+     */
+    public static final long MFPKEY_WMAAECMA_FEATR_CENTER_CLIP;
+
+    /**
+     * Specifies whether the Voice Capture DSP performs noise filling. Noise
+     * filling adds a small amount of noise to portions of the signal where
+     * center clipping has removed the residual echoes. This results in a better
+     * experience for the user than leaving silent gaps in the signal. The
+     * default value of this property is <tt>true</tt> (i.e. enabled). Before
+     * setting this property, you must set the
+     * {@link #MFPKEY_WMAAECMA_FEATURE_MODE} property to <tt>true</tt>. The DSP
+     * uses this property only when AEC processing is enabled.
+     */
+    public static final long MFPKEY_WMAAECMA_FEATR_NOISE_FILL;
+
+    /**
+     * Unused constants.
+     */
+    public static final long MFPKEY_WMAAECMA_RETRIEVE_TS_STATS;
+    public static final long MFPKEY_WMAAECMA_QUALITY_METRICS;
+    public static final long MFPKEY_WMAAECMA_MICARRAY_DESCPTR;
+    public static final long MFPKEY_WMAAECMA_DEVICEPAIR_GUID;
+    public static final long MFPKEY_WMAAECMA_FEATR_MICARR_MODE;
+    public static final long MFPKEY_WMAAECMA_FEATR_MICARR_BEAM;
+    public static final long MFPKEY_WMAAECMA_FEATR_MICARR_PREPROC;
+
+    /**
+     * Mic gain bounder.  This appears to just break microphone input by
+     * constantly ramping up the gain to max when the user is not talking.  A
+     * bit like a very poor implementation of AGC.  Therefore, it is disabled!
+     */
+    public static final long MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER;
 
     /**
      * The value of the <tt>AEC_SYSTEM_MODE</tt> enumeration which is used with
@@ -247,27 +275,31 @@ public class VoiceCaptureDSP
             }
         }
 
-        MFPKEY_WMAAECMA_DEVICE_INDEXES = _MFPKEY_WMAAECMA_DEVICE_INDEXES;
-        MFPKEY_WMAAECMA_DMO_SOURCE_MODE = _MFPKEY_WMAAECMA_DMO_SOURCE_MODE;
         MFPKEY_WMAAECMA_SYSTEM_MODE = _MFPKEY_WMAAECMA_SYSTEM_MODE;
+        MFPKEY_WMAAECMA_DMO_SOURCE_MODE = _MFPKEY_WMAAECMA_DMO_SOURCE_MODE;
+        MFPKEY_WMAAECMA_DEVICE_INDEXES = _MFPKEY_WMAAECMA_DEVICE_INDEXES;
 
         /*
          * The support for the remaining properties of the Voice Capture DSP is
          * optional at the time of this writing.
          */
-        MFPKEY_WMAAECMA_FEATR_AES = maybePSPropertyKeyFromString(fmtid + "10");
-        MFPKEY_WMAAECMA_FEATR_AGC = maybePSPropertyKeyFromString(fmtid + "9");
-        MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER 
-            = maybePSPropertyKeyFromString(fmtid + "21");
-        MFPKEY_WMAAECMA_FEATR_CENTER_CLIP
-            = maybePSPropertyKeyFromString(fmtid + "12");
-        MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH
-            = maybePSPropertyKeyFromString(fmtid + "7");
-        MFPKEY_WMAAECMA_FEATR_NOISE_FILL
-            = maybePSPropertyKeyFromString(fmtid + "13");
+        MFPKEY_WMAAECMA_FEATURE_MODE = maybePSPropertyKeyFromString(fmtid + "5");
+        MFPKEY_WMAAECMA_FEATR_FRAME_SIZE = maybePSPropertyKeyFromString(fmtid + "6");
+        MFPKEY_WMAAECMA_FEATR_ECHO_LENGTH = maybePSPropertyKeyFromString(fmtid + "7");
         MFPKEY_WMAAECMA_FEATR_NS = maybePSPropertyKeyFromString(fmtid + "8");
-        MFPKEY_WMAAECMA_FEATURE_MODE
-            = maybePSPropertyKeyFromString(fmtid + "5");
+        MFPKEY_WMAAECMA_FEATR_AGC = maybePSPropertyKeyFromString(fmtid + "9");
+        MFPKEY_WMAAECMA_FEATR_AES = maybePSPropertyKeyFromString(fmtid + "10");
+        MFPKEY_WMAAECMA_FEATR_VAD = maybePSPropertyKeyFromString(fmtid + "11");
+        MFPKEY_WMAAECMA_FEATR_CENTER_CLIP = maybePSPropertyKeyFromString(fmtid + "12");
+        MFPKEY_WMAAECMA_FEATR_NOISE_FILL = maybePSPropertyKeyFromString(fmtid + "13");
+        MFPKEY_WMAAECMA_RETRIEVE_TS_STATS = maybePSPropertyKeyFromString(fmtid + "14");
+        MFPKEY_WMAAECMA_QUALITY_METRICS = maybePSPropertyKeyFromString(fmtid + "15");
+        MFPKEY_WMAAECMA_MICARRAY_DESCPTR = maybePSPropertyKeyFromString(fmtid + "16");
+        MFPKEY_WMAAECMA_DEVICEPAIR_GUID = maybePSPropertyKeyFromString(fmtid + "17");
+        MFPKEY_WMAAECMA_FEATR_MICARR_MODE = maybePSPropertyKeyFromString(fmtid + "18");
+        MFPKEY_WMAAECMA_FEATR_MICARR_BEAM = maybePSPropertyKeyFromString(fmtid + "19");
+        MFPKEY_WMAAECMA_FEATR_MICARR_PREPROC = maybePSPropertyKeyFromString(fmtid + "20");
+        MFPKEY_WMAAECMA_MIC_GAIN_BOUNDER = maybePSPropertyKeyFromString(fmtid + "21");
     }
 
     public static native int DMO_MEDIA_TYPE_fill(
