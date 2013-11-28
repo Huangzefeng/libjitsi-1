@@ -116,6 +116,8 @@ public class ProcessorUtility
      */
     public synchronized boolean waitForState(Processor processor, int state)
     {
+        logger.debug("Waiting for state " + state +" on processor " +
+            processor.hashCode());
         processor.addControllerListener(this);
         setFailed(false);
 
@@ -166,6 +168,7 @@ public class ProcessorUtility
             Thread.currentThread().interrupt();
 
         processor.removeControllerListener(this);
+        logger.debug("Returning (failed = " + failed + ")");
         return !failed;
     }
 }
