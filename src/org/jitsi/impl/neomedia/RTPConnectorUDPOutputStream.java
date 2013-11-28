@@ -76,7 +76,10 @@ public class RTPConnectorUDPOutputStream
 
         PacketLoggingService packetLogging = LibJitsi.getPacketLoggingService();
 
-        if (packetLogging != null)
+        if ((packetLogging != null) &&
+            (socket != null) &&
+            (target != null) &&
+            (packet != null))
         {
             packetLogging.logPacket(
                     PacketLoggingService.ProtocolName.RTP,
