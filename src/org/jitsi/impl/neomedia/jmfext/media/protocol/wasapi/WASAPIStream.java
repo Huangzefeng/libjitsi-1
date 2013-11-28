@@ -1611,6 +1611,10 @@ public class WASAPIStream
                         iMediaBuffer = 0;
                         this.iMediaObject = iMediaObject;
                         iMediaObject = 0;
+                        logger.debug("iMediaObject set to " +
+                                      this.iMediaObject +
+                                      " and dmoOutputDataBuffer set to " +
+                                      this.dmoOutputDataBuffer);
                     }
                     finally
                     {
@@ -2820,13 +2824,17 @@ public class WASAPIStream
 
     private void uninitializeAEC()
     {
+        logger.logEntry();
+        
         if (iMediaObject != 0)
         {
+            logger.debug("Release iMediaObject");
             IMediaObject_Release(iMediaObject);
             iMediaObject = 0;
         }
         if (dmoOutputDataBuffer != 0)
         {
+            logger.debug("Release dmoOutputDataBuffer");
             CoTaskMemFree(dmoOutputDataBuffer);
             dmoOutputDataBuffer = 0;
         }
@@ -2851,6 +2859,8 @@ public class WASAPIStream
         this.renderer = null;
         if (renderer != null)
             renderer.close();
+        
+        logger.logExit();
     }
 
     private void uninitializeCapture()
