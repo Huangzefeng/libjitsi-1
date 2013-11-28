@@ -11,6 +11,8 @@ import java.util.*;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.neomedia.codec.*;
 
@@ -103,6 +105,7 @@ public class JavaDecoder
     {
         byte[] input = (byte[]) inputBuffer.getData();
         int inputLength = inputBuffer.getLength();
+        Log.logReadBytes(this, inputLength);
 
         if(offsets.size() == 0 &&
             ((inputLength > ilbc_constants.NO_OF_BYTES_20MS &&

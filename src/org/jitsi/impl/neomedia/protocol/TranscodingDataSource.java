@@ -302,6 +302,9 @@ public class TranscodingDataSource
          * outputDataSource.
          */
         Log.annotate(this, "Start");
+        if (outputDataSource == null) {
+            Log.dumpStack(new NullPointerException("About to hit NPE and die"));
+        }
         outputDataSource.start();
         transcodingProcessor.start();
     }

@@ -4,6 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.nio.*;
 
+import net.sf.fmj.media.Log;
+
 public class TimedPCapDatagramSocket extends PCapDatagramSocket
 {
     // An offset between the time the packet was written and the current nano time reading
@@ -39,6 +41,13 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
         {
             if (! hasMediaOffsetEverBeenSet())
             {
+                // Before we start, sleep for a second.  This hopefully makes
+                // the replay a bit more realistic (the audio is set up before
+                // we start receiving packets).
+                /*int snoozy_time = 1000;
+                Log.annotate(this, "Sleep for " + snoozy_time +
+                                           " millis before sending in packets");
+                Thread.sleep(snoozy_time);*/ // TODO put this back in, probably
                 // Set the media time offset to be the difference between the
                 // current time and the time the packet was captured.
                 mediaTimeOffset = System.nanoTime() - timeStampNanoSeconds;

@@ -9,6 +9,8 @@ package net.java.sip.communicator.impl.neomedia.codec.audio.g722;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.*;
 
 /**
@@ -92,6 +94,7 @@ public class JNIEncoder
     {
         int inputOffset = inputBuffer.getOffset();
         int inputLength = inputBuffer.getLength();
+        Log.logReadBytes(this, inputLength);
         byte[] input = (byte[]) inputBuffer.getData();
 
         int outputOffset = outputBuffer.getOffset();

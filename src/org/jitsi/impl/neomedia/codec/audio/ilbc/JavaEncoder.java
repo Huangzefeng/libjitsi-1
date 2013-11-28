@@ -9,6 +9,8 @@ package org.jitsi.impl.neomedia.codec.audio.ilbc;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.neomedia.codec.*;
 
@@ -189,6 +191,7 @@ public class JavaEncoder
     protected int doProcess(Buffer inputBuffer, Buffer outputBuffer)
     {
         int inputLength = inputBuffer.getLength();
+        Log.logReadBytes(this, inputLength);
         byte[] input = (byte[]) inputBuffer.getData();
         int inputOffset = inputBuffer.getOffset();
 

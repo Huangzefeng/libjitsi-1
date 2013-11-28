@@ -186,6 +186,7 @@ public class JavaEncoder
         byte[] input = (byte[]) inputBuffer.getData();
 
         int inputLength = inputBuffer.getLength();
+        Log.logReadBytes(this, inputLength);
         int inputOffset = inputBuffer.getOffset();
 
         if ((prevInputLength + inputLength) < INPUT_FRAME_SIZE_IN_BYTES)
