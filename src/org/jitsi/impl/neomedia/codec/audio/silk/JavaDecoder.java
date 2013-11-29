@@ -11,7 +11,7 @@ import java.awt.*;
 import javax.media.*;
 import javax.media.format.*;
 
-import net.sf.fmj.media.Log;
+import net.sf.fmj.media.*;
 
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.service.neomedia.control.*;
@@ -215,7 +215,6 @@ public class JavaDecoder
     protected int doProcess(Buffer inBuffer, Buffer outBuffer)
     {
         long seqNo = inBuffer.getSequenceNumber();
-        logger.trace("Libjitsi SILK decoder " + this.hashCode() + " processing packet " + seqNo);
         byte[] in = (byte[]) inBuffer.getData();
         int inOffset = inBuffer.getOffset();
         int inLength = inBuffer.getLength();
