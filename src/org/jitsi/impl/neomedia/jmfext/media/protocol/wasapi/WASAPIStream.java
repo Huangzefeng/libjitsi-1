@@ -2718,32 +2718,6 @@ public class WASAPIStream
             processThread.setDaemon(true);
             aecStartTime = System.currentTimeMillis();
             processThread.start();
-            
-            /*  TODO Probably don't want to keep this in permanently
-             *  We sometimes see no audio after starting the process thread
-             *  above.  To help diagnose this, dump the threads one second after
-             *  the processThread is started - that should show if there has
-             *  been a deadlock.
-             */
-            Thread threadDumper = new Thread()
-            {
-                @Override
-                public void run()
-                {
-                    try
-                    {
-                        logger.info("Sleep before dumping threads");
-        			    Thread.sleep(1000);
-        			}
-                    catch (InterruptedException e)
-        			{
-        			    logger.error("threadDumper sleep interrupted", e);
-        			}
-                    
-                    logger.dumpThreads();
-                }
-            };
-            threadDumper.start();
         }
         else
         {
