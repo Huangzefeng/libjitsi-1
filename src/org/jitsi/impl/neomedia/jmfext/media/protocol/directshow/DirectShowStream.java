@@ -15,8 +15,6 @@ import javax.media.control.*;
 import javax.media.protocol.*;
 import javax.swing.*;
 
-import net.sf.fmj.media.Log;
-
 import org.jitsi.impl.neomedia.codec.video.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
 import org.jitsi.service.libjitsi.*;
@@ -469,8 +467,7 @@ public class DirectShowStream
                             logger.error("Failed to get data stream " +
                                    nFailedToGetData + "time(s) from " +
                                                    getClass().getSimpleName());
-                            Log.dumpStack(new Exception(
-                              "Failed to get video data: " + nFailedToGetData));
+                            logger.dumpThreads();
                             
                             if (nFailedToGetData >= 10)
                             {
