@@ -472,7 +472,8 @@ public class DirectShowStream
                             logger.error("Failed to get data stream " +
                                    nFailedToGetData + " time(s) from " +
                                                    getClass().getSimpleName());
-                            logger.dumpThreads();
+                            Log.dumpStack(new Exception(
+                              "Failed to get video data: " + nFailedToGetData));
                             
                             if (nFailedToGetData >= 10)
                             {
