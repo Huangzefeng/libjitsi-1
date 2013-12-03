@@ -33,10 +33,6 @@ public class FMJPlugInConfiguration
      */
     private static final String[] CUSTOM_CODECS
         = {
-            // Don't bother loading up codecs that we don't actually support.
-            // This speeds up media cut-through as we don't need to create
-            // en- and de-coders for each one every time we create a media stack
-            // for a call.
 //            "org.jitsi.impl.neomedia.codec.AndroidMediaCodec",
             "org.jitsi.impl.neomedia.codec.audio.alaw.DePacketizer",
             "org.jitsi.impl.neomedia.codec.audio.alaw.JavaEncoder",
@@ -44,41 +40,41 @@ public class FMJPlugInConfiguration
             "org.jitsi.impl.neomedia.codec.audio.ulaw.JavaDecoder",
             "org.jitsi.impl.neomedia.codec.audio.ulaw.JavaEncoder",
             "org.jitsi.impl.neomedia.codec.audio.ulaw.Packetizer",
-//            "org.jitsi.impl.neomedia.codec.audio.opus.JNIDecoder",
-//            "org.jitsi.impl.neomedia.codec.audio.opus.JNIEncoder",
-//            "org.jitsi.impl.neomedia.codec.audio.speex.JNIDecoder",
-//            "org.jitsi.impl.neomedia.codec.audio.speex.JNIEncoder",
-//            "org.jitsi.impl.neomedia.codec.audio.speex.SpeexResampler",
-//            "org.jitsi.impl.neomedia.codec.audio.mp3.JNIEncoder",
-//            "org.jitsi.impl.neomedia.codec.audio.ilbc.JavaDecoder",
-//            "org.jitsi.impl.neomedia.codec.audio.ilbc.JavaEncoder",
-//            EncodingConfigurationImpl.G729
-//                    ? "org.jitsi.impl.neomedia.codec.audio.g729.JavaDecoder"
-//                    : null,
-//            EncodingConfigurationImpl.G729
-//                    ? "org.jitsi.impl.neomedia.codec.audio.g729.JavaEncoder"
-//                    : null,
+            "org.jitsi.impl.neomedia.codec.audio.opus.JNIDecoder",
+            "org.jitsi.impl.neomedia.codec.audio.opus.JNIEncoder",
+            "org.jitsi.impl.neomedia.codec.audio.speex.JNIDecoder",
+            "org.jitsi.impl.neomedia.codec.audio.speex.JNIEncoder",
+            "org.jitsi.impl.neomedia.codec.audio.speex.SpeexResampler",
+            "org.jitsi.impl.neomedia.codec.audio.mp3.JNIEncoder",
+            "org.jitsi.impl.neomedia.codec.audio.ilbc.JavaDecoder",
+            "org.jitsi.impl.neomedia.codec.audio.ilbc.JavaEncoder",
+            EncodingConfigurationImpl.G729
+                    ? "org.jitsi.impl.neomedia.codec.audio.g729.JavaDecoder"
+                    : null,
+            EncodingConfigurationImpl.G729
+                    ? "org.jitsi.impl.neomedia.codec.audio.g729.JavaEncoder"
+                    : null,
             "net.java.sip.communicator.impl.neomedia.codec.audio.g722.JNIDecoder",
             "net.java.sip.communicator.impl.neomedia.codec.audio.g722.JNIEncoder",
-//            "org.jitsi.impl.neomedia.codec.audio.gsm.Decoder",
-//            "org.jitsi.impl.neomedia.codec.audio.gsm.Encoder",
-//            "org.jitsi.impl.neomedia.codec.audio.gsm.DePacketizer",
-//            "org.jitsi.impl.neomedia.codec.audio.gsm.Packetizer",
+            "org.jitsi.impl.neomedia.codec.audio.gsm.Decoder",
+            "org.jitsi.impl.neomedia.codec.audio.gsm.Encoder",
+            "org.jitsi.impl.neomedia.codec.audio.gsm.DePacketizer",
+            "org.jitsi.impl.neomedia.codec.audio.gsm.Packetizer",
             "org.jitsi.impl.neomedia.codec.audio.silk.JavaDecoder",
             "org.jitsi.impl.neomedia.codec.audio.silk.JavaEncoder",
-//            "org.jitsi.impl.neomedia.codec.video.h263p.DePacketizer",
-//            "org.jitsi.impl.neomedia.codec.video.h263p.JNIDecoder",
-//            "org.jitsi.impl.neomedia.codec.video.h263p.JNIEncoder",
-//            "org.jitsi.impl.neomedia.codec.video.h263p.Packetizer",
+            "org.jitsi.impl.neomedia.codec.video.h263p.DePacketizer",
+            "org.jitsi.impl.neomedia.codec.video.h263p.JNIDecoder",
+            "org.jitsi.impl.neomedia.codec.video.h263p.JNIEncoder",
+            "org.jitsi.impl.neomedia.codec.video.h263p.Packetizer",
             "org.jitsi.impl.neomedia.codec.video.h264.DePacketizer",
             "org.jitsi.impl.neomedia.codec.video.h264.JNIDecoder",
             "org.jitsi.impl.neomedia.codec.video.h264.JNIEncoder",
             "org.jitsi.impl.neomedia.codec.video.h264.Packetizer",
             "org.jitsi.impl.neomedia.codec.video.SwScale",
-//            "org.jitsi.impl.neomedia.codec.video.vp8.Packetizer",
-//            "org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer",
-//            "org.jitsi.impl.neomedia.codec.video.vp8.VPXEncoder",
-//            "org.jitsi.impl.neomedia.codec.video.vp8.VPXDecoder"
+            "org.jitsi.impl.neomedia.codec.video.vp8.Packetizer",
+            "org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer",
+            "org.jitsi.impl.neomedia.codec.video.vp8.VPXEncoder",
+            "org.jitsi.impl.neomedia.codec.video.vp8.VPXDecoder"
         };
 
     /**
