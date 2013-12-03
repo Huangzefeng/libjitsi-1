@@ -381,7 +381,6 @@ public class DirectShowStream
             = (FrameRateControl)
                 dataSource.getControl(FrameRateControl.class.getName());
         long transferDataTimeStamp = -1;
-        int nFailedToGetData = 0;
 
         while (Thread.currentThread().equals(transferDataThread))
         {
@@ -465,61 +464,47 @@ public class DirectShowStream
 
                     try
                     {
-                        dataSyncRoot.wait(1000);
+                        dataSyncRoot.wait(3000);
                         if (data == null && transferData == false && deviceRunning)
                         {
-                            nFailedToGetData += 1;
-                            logger.error("Failed to get data stream " +
-                                   nFailedToGetData + " time(s) from " +
-                                                   getClass().getSimpleName());
-                            Log.dumpStack(new Exception(
-                              "Failed to get video data: " + nFailedToGetData));
-                            
-                            if (nFailedToGetData >= 10)
-                            {
-                                // If we still have no data then we're probably
-                                // never going to get any. Most likely reason is
-                                // that the camera is in use elsewhere
-                                logger.error(
-                                  "Repeatedly failed to get data - give up (" +
-                                              getClass().getSimpleName() + ")");
-    
-                                ResourceManagementService res = LibJitsi.
-                                                 getResourceManagementService();
-                                String error =
-                                        res.getI18NString(deviceReadErrorProp);
-                                String errorTitle =
-                                        res.getI18NString(errorTitleProp);
-    
-                                JOptionPane msgFrame = new JOptionPane(error,
-                                                     JOptionPane.ERROR_MESSAGE);
-    
-                                JDialog msgDialog = msgFrame.createDialog(
+                            // If we still have no data then we're probably
+                            // never going to get any. Most likely reason is
+                            // that the camera is in use elsewhere
+                            logger.error("Failed to get data stream from " +
+                                                    getClass().getSimpleName());
+
+                            ResourceManagementService res = LibJitsi.
+                                                getResourceManagementService();
+                            String error = res.getI18NString(deviceReadErrorProp);
+                            String errorTitle = res.getI18NString(errorTitleProp);
+
+                            JOptionPane msgFrame = new JOptionPane(error,
+                                                    JOptionPane.ERROR_MESSAGE);
+
+                            JDialog msgDialog = msgFrame.createDialog(
                                                                     errorTitle);
-                                msgDialog.setAlwaysOnTop(true);
-                                msgDialog.setModal(true);
-                                msgDialog.setDefaultCloseOperation(
+                            msgDialog.setAlwaysOnTop(true);
+                            msgDialog.setModal(true);
+                            msgDialog.setDefaultCloseOperation(
                                                       JDialog.DISPOSE_ON_CLOSE);
-                                msgDialog.setIconImage(new BufferedImage(
+                            msgDialog.setIconImage(new BufferedImage(
                                         1, 1, BufferedImage.TYPE_INT_ARGB_PRE));
-                                msgDialog.setVisible(true);
-    
-                                try
-                                {
-                                    stop();
-                                }
-                                catch (IOException ex)
-                                {
-                                    logger.error("Failed to stop " +
-                                                getClass().getSimpleName(), ex);
-                                }
+                            msgDialog.setVisible(true);
+
+                            try
+                            {
+                                stop();
+                            }
+                            catch (IOException ex)
+                            {
+                                logger.error("Failed to stop " +
+                                               getClass().getSimpleName(), ex);
                             }
                         }
                     }
                     catch (InterruptedException iex)
                     {
                         interrupted = true;
-                        nFailedToGetData = 0;
                     }
                     if(interrupted)
                         Thread.currentThread().interrupt();
