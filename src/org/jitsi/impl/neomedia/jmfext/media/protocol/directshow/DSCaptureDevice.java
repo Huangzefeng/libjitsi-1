@@ -6,6 +6,12 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.directshow;
 
+import java.util.Arrays;
+
+import net.sf.fmj.media.Log;
+
+import com.sun.istack.internal.logging.Logger;
+
 /**
  * DirectShow capture device.
  *
@@ -65,6 +71,7 @@ public class DSCaptureDevice
         if (ptr == 0)
             throw new IllegalArgumentException("ptr");
 
+        Log.dumpStack(new Exception("Contruct new DSCaptureDevice with ptr " + ptr));
         this.ptr = ptr;
     }
 
@@ -73,6 +80,7 @@ public class DSCaptureDevice
      */
     public void connect()
     {
+        Log.dumpStack(new Exception("connect (ptr " + ptr + ")"));
         connect(ptr);
     }
 
@@ -88,6 +96,7 @@ public class DSCaptureDevice
      */
     public void disconnect()
     {
+        Log.dumpStack(new Exception("disconnect (ptr " + ptr + ")"));
         disconnect(ptr);
     }
 
@@ -106,7 +115,9 @@ public class DSCaptureDevice
      */
     public DSFormat getFormat()
     {
-        return getFormat(ptr);
+        DSFormat format = getFormat(ptr);
+        Log.dumpStack(new Exception("getFormat: " + format.toString() + " (ptr " + ptr + ")"));
+        return format;
     }
 
     /**
@@ -124,7 +135,9 @@ public class DSCaptureDevice
      */
     public String getName()
     {
-        return getName(ptr).trim();
+        String name = getName(ptr).trim();
+        Log.dumpStack(new Exception("getName: " + name + " (ptr " + ptr + ")"));
+        return name;
     }
 
     /**
@@ -143,8 +156,10 @@ public class DSCaptureDevice
     public DSFormat[] getSupportedFormats()
     {
         DSFormat[] formats = getSupportedFormats(ptr);
+        formats = (formats == null) ? EMPTY_FORMATS : formats;
+        Log.dumpStack(new Exception("getSupportedFormats: " + Arrays.toString(formats) + " (ptr " + ptr + ")"));
 
-        return (formats == null) ? EMPTY_FORMATS : formats;
+        return formats;
     }
 
     /**
@@ -161,6 +176,7 @@ public class DSCaptureDevice
      */
     public void setDelegate(ISampleGrabberCB delegate)
     {
+        Log.dumpStack(new Exception("setDelegate: ptr " + ptr + " delegate " + delegate.toString()));
         setDelegate(ptr, delegate);
     }
 
@@ -181,6 +197,7 @@ public class DSCaptureDevice
      */
     public int setFormat(DSFormat format)
     {
+        Log.dumpStack(new Exception("setFormat: " + format.toString() + " (ptr " + ptr + ")"));
         return setFormat(ptr, format);
     }
 
@@ -196,6 +213,7 @@ public class DSCaptureDevice
 
     public int start()
     {
+        Log.dumpStack(new Exception("start (ptr " + ptr + ")"));
         return start(ptr);
     }
 
@@ -203,6 +221,7 @@ public class DSCaptureDevice
 
     public int stop()
     {
+        Log.dumpStack(new Exception("stop (ptr " + ptr + ")"));
         return stop(ptr);
     }
 

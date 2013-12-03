@@ -15,6 +15,8 @@ import javax.media.control.*;
 import javax.media.protocol.*;
 import javax.swing.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.codec.video.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
 import org.jitsi.service.libjitsi.*;
@@ -318,6 +320,7 @@ public class DirectShowStream
             {
                 if (AVFrame.read(buffer, bufferFormat, data) < 0)
                     data.free();
+                Log.logRead(this);
                 /*
                  * XXX For the sake of safety, make sure that this instance does
                  * not reference the data instance as soon as it is set on the
@@ -330,6 +333,7 @@ public class DirectShowStream
                 Object o = buffer.getData();
                 byte[] bytes;
                 int length = data.getLength();
+                Log.logReadBytes(this, length);
 
                 if(o instanceof byte[])
                 {
@@ -371,6 +375,7 @@ public class DirectShowStream
      */
     private void runInTransferDataThread()
     {
+        logger.logEntry();
         boolean transferData = false;
         FrameRateControl frameRateControl
             = (FrameRateControl)
@@ -465,7 +470,7 @@ public class DirectShowStream
                         {
                             nFailedToGetData += 1;
                             logger.error("Failed to get data stream " +
-                                   nFailedToGetData + "time(s) from " +
+                                   nFailedToGetData + " time(s) from " +
                                                    getClass().getSimpleName());
                             logger.dumpThreads();
                             
@@ -524,6 +529,7 @@ public class DirectShowStream
                     transferData = true;
             }
         }
+        logger.logExit();
     }
 
     /**
@@ -537,6 +543,7 @@ public class DirectShowStream
     private void SampleCB(long source, long ptr, int length)
     {
         boolean transferData = false;
+        Log.logReadBytes(this.delegate, length);
 
         synchronized (dataSyncRoot)
         {
@@ -612,6 +619,10 @@ public class DirectShowStream
     void setDevice(DSCaptureDevice device)
         throws IOException
     {
+        Log.dumpStack(new Exception(
+            "setDevice.  Changed? " + ((device == this.device) ?
+                              ("No (" + this.device + ")") :
+                              ("Yes (" + this.device + " to " + device +")"))));
         if (this.device != device)
         {
             if (this.device != null)
@@ -636,6 +647,7 @@ public class DirectShowStream
     private void setDeviceFormat(Format format)
         throws IOException
     {
+        logger.logEntry();
         if (format == null)
             throw new IOException("format == null");
         else if (format instanceof AVFrameFormat)
@@ -671,6 +683,7 @@ public class DirectShowStream
         }
         else
             throw new IOException("!(format instanceof AVFrameFormat)");
+        logger.logExit();
     }
 
     /**
@@ -683,6 +696,7 @@ public class DirectShowStream
     public void start()
         throws IOException
     {
+        logger.logEntry();
         super.start();
 
         try
@@ -702,10 +716,12 @@ public class DirectShowStream
                                 runInTransferDataThread();
                             }
                         };
+
+                    Log.dumpStack(new Exception(
+                                  "Start DirectShowStream transferDataThread"));
                     transferDataThread.start();
                 }
             }
-
             device.start();
 
             deviceRunning = true;
@@ -715,6 +731,7 @@ public class DirectShowStream
             if (!deviceRunning)
                 stop();
         }
+        logger.logExit();
     }
 
     /**
@@ -727,6 +744,7 @@ public class DirectShowStream
     public void stop()
         throws IOException
     {
+        logger.logEntry();
         try
         {
             device.stop();
@@ -758,6 +776,7 @@ public class DirectShowStream
 
             byteBufferPool.drain();
         }
+        logger.logExit();
     }
 
     /**
