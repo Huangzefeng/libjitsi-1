@@ -69,7 +69,8 @@ public class DSCaptureDevice
         if (ptr == 0)
             throw new IllegalArgumentException("ptr");
 
-        Log.dumpStack(new Exception("Contruct new DSCaptureDevice with ptr " + ptr));
+        Log.dumpStack(new Exception("Contruct new DSCaptureDevice with ptr " +
+                                                                          ptr));
         this.ptr = ptr;
     }
 
@@ -114,7 +115,8 @@ public class DSCaptureDevice
     public DSFormat getFormat()
     {
         DSFormat format = getFormat(ptr);
-        Log.dumpStack(new Exception("getFormat: " + format.toString() + " (ptr " + ptr + ")"));
+        Log.dumpStack(new Exception("getFormat: " + format.toString() +
+                                                         " (ptr " + ptr + ")"));
         return format;
     }
 
@@ -155,7 +157,8 @@ public class DSCaptureDevice
     {
         DSFormat[] formats = getSupportedFormats(ptr);
         formats = (formats == null) ? EMPTY_FORMATS : formats;
-        Log.dumpStack(new Exception("getSupportedFormats: " + Arrays.toString(formats) + " (ptr " + ptr + ")"));
+        Log.dumpStack(new Exception("getSupportedFormats: " +
+                              Arrays.toString(formats) + " (ptr " + ptr + ")"));
 
         return formats;
     }
@@ -174,7 +177,8 @@ public class DSCaptureDevice
      */
     public void setDelegate(ISampleGrabberCB delegate)
     {
-        Log.dumpStack(new Exception("setDelegate: ptr " + ptr + " delegate " + delegate.toString()));
+        Log.dumpStack(new Exception("setDelegate: ptr " + ptr + " delegate " +
+                                                          delegate.toString()));
         setDelegate(ptr, delegate);
     }
 
@@ -195,7 +199,8 @@ public class DSCaptureDevice
      */
     public int setFormat(DSFormat format)
     {
-        Log.dumpStack(new Exception("setFormat: " + format.toString() + " (ptr " + ptr + ")"));
+        Log.dumpStack(new Exception("setFormat: " + format.toString() +
+                                                         " (ptr " + ptr + ")"));
         return setFormat(ptr, format);
     }
 
