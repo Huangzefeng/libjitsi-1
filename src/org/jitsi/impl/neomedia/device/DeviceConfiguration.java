@@ -114,7 +114,7 @@ public class DeviceConfiguration
     /**
      * The default video height.
      */
-    public static final int DEFAULT_VIDEO_HEIGHT = 720;
+    public static final int DEFAULT_VIDEO_HEIGHT = 240;//720; TODO SFR 452618
 
     /**
      * The default value for video maximum bandwidth.
@@ -124,7 +124,7 @@ public class DeviceConfiguration
     /**
      * The default video width.
      */
-    public static final int DEFAULT_VIDEO_WIDTH = 1280;
+    public static final int DEFAULT_VIDEO_WIDTH = 320;//1280; TODO SFR 452618
 
     /**
      * The name of the <tt>long</tt> property which determines the filter length
@@ -195,13 +195,13 @@ public class DeviceConfiguration
                 // QVGA
                 new Dimension(320, 200),
                 // QVGA
-                new Dimension(320, 240),
+                new Dimension(320, 240),// TODO old defaults (change above)
                 //CIF
-                new Dimension(352, 288),
-                // VGA
-                new Dimension(640, 480),
-                // HD 720
-                new Dimension(1280, 720)
+                new Dimension(352, 288)//, TODO Uncomment when we've fixed hi-res video issue (SFR 452618)
+//                // VGA
+//                new Dimension(640, 480),
+//                // HD 720
+//                new Dimension(1280, 720)
             };
 
     /**
