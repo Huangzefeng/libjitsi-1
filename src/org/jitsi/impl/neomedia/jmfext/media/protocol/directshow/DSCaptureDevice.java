@@ -10,8 +10,6 @@ import java.util.Arrays;
 
 import net.sf.fmj.media.Log;
 
-import com.sun.istack.internal.logging.Logger;
-
 /**
  * DirectShow capture device.
  *
