@@ -106,6 +106,11 @@ public class MediaUtils
     private static final byte H264_PROFILE_IDC_3_1 = 31;
 
     /**
+     * Maximum H.264 profile level supported.
+     */
+    private static final byte H264_PROFILE_MAX_SUPPORTED = H264_PROFILE_IDC_3_1;
+    
+    /**
      * The values of the level IDC byte in the H.264 profile that we support in
      * preference order.
      */
@@ -944,7 +949,7 @@ public class MediaUtils
 
         // The first level is at least as good as our maximum supported level,
         // just check whether the second is too.
-        return (idc2 >= H264_PROFILE_IDC_3_1);
+        return (idc2 >= H264_PROFILE_MAX_SUPPORTED);
     }
 
     /**

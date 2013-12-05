@@ -336,6 +336,8 @@ public class MediaDeviceImpl
      */
     public MediaFormat getFormat()
     {
+        // TODO : Make this implementation less insane.  Why does it need to
+        // create a CaptureDevice? Couldn't the result be cached?
         CaptureDevice captureDevice = createCaptureDevice();
 
         if (captureDevice != null)
@@ -365,6 +367,7 @@ public class MediaDeviceImpl
                 catch (Exception e)
                 {
                     // just ignore any exceptions trying to clean up
+                    logger.debug("Error disconneting captureDevice", e);
                 }
             }
         }
