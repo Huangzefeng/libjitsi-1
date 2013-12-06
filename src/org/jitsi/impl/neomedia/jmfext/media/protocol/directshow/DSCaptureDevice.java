@@ -115,7 +115,8 @@ public class DSCaptureDevice
     public DSFormat getFormat()
     {
         DSFormat format = getFormat(ptr);
-        Log.dumpStack(new Exception("getFormat: " + format.toString() +
+        Log.dumpStack(new Exception("getFormat: " +
+                             ((format == null) ? "null" : format.toString()) +
                                                          " (ptr " + ptr + ")"));
         return format;
     }
@@ -178,7 +179,7 @@ public class DSCaptureDevice
     public void setDelegate(ISampleGrabberCB delegate)
     {
         Log.dumpStack(new Exception("setDelegate: ptr " + ptr + " delegate " +
-                                                          delegate.toString()));
+                          ((delegate == null) ? "null" : delegate.toString())));
         setDelegate(ptr, delegate);
     }
 
@@ -199,7 +200,8 @@ public class DSCaptureDevice
      */
     public int setFormat(DSFormat format)
     {
-        Log.dumpStack(new Exception("setFormat: " + format.toString() +
+        Log.dumpStack(new Exception("setFormat: " +
+                              ((format == null) ? "null" : format.toString()) +
                                                          " (ptr " + ptr + ")"));
         return setFormat(ptr, format);
     }
