@@ -72,6 +72,12 @@ public class WASAPIStream
     protected static final int MAX_WAIT_TIME = 1000;
 
     /**
+     * COM return value if IMediaObject calls are made without first having
+     * called coInitializeEx on the underlying OS thread.
+     */
+    private static final int CO_E_NOTINITIALIZED = 0x800401f0;
+
+    /**
      * Finds an <tt>AudioFormat</tt> in a specific list of <tt>Format</tt>s
      * which is as similar to a specific <tt>AudioFormat</tt> as possible.
      *
@@ -582,6 +588,7 @@ public class WASAPIStream
     private final PropertyChangeListener propertyChangeListener
         = new PropertyChangeListener()
         {
+            @Override
             public void propertyChange(PropertyChangeEvent ev)
             {
                 try
@@ -1891,6 +1898,7 @@ public class WASAPIStream
         BufferTransferHandler transferHandler
             = new BufferTransferHandler()
                     {
+                        @Override
                         public void transferData(PushBufferStream stream)
                         {
                             transferCaptureData();
@@ -1934,6 +1942,7 @@ public class WASAPIStream
         BufferTransferHandler transferHandler
             = new BufferTransferHandler()
                     {
+                        @Override
                         public void transferData(PushBufferStream stream)
                         {
                             transferRenderData();
@@ -2244,6 +2253,31 @@ public class WASAPIStream
             {
                 dwStatus = 0;
                 logger.error("IMediaObject_ProcessOutput", hre);
+
+                if (hre.getHResult() == CO_E_NOTINITIALIZED)
+                {
+                    /* Error - we evidently haven't called CoInitializeEx on the
+                     * underlying OS thread.  Do that now and then try again.
+                     */
+                    logger.info("Calling CoInitializeEx, then will try again");
+                    try
+                    {
+                        WASAPISystem.CoInitializeEx();
+                        logger.debug("Try ProcessOutput again");
+                        IMediaObject_ProcessOutput(
+                                iMediaObject,
+                                /* dwFlags */ 0,
+                                1,
+                                dmoOutputDataBuffer);
+                        dwStatus = DMO_OUTPUT_DATA_BUFFER_getDwStatus(
+                                                           dmoOutputDataBuffer);
+                    }
+                    catch (HResultException e)
+                    {
+                        logger.error("Failed: ", hre);
+                        dwStatus = 0;
+                    }
+                }
             }
             try
             {
@@ -2405,6 +2439,7 @@ public class WASAPIStream
      * data read from {@link #capture} or {@link #processed} into
      * {@link #format}.
      */
+    @Override
     public void read(Buffer buffer)
         throws IOException
     {
