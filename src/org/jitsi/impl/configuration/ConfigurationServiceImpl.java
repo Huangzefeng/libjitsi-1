@@ -383,6 +383,65 @@ public class ConfigurationServiceImpl
         }
     }
 
+    @Override
+    public void removeAccountConfigForProtocol(String protocol,
+                                               Boolean removeReconnect)
+    {
+        logger.info("Removing account config for " + protocol);
+
+        Set<String> storedUIDs = new HashSet<String>();
+        String protocolPrefix =
+            "net.java.sip.communicator.impl.protocol." + protocol;
+        List<String> protocolConfigStrings =
+            getPropertyNamesByPrefix(protocolPrefix, true);
+
+        // First get the UIDs of all accounts that are stored in config for
+        // this protocol.
+        for (String protocolConfigString : protocolConfigStrings)
+        {
+            if (protocolConfigString.startsWith(protocolPrefix + ".acc"))
+            {
+                // UIDs start with ".acc" so add this to the list of UIDs
+                storedUIDs.add(getString(protocolConfigString + ".ACCOUNT_UID"));
+            }
+        }
+
+        for (String storedUID : storedUIDs)
+        {
+            // Next remove any GUI account config for the stored UIDs for this
+            // protocol.
+            List<String> accountConfigStrings = getPropertyNamesByPrefix(
+                "net.java.sip.communicator.impl.gui.accounts", true);
+
+            for (String accountConfigString : accountConfigStrings)
+            {
+                String accountUID = getString(accountConfigString);
+
+                if (accountUID.equals(storedUID))
+                {
+                    logger.debug("Removing account config for " + accountUID);
+                    removeProperty(accountConfigString);
+                    break;
+                }
+            }
+
+            // If we've been asked to remove the reconnectplugin config for
+            // this protocol so that we don't report reconnection failures for,
+            // or try to reconnect to the removed account, do so now.
+            if (removeReconnect)
+            {
+                logger.debug("Remove reconnectplugin config for " + storedUID);
+                String reconnectPrefix =
+                    "net.java.sip.communicator.plugin.reconnectplugin." +
+                        "ATLEAST_ONE_SUCCESSFUL_CONNECTION.";
+                removeProperty(reconnectPrefix + storedUID);
+            }
+        }
+
+        // Finally, remove all account config for the protocol.
+        removeProperty(protocolPrefix);
+    }
+
     /**
      * Returns the value of the property with the specified name or null if no
      * such property exists.

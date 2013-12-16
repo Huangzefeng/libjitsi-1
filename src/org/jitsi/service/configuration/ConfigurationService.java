@@ -137,6 +137,22 @@ public interface ConfigurationService
         // throws PropertyVetoException;
 
     /**
+     * Removes all account config for the given protocol.
+     * <p>
+     * Additionally, if removeReconnect is true, any reconnectplugin config
+     * for the given protocol will also be deleted to ensure that we don't try
+     * to reconnect to or report connection errors for deleted accounts.
+     * <p>
+     * @param protocol the protocol for which all account config will be deleted.
+     * @param removeReconnect if true, all reconnectplugin config for the
+     *                        given protocol will also be deleted.
+     * @throws ConfigPropertyVetoException in case the changed has been refused by
+     * at least one propertychange listener.
+     */
+    public void removeAccountConfigForProtocol(String protocol,
+                                               Boolean removeReconnect);
+
+    /**
      * Returns a <tt>java.util.List</tt> of <tt>String</tt>s containing all
      * property names.
      *
