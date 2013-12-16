@@ -438,8 +438,15 @@ public class ConfigurationServiceImpl
             }
         }
 
-        // Finally, remove all account config for the protocol.
+        // Finally, remove all account config for the protocol, making sure we
+        // append ".acc" to the prefix for all protocols other than jabber,
+        // otherwise we will delete unnecessary config for some protocols and
+        // not enough config for jabber.
+        protocolPrefix = "jabber".equals(protocol) ?
+            protocolPrefix : (protocolPrefix + ".acc");
+        logger.debug("Removing all config with prefix " + protocolPrefix);
         removeProperty(protocolPrefix);
+
     }
 
     /**
