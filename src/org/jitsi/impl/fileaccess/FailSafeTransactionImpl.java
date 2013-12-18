@@ -77,10 +77,19 @@ public class FailSafeTransactionImpl
 
         // if a backup copy is still present, simply restore it
         if (back.exists()) {
+            logger.info("Restoring backup file: " + back);
+
             failsafeCopy(back.getAbsolutePath(),
                     this.file.getAbsolutePath());
 
-            back.delete();
+            if (!back.delete())
+            {
+                // We failed to delete the backup file.
+                // We should be able to recover, as we'll overwrite the backup
+                // the next time we start a transaction, but it's an indication
+                // that things might not be working.
+                logger.warn("Failed to delete backup file after restore.");
+            }
         }
     }
 
@@ -128,7 +137,16 @@ public class FailSafeTransactionImpl
         }
 
         // simply delete the backup file
-        this.backup.delete();
+        if (!this.backup.delete())
+        {
+            // We failed to delete the backup file.
+            // We can usually recover from this, as it will be overwritten
+            // the next time we start a transaction, but if the client
+            // closes suddenly before then, we'll lose this commit.
+            logger.error("Failed to delete backup file during commit.");
+        }
+
+
         this.backup = null;
     }
 
@@ -145,15 +163,29 @@ public class FailSafeTransactionImpl
 
         if (this.backup == null) {
             logger.error("Could not roll back - no backup found!");
-            return;
+            throw new IllegalStateException("Unable to roll back - no backup found!");
         }
 
         // restore the backup and delete it
         failsafeCopy(this.backup.getAbsolutePath(),
                 this.file.getAbsolutePath());
-        this.backup.delete();
+
+        if (!this.backup.delete())
+        {
+            // We failed to delete the backup file.
+            // We should be able to recover, as we'll overwrite the backup
+            // the next time we start a transaction, but it's an indication
+            // that things might not be working.
+            logger.warn("Failed to delete backup file after rollback.");
+        }
+        else
+        {
+            logger.info("Rollback of " + file +
+                        " completed and backup removed.");
+        }
+
         this.backup = null;
-        logger.info("Rollback of " + file + " completed and backup removed.");
+
     }
 
     /**
@@ -175,26 +207,41 @@ public class FailSafeTransactionImpl
 
         File ptoF = new File(to + PART_EXT);
         if (ptoF.exists()) {
-            ptoF.delete();
+            if (!ptoF.delete())
+            {
+                // This shouldn't matter, as FileOutputStream will overwrite
+                // the target by default. But let's log it just in case.
+                logger.warn("Failed to delete existing PART file " + ptoF +
+                            " during failsafe copy.");
+            }
         }
 
-        try {
+        try
+        {
             in = new FileInputStream(from);
             out = new FileOutputStream(to + PART_EXT);
-        } catch (FileNotFoundException e) {
+
+            // actually copy the file
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = in.read(buf)) > 0)
+            {
+              out.write(buf, 0, len);
+            }
+
+            in.close();
+            out.close();
+        }
+        catch (IOException e)
+        {
+            logger.error("Failsafe copy failed: " + e.getMessage());
             throw new IllegalStateException(e.getMessage());
         }
-
-        // actually copy the file
-        byte[] buf = new byte[1024];
-        int len;
-        while ((len = in.read(buf)) > 0)
+        finally
         {
-          out.write(buf, 0, len);
+            if (in != null) in.close();
+            if (out != null) out.close();
         }
-
-        in.close();
-        out.close();
 
         // to ensure a perfect copy, delete the destination if it exists
         File toF = new File(to);
@@ -202,13 +249,27 @@ public class FailSafeTransactionImpl
             logger.debug("Overwriting file at " + to + " for failsafe copy.");
             boolean success = toF.delete();
             if (!success)
-                logger.error("Failed to delete file at " + to + " during " +
-                             "failsafe copy.");
+            {
+                String error = "Failed to delete file at " + to +
+                               " during failsafe copy. Failsafe copy failed.";
+                logger.error(error);
+                throw new IllegalStateException(error);
+            }
         }
 
         // once done, rename the partial file to the final copy
-        ptoF.renameTo(toF);
-
-        logger.trace("Failsafe copy from " + from + " to " + to + " succeeded");
+        boolean success = ptoF.renameTo(toF);
+        if (success)
+        {
+            logger.trace("Failsafe copy from " + from + " to " + to +
+                         " succeeded");
+        }
+        else
+        {
+            String error = "Failed to rename " + ptoF + "to " + toF +
+                           " during failsafe copy. Failsafe copy failed.";
+            logger.error(error);
+            throw new IllegalStateException(error);
+        }
     }
 }
