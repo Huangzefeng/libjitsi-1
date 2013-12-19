@@ -20,6 +20,8 @@ public class WASAPI
 {
     public static final int AUDCLNT_E_NOT_STOPPED;
 
+    public static final int AUDCLNT_E_DEVICE_INVALIDATED;
+
     public static final int AUDCLNT_SHAREMODE_SHARED = 0;
 
     public static final int AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000;
@@ -118,6 +120,9 @@ public class WASAPI
 
         AUDCLNT_E_NOT_STOPPED
             = MAKE_HRESULT(SEVERITY_ERROR, FACILIY_AUDCLNT, 5);
+
+        AUDCLNT_E_DEVICE_INVALIDATED
+            = MAKE_HRESULT(SEVERITY_ERROR, FACILIY_AUDCLNT, 4);
 
         /*
          * XXX The pointer to native memory returned by PSPropertyKeyFromString

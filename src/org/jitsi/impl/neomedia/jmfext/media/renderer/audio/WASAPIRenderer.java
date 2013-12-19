@@ -340,10 +340,23 @@ public class WASAPIRenderer
     @Override
     public synchronized void close()
     {
+        close(true);
+    }
+
+    /**
+     * Overridden close method that allows us to skip stopping the device.
+     * Should only be used if the device is broken!
+     */
+    public synchronized void close(boolean doStop)
+    {
         try
         {
             logger.debug("WASAPIRenderer.close() on " + this.hashCode());
-            stop();
+            if (doStop)
+            {
+                logger.debug("Call stop");
+                stop();
+            }
         }
         finally
         {
@@ -725,6 +738,7 @@ public class WASAPIRenderer
         logger.debug("WASAPIRenderer.open() on " + this.hashCode());
         if (this.iAudioClient != 0)
         {
+            logger.debug("iAudioClient already exists: " + iAudioClient);
             return;
         }
 
@@ -1207,6 +1221,8 @@ public class WASAPIRenderer
      */
     private void runInEventHandleCmd(Runnable eventHandleCmd)
     {
+        boolean resetDevice = false;
+
         try
         {
             useAudioThreadPriority();
@@ -1214,6 +1230,37 @@ public class WASAPIRenderer
             do
             {
                 long eventHandle;
+
+                /*
+                 * If we hit a device exception while running through the loop,
+                 * reset it now and then attempt to continue.
+                 */
+                if (resetDevice)
+                {
+                    logger.error("Try to reset audio device");
+                    synchronized (this)
+                    {
+                        logger.debug("Try to close");
+                        close(false);
+                        logger.debug("Closed, try to re-Open");
+
+                        try
+                        {
+                            open();
+                            logger.debug("Opened");
+
+                            // Fix these up so we stay in the loop.
+                            eventHandleCmd = this.eventHandleCmd;
+                            started = true;
+                        }
+                        catch (ResourceUnavailableException rue)
+                        {
+                            logger.error("Unable to reopen renderer", rue);
+                        }
+                    }
+
+                    resetDevice = false;
+                }
 
                 synchronized (this)
                 {
@@ -1223,6 +1270,7 @@ public class WASAPIRenderer
                      */
                     if (!eventHandleCmd.equals(this.eventHandleCmd))
                     {
+                        logger.debug("eventHandleCmd changed");
                         break;
                     }
                     // Is this WASAPIRenderer still opened and started?
@@ -1230,6 +1278,10 @@ public class WASAPIRenderer
                             || (iAudioRenderClient == 0)
                             || !started)
                     {
+                        logger.debug("Renederer no longer opened/started. " +
+                           "iAudioClient: " + iAudioClient +
+                           " iAudioRenderClient: " + iAudioRenderClient +
+                           " started: " + started);
                         break;
                     }
 
@@ -1257,8 +1309,30 @@ public class WASAPIRenderer
                     }
                     catch (HResultException hre)
                     {
-                        numPaddingFrames = numBufferFrames;
                         logger.error("IAudioClient_GetCurrentPadding", hre);
+
+                        if (hre.getHResult() == AUDCLNT_E_DEVICE_INVALIDATED)
+                        {
+                            /*
+                             * The endpoint device has become invalid.  We can
+                             * recover by releasing and reactivating the WASAPI
+                             * interface.
+                             *
+                             * See http://msdn.microsoft.com/en-us/library/windows/desktop/dd316605%28v=vs.85%29.aspx
+                             *
+                             * We can't do that within this loop or stop() will
+                             * hang waiting for this.eventHandleCmd to be reset,
+                             * which doesn't happen until this loop exits.
+                             */
+                            logger.debug("Device needs to be reset");
+                            resetDevice = true;
+                            continue;
+                        }
+                        else
+                        {
+                            logger.debug("Different error");
+                            break;
+                        }
                     }
 
                     int numFramesRequested = numBufferFrames - numPaddingFrames;
@@ -1758,6 +1832,7 @@ public class WASAPIRenderer
         }
     }
 
+    @Override
     protected void finalize() throws Throwable
     {
         // We should have closed this renderer by now but try to do so here
