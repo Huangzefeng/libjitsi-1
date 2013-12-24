@@ -283,10 +283,14 @@ public class MacCoreaudioRenderer
         AudioFormat audioFormat = (AudioFormat) format;
         int sampleSizeInBits = audioFormat.getSampleSizeInBits();
         double sampleRate = audioFormat.getSampleRate();
-        float minRate
-            = MacCoreAudioDevice.getMinimalNominalSampleRate(deviceUID);
-        float maxRate
-            = MacCoreAudioDevice.getMaximalNominalSampleRate(deviceUID);
+        float minRate = MacCoreAudioDevice.getMinimalNominalSampleRate(
+                deviceUID,
+                true,
+                MacCoreaudioSystem.isEchoCancelActivated());
+        float maxRate = MacCoreAudioDevice.getMaximalNominalSampleRate(
+                deviceUID,
+                true,
+                MacCoreaudioSystem.isEchoCancelActivated());
 
         for(int channels = minOutputChannels;
                 channels <= maxOutputChannels;
@@ -468,7 +472,8 @@ public class MacCoreaudioRenderer
                         false,
                         inputFormat.getEndian() == AudioFormat.BIG_ENDIAN,
                         false,
-                        false);
+                        false,
+                        MacCoreaudioSystem.isEchoCancelActivated());
                 MacCoreaudioSystem.didOpenStream();
             }
         }
