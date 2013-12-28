@@ -384,14 +384,14 @@ public class ConfigurationServiceImpl
     }
 
     @Override
-    public void removeAccountConfigForProtocol(String protocol,
-                                               Boolean removeReconnect)
+    public void removeAccountConfigForProtocol(String protocolName,
+                                               boolean removeReconnect)
     {
-        logger.info("Removing account config for " + protocol);
+        logger.info("Removing account config for " + protocolName);
 
         Set<String> storedUIDs = new HashSet<String>();
         String protocolPrefix =
-            "net.java.sip.communicator.impl.protocol." + protocol;
+            "net.java.sip.communicator.impl.protocol." + protocolName;
         List<String> protocolConfigStrings =
             getPropertyNamesByPrefix(protocolPrefix, true);
 
@@ -402,7 +402,12 @@ public class ConfigurationServiceImpl
             if (protocolConfigString.startsWith(protocolPrefix + ".acc"))
             {
                 // UIDs start with ".acc" so add this to the list of UIDs
-                storedUIDs.add(getString(protocolConfigString + ".ACCOUNT_UID"));
+                String uid = getString(protocolConfigString + ".ACCOUNT_UID");
+
+                if ((uid != null) && (uid.trim() != ""))
+                {
+                    storedUIDs.add(uid);
+                }
             }
         }
 
@@ -417,7 +422,7 @@ public class ConfigurationServiceImpl
             {
                 String accountUID = getString(accountConfigString);
 
-                if (accountUID.equals(storedUID))
+                if (storedUID.equals(accountUID))
                 {
                     logger.debug("Removing account config for " + accountUID);
                     removeProperty(accountConfigString);
@@ -442,7 +447,7 @@ public class ConfigurationServiceImpl
         // append ".acc" to the prefix for all protocols other than jabber,
         // otherwise we will delete unnecessary config for some protocols and
         // not enough config for jabber.
-        protocolPrefix = "jabber".equals(protocol) ?
+        protocolPrefix = "jabber".equals(protocolName) ?
             protocolPrefix : (protocolPrefix + ".acc");
         logger.debug("Removing all config with prefix " + protocolPrefix);
         removeProperty(protocolPrefix);

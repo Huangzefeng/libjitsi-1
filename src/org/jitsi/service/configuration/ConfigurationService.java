@@ -143,14 +143,15 @@ public interface ConfigurationService
      * for the given protocol will also be deleted to ensure that we don't try
      * to reconnect to or report connection errors for deleted accounts.
      * <p>
-     * @param protocol the protocol for which all account config will be deleted.
+     * @param protocolName the name of the protocol for which all account
+     *                     config will be deleted.
      * @param removeReconnect if true, all reconnectplugin config for the
      *                        given protocol will also be deleted.
      * @throws ConfigPropertyVetoException in case the changed has been refused by
      * at least one propertychange listener.
      */
-    public void removeAccountConfigForProtocol(String protocol,
-                                               Boolean removeReconnect);
+    public void removeAccountConfigForProtocol(String protocolName,
+                                               boolean removeReconnect);
 
     /**
      * Returns a <tt>java.util.List</tt> of <tt>String</tt>s containing all
