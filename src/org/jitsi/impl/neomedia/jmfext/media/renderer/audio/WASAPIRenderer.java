@@ -16,7 +16,7 @@ import java.util.concurrent.*;
 import javax.media.*;
 import javax.media.format.*;
 
-import net.sf.fmj.media.Log;
+import net.sf.fmj.media.*;
 import net.sf.fmj.utility.charting.*;
 
 import org.jitsi.impl.neomedia.*;
@@ -1319,10 +1319,6 @@ public class WASAPIRenderer
                              * interface.
                              *
                              * See http://msdn.microsoft.com/en-us/library/windows/desktop/dd316605%28v=vs.85%29.aspx
-                             *
-                             * We can't do that within this loop or stop() will
-                             * hang waiting for this.eventHandleCmd to be reset,
-                             * which doesn't happen until this loop exits.
                              */
                             logger.debug("Device needs to be reset");
                             resetDevice = true;

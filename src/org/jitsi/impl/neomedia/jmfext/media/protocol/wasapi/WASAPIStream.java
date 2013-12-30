@@ -18,7 +18,7 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
-import net.sf.fmj.media.Log;
+import net.sf.fmj.media.*;
 
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.control.*;
@@ -2283,6 +2283,18 @@ public class WASAPIStream
                         logger.error("Failed: ", hre);
                         dwStatus = 0;
                     }
+                }
+                else if (hre.getHResult() == AUDCLNT_E_DEVICE_INVALIDATED)
+                {
+                  logger.error("Device has become invalidated so stop the stream");
+                  try
+                  {
+                    stop();
+                  }
+                  catch (IOException e)
+                  {
+                    logger.error("Failed to stop the WASAPI stream", e);
+                  }
                 }
             }
             try
