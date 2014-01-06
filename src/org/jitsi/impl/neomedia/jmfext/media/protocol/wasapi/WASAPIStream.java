@@ -2284,9 +2284,15 @@ public class WASAPIStream
                         dwStatus = 0;
                     }
                 }
-                else if (hre.getHResult() == AUDCLNT_E_DEVICE_INVALIDATED)
+                else if (HRESULT_BLACKLIST.contains(hre.getHResult()))
                 {
-                  logger.error("Device has become invalidated so stop the stream");
+                  // We have hit an error that we cannot recover the device
+                  // from, so reset it here. This causes the current audio
+                  // stream to collapse and the user will lose their call if
+                  // they are in one.
+                  // TODO Tear down and re-establish the renderer so the user
+                  // does not lose their call.
+                  logger.error("Device needs to be reset");
                   try
                   {
                     stop();

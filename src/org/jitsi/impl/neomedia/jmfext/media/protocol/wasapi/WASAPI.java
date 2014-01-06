@@ -6,6 +6,8 @@
  */
 package org.jitsi.impl.neomedia.jmfext.media.protocol.wasapi;
 
+import java.util.*;
+
 import org.jitsi.util.*;
 
 /**
@@ -29,6 +31,19 @@ public class WASAPI
     public static final int AUDCLNT_STREAMFLAGS_LOOPBACK = 0x00020000;
 
     public static final int AUDCLNT_STREAMFLAGS_NOPERSIST = 0x00080000;
+
+    public static final int ERROR_INVALID_FUNCTION = 0x80070001;
+
+    public static final int FILE_NOT_FOUND = 0x80070002;
+
+    public static final int AEC_NO_AUDIO_RENDERED = 0x87cc000a;
+
+    /**
+     * A list of errors that, if hit, will tear down the current audio stream.
+     * Note that this is not a complete list and should be appended to in
+     * response to reports from the field.
+     */
+    public static final List<Integer> HRESULT_BLACKLIST;
 
     public static final int CLSCTX_ALL
         = /* CLSCTX_INPROC_SERVER */ 0x1
@@ -123,6 +138,12 @@ public class WASAPI
 
         AUDCLNT_E_DEVICE_INVALIDATED
             = MAKE_HRESULT(SEVERITY_ERROR, FACILIY_AUDCLNT, 4);
+
+        // Initialise a list of errors that, if hit, will tear down the
+        // current audio stream
+        HRESULT_BLACKLIST = Arrays.asList(AUDCLNT_E_DEVICE_INVALIDATED,
+                                          ERROR_INVALID_FUNCTION,
+                                          AEC_NO_AUDIO_RENDERED);
 
         /*
          * XXX The pointer to native memory returned by PSPropertyKeyFromString

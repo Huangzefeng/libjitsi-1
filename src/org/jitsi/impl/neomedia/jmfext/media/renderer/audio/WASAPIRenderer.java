@@ -1311,15 +1311,15 @@ public class WASAPIRenderer
                     {
                         logger.error("IAudioClient_GetCurrentPadding", hre);
 
-                        if (hre.getHResult() == AUDCLNT_E_DEVICE_INVALIDATED)
+                        if (HRESULT_BLACKLIST.contains(hre.getHResult()))
                         {
-                            /*
-                             * The endpoint device has become invalid.  We can
-                             * recover by releasing and reactivating the WASAPI
-                             * interface.
-                             *
-                             * See http://msdn.microsoft.com/en-us/library/windows/desktop/dd316605%28v=vs.85%29.aspx
-                             */
+                            // We have hit an error that we cannot recover the
+                            // device from, so reset it here. This causes the
+                            // current audio stream to collapse and the user
+                            // will lose their call if they are in one.
+                            //
+                            // TODO Tear down and re-establish the renderer so
+                            // the user does not lose their call.
                             logger.debug("Device needs to be reset");
                             resetDevice = true;
                             continue;
