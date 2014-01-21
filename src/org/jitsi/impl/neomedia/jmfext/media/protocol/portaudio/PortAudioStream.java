@@ -420,6 +420,8 @@ public class PortAudioStream
                                 = devCfg.getEchoCancelFilterLengthInMillis();
                         }
                     }
+                    logger.debug("Echo canceller enabled for PortAudio.  Length: " +
+                                              echoCancelFilterLengthInMillis + "ms");
                 }
             }
         }
@@ -757,6 +759,7 @@ public class PortAudioStream
     public synchronized void start()
         throws IOException
     {
+        logger.debug("PortAudioStream - start()");
         if (stream != 0)
         {
             waitWhileStreamIsBusy();
@@ -790,6 +793,7 @@ public class PortAudioStream
     public synchronized void stop()
         throws IOException
     {
+        logger.debug("PortAudioStream - stop()");
         if (stream != 0)
         {
             waitWhileStreamIsBusy();

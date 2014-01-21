@@ -954,6 +954,7 @@ public class PortAudioRenderer
      */
     public synchronized void start()
     {
+        logger.debug("PortAudioRenderer - start()");
         if (!started && (stream != 0))
         {
             try
@@ -974,6 +975,7 @@ public class PortAudioRenderer
      */
     public synchronized void stop()
     {
+        logger.debug("PortAudioRenderer - stop()");
         waitWhileStreamIsBusy();
         if (started && (stream != 0))
         {

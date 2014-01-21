@@ -74,7 +74,7 @@ public class DeviceConfiguration
                 OSUtils.IS_WINDOWS_8) ? ".audio.WASAPIRenderer" : null,
             (OSUtils.IS_ANDROID ||
                 OSUtils.IS_WINDOWS_7 ||
-                    OSUtils.IS_WINDOWS_8) ? null : ".audio.PortAudioRenderer",
+                    OSUtils.IS_WINDOWS_8) ? null : ".audio.PortAudioRenderer", // TODO CoreAudio?
             ".video.JAWTRenderer"
         };
 

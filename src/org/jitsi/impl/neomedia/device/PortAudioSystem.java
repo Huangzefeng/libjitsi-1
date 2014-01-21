@@ -494,7 +494,7 @@ public class PortAudioSystem
     protected void doInitialize()
         throws Exception
     {
-        logger.debug("doInitialise called");
+        logger.debug("doInitialize called");
 
         /*
          * If PortAudio fails to initialize because of, for example, a missing
@@ -871,7 +871,7 @@ public class PortAudioSystem
     @Override
     public String toString()
     {
-        return "Speakers";
-//        return "PortAudio";
+//        return "Speakers";
+        return "PortAudio";
     }
 }

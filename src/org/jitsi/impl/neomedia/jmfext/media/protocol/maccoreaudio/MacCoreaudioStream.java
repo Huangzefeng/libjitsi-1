@@ -363,6 +363,9 @@ public class MacCoreaudioStream
                 this.freeBufferList.clear();
 
                 MacCoreaudioSystem.willOpenStream();
+                boolean isEchoCancelActivated = MacCoreaudioSystem.isEchoCancelActivated();
+                logger.debug("Call on MacCoreAudioDevice: startStream(" +
+                        "..., isEchoCancelActivated=" + isEchoCancelActivated +")");
                 stream = MacCoreAudioDevice.startStream(
                         deviceUID,
                         this,
@@ -373,7 +376,7 @@ public class MacCoreaudioStream
                         format.getEndian() == AudioFormat.BIG_ENDIAN,
                         false,
                         true,
-                        MacCoreaudioSystem.isEchoCancelActivated());
+                        isEchoCancelActivated);
                 MacCoreaudioSystem.didOpenStream();
             }
         }
@@ -393,6 +396,7 @@ public class MacCoreaudioStream
             {
                 if(stream != 0 && deviceUID != null)
                 {
+                    logger.debug("Call on MacCoreAudioDevice: stopStream()");
                     MacCoreAudioDevice.stopStream(deviceUID, stream);
 
                     stream = 0;

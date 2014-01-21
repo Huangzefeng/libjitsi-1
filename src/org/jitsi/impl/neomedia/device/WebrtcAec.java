@@ -34,8 +34,10 @@ public class WebrtcAec
     {
         try
         {
+            logger.info("Loading webrtc...");
             System.loadLibrary("jnwebrtc");
             System.loadLibrary("jnwebrtcaec");
+            logger.info("...done.");
         }
         catch (NullPointerException npe)
         {

@@ -271,6 +271,8 @@ public class MacCoreaudioSystem
             String deviceUID,
             boolean isEchoCancel)
     {
+    	logger.debug("Call on MacCoreAudioDevice: getNominalSampleRate(..., " +
+                "isEchoCancel=" + isEchoCancel + ")");
         double supportedSampleRate = MacCoreAudioDevice.getNominalSampleRate(
                 deviceUID,
                 false,
@@ -281,6 +283,8 @@ public class MacCoreaudioSystem
             supportedSampleRate = MacCoreAudioDevice.DEFAULT_SAMPLE_RATE;
         }
 
+        logger.debug("getSupportedSampleRate. isEchoCancel: " + isEchoCancel +
+        		" supportedSampleRate: " + supportedSampleRate);
         return supportedSampleRate;
     }
 
@@ -380,6 +384,7 @@ public class MacCoreaudioSystem
                 FEATURE_NOTIFY_AND_PLAYBACK_DEVICES
                     | FEATURE_REINITIALIZE
                     | FEATURE_ECHO_CANCELLATION);
+        logger.debug("MacCoreaudioSystem constructor");
     }
 
     /**
@@ -424,6 +429,7 @@ public class MacCoreaudioSystem
     protected void doInitialize()
         throws Exception
     {
+    	logger.debug("doInitialize called");
         if(!CoreAudioDevice.isLoaded)
         {
             String message = "MacOSX CoreAudio library is not loaded";
@@ -772,6 +778,7 @@ public class MacCoreaudioSystem
     private void reinitialize()
         throws Exception
     {
+    	logger.debug("reinitialize");
         synchronized (updateAvailableDeviceListSyncRoot)
         {
             willUpdateAvailableDeviceList();
@@ -796,8 +803,8 @@ public class MacCoreaudioSystem
     @Override
     public String toString()
     {
-        return "Headset";
-//        return "Core Audio";
+//        return "Headset";
+        return "Core Audio";
     }
 
     /**
@@ -817,6 +824,7 @@ public class MacCoreaudioSystem
                     + "." + PNAME_ECHOCANCEL,
                     isEchoCancel);
 
+        logger.info("isEchoCancel: " + isEchoCancel);
         return isEchoCancel;
     }
 
