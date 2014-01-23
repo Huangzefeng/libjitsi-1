@@ -205,7 +205,6 @@ public abstract class DeviceSystem
                         : null,
                     OSUtils.IS_WINDOWS ? ".WASAPISystem" : null,
                     OSUtils.IS_ANDROID ? null : ".PortAudioSystem",
-                    OSUtils.IS_MAC ? ".MacCoreaudioSystem" : null,
                     ".NoneAudioSystem"
                 };
             break;
