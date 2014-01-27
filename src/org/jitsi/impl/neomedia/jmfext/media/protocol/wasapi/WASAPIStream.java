@@ -2286,21 +2286,38 @@ public class WASAPIStream
                 }
                 else if (HRESULT_BLACKLIST.contains(hre.getHResult()))
                 {
-                  // We have hit an error that we cannot recover the device
-                  // from, so reset it here. This causes the current audio
-                  // stream to collapse and the user will lose their call if
-                  // they are in one.
-                  // TODO Tear down and re-establish the renderer so the user
-                  // does not lose their call.
-                  logger.error("Device needs to be reset");
-                  try
-                  {
-                    stop();
-                  }
-                  catch (IOException e)
-                  {
-                    logger.error("Failed to stop the WASAPI stream", e);
-                  }
+                    // We have hit an error that we cannot recover the device
+                    // from, so reset it here. This causes the current audio
+                    // stream to collapse and the user will lose their call if
+                    // they are in one.
+                    // TODO Tear down and re-establish the renderer so the user
+                    // does not lose their call.
+
+                    // Note: we use a separate thread to do this as stop()
+                    // deadlocks when called within the processThread (as it
+                    // waits for the processThread to finish before exiting).
+                    logger.error("Device needs to be reset");
+                    Thread streamResetter = new Thread("WASAPI Stream stopper")
+                    {
+                        @Override
+                        public void run()
+                        {
+                            try
+                            {
+                                logger.debug("Disconnect...");
+                                WASAPIStream.this.disconnect();
+                                logger.debug("(Re)connect...");
+                                WASAPIStream.this.connect();
+                                logger.debug("Done");
+                            }
+                            catch (IOException e)
+                            {
+                                logger.error("Failed to reset WASAPIStream", e);
+                            }
+                        }
+                    };
+                    logger.warn("Attempt to restart stream on a new thread");
+                    streamResetter.start();
                 }
             }
             try
