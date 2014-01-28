@@ -503,16 +503,18 @@ public class VideoLayout
             
             if (prefLayoutSize.height > MAX_INITIAL_SIZE.height)
             {
-                float scaleFactor = prefLayoutSize.height / MAX_INITIAL_SIZE.height;
-                prefLayoutSize = new Dimension((int)(prefLayoutSize.width * scaleFactor),
-                                               (int)(prefLayoutSize.height * scaleFactor));
+                float scaleFactor = 
+                         (float)prefLayoutSize.height / MAX_INITIAL_SIZE.height;
+                prefLayoutSize = new Dimension((int)(prefLayoutSize.width / scaleFactor),
+                                               (int)(prefLayoutSize.height / scaleFactor));
             }
             
             if (prefLayoutSize.width > MAX_INITIAL_SIZE.width)
             {
-                float scaleFactor = prefLayoutSize.width / MAX_INITIAL_SIZE.width;
-                prefLayoutSize = new Dimension((int)(prefLayoutSize.width * scaleFactor),
-                                               (int)(prefLayoutSize.height * scaleFactor));
+                float scaleFactor =
+                           (float)prefLayoutSize.width / MAX_INITIAL_SIZE.width;
+                prefLayoutSize = new Dimension((int)(prefLayoutSize.width / scaleFactor),
+                                               (int)(prefLayoutSize.height / scaleFactor));
             }
         }
         else if (remoteCount > 0)
