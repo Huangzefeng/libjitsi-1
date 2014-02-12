@@ -121,9 +121,9 @@ public class RTPPlayer
     private JComboBox<Boolean> autoComboBox;
     private JTextField autoItersInput;
     private JComboBox<Boolean> stopOnNoAudioComboBox;
-    
+
     private org.jitsi.examples.PacketPlayer.PlayRTPThread[] threads;
-    
+
     public void playRow(int row)
     {
         final int ssrc = (Integer) (rows.get(row)[1]);
@@ -179,13 +179,17 @@ public class RTPPlayer
                 // Set the initial format of this stream from the initial
                 // payload type - it's either a standard payload type or the
                 // same as the dynamic format we just calculated.
-                MediaFormat initialFormat = dynamicFormats.get(0);
+                MediaFormat initialFormat;
                 if (initialPT <= 34)
                 {
                     String codec = SdpConstants.avpTypeNames[initialPT];
                     initialFormat = LibJitsi.getMediaService()
                         .getFormatFactory().createMediaFormat(codec,
                             (double)8000); // g711 and 722 using 8K always
+                }
+                else
+                {
+                    initialFormat = dynamicFormats.get(0);
                 }
 
                 if ((Boolean)autoComboBox.getSelectedItem() == true)
@@ -217,7 +221,7 @@ public class RTPPlayer
     {
         initialize();
     }
-    
+
     /**
      * Initialize the contents of the frame.
      */
@@ -250,7 +254,7 @@ public class RTPPlayer
             public void actionPerformed(ActionEvent arg0)
             {
                 Preferences prefs = Preferences.userNodeForPackage(getClass());
-                
+
                 String lastLocation = prefs.get("location", "");
                 System.out.println("lastLocation: " + lastLocation);
                 if (!"".equals(lastLocation))
@@ -261,7 +265,7 @@ public class RTPPlayer
                         fc.setCurrentDirectory(file);
                     }
                 }
-                
+
                 int returnVal = fc.showOpenDialog(mframe);
                 if (returnVal == JFileChooser.APPROVE_OPTION)
                 {
@@ -516,7 +520,7 @@ public class RTPPlayer
     protected void loadFile(File file)
     {
         clearUpLastRun();
-        
+
         lblFileName.setText(file.toString());
         rows.clear();
 
@@ -537,10 +541,10 @@ public class RTPPlayer
                 ssrc, packets, ptList));
         }
         myTable.fireTableDataChanged();
-        
+
         threads = new org.jitsi.examples.PacketPlayer.PlayRTPThread[rows.size()];
     }
-    
+
     private void clearUpLastRun()
     {
         if (threads != null)
@@ -552,7 +556,7 @@ public class RTPPlayer
                     thread.playRTP.stopPlaying();
                 }
             }
-            
+
             threads = null;
         }
     }
