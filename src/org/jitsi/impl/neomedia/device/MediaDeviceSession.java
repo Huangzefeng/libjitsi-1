@@ -2100,6 +2100,9 @@ public class MediaDeviceSession
             MediaDirection oldValue,
             MediaDirection newValue)
     {
+        logger.debug("Media direction changed from " + oldValue + " to " +
+                                                      newValue + " in " + this);
+
         if (newValue.allowsSending())
         {
             Processor processor = getProcessor();
