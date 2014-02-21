@@ -189,7 +189,7 @@ public abstract class Devices
     {
         if (activeDevices != null)
         {
-            logger.debug("Got some active devices");
+            logger.debug("Got " + activeDevices.size() + " active devices");
             String property = getPropDevice();
 
             loadDevicePreferences(property);
