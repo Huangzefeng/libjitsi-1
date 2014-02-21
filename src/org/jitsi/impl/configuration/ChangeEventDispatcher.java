@@ -327,14 +327,21 @@ public class ChangeEventDispatcher
             return;
 
         // Copy the change listeners list to prevent concurrent modifications
-        List<PropertyChangeListener> changeListeners;
-        Map<String, ChangeEventDispatcher> changeChildren;
+        List<PropertyChangeListener> changeListeners = null;
+        Map<String, ChangeEventDispatcher> changeChildren = null;
         synchronized (this)
         {
-           changeListeners = propertyChangeListeners;
-           changeChildren = propertyChangeChildren;
+            if (propertyChangeListeners != null)
+            {
+                changeListeners = new ArrayList<PropertyChangeListener>
+                (propertyChangeListeners);
+            }
+            if (propertyChangeChildren != null)
+            {
+                changeChildren =  new HashMap<String, ChangeEventDispatcher>
+                (propertyChangeChildren);
+            }
         }
-
 
         if (changeListeners != null)
         {
