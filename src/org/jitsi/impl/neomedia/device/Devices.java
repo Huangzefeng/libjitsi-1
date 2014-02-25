@@ -214,7 +214,8 @@ public abstract class Devices
                         = activeDevice.isSameTransportType("USB");
                     ConfigurationService cfg
                         = LibJitsi.getConfigurationService();
-                    // Desactivate the USB device automatic selection if the
+
+                    // Deactivate the USB device automatic selection if the
                     // property is set to true.
                     if ((cfg != null) && cfg.getBoolean(
                                 PROP_DISABLE_USB_DEVICE_AUTO_SELECTION,
