@@ -1912,6 +1912,8 @@ public class MediaStreamImpl
                 && ((startedDirection == null)
                         || !startedDirection.allowsSending()))
         {
+            logger.info("Start sending media on stream: " + this);
+
             /*
              * The startSendStreams method will be called so the getRTPManager
              * method will be called as part of the execution of the former.
@@ -1953,6 +1955,8 @@ public class MediaStreamImpl
                 && ((startedDirection == null)
                         || !startedDirection.allowsReceiving()))
         {
+            logger.info("Start receiving media on stream: " + this);
+
             /*
              * The startReceiveStreams method will be called so the
              * getRTPManager method will be called as part of the execution of
@@ -2062,10 +2066,11 @@ public class MediaStreamImpl
 
         StreamRTPManager rtpManager = getRTPManager();
         @SuppressWarnings("unchecked")
-        Iterable<SendStream> sendStreams = rtpManager.getSendStreams();
+        Vector<SendStream> sendStreams = rtpManager.getSendStreams();
 
         if (sendStreams != null)
         {
+            logger.debug("Starting " + sendStreams.size() + " in " + this);
             for (SendStream sendStream : sendStreams)
             {
                 try
