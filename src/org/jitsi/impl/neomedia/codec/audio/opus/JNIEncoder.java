@@ -224,6 +224,7 @@ public class JNIEncoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         if (encoder != 0)
         {
            Opus.encoder_destroy(encoder);
@@ -246,6 +247,7 @@ public class JNIEncoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         AudioFormat inputFormat = (AudioFormat) getInputFormat();
         int sampleRate = (int) inputFormat.getSampleRate();
 
@@ -437,6 +439,7 @@ public class JNIEncoder
      * @return <tt>null</tt> to signify that <tt>JNIEncoder</tt> does not
      * provide user interface of its own
      */
+    @Override
     public Component getControlComponent()
     {
         return null;
@@ -491,6 +494,7 @@ public class JNIEncoder
      *
      * @param percentage the expected packet loss percentage to set
      */
+    @Override
     public void setExpectedPacketLoss(int percentage)
     {
         if (opened)
@@ -512,6 +516,7 @@ public class JNIEncoder
      *
      * @param fmtps the format parameters to set
      */
+    @Override
     public void setFormatParameters(Map<String, String> fmtps)
     {
         if (logger.isDebugEnabled())

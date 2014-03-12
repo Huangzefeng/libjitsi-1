@@ -129,6 +129,7 @@ public class JNIEncoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         // state
         if (state != 0)
         {
@@ -160,6 +161,7 @@ public class JNIEncoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         bits = Speex.speex_bits_init();
         if (bits == 0)
             throw new ResourceUnavailableException("speex_bits_init");

@@ -181,6 +181,7 @@ public class JavaEncoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         encState = null;
         encControl = null;
     }
@@ -189,6 +190,7 @@ public class JavaEncoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         encState = new SKP_Silk_encoder_state_FLP();
         encControl = new SKP_SILK_SDK_EncControlStruct();
         if (EncAPI.SKP_Silk_SDK_InitEncoder(encState, encControl) != 0)
@@ -223,9 +225,9 @@ public class JavaEncoder
 
         if (inputLength > encControl.packetSize)
             inputLength = encControl.packetSize;
-        
+
         Log.logReadBytes(this, inputLength);
-        
+
         byte[] outputData
             = validateByteArraySize(outputBuffer, MAX_BYTES_PER_FRAME, false);
         int outputOffset = 0;
@@ -374,6 +376,7 @@ public class JavaEncoder
      *
      * @param percentage the expected packet loss percentage to set.
      */
+    @Override
     public void setExpectedPacketLoss(int percentage)
     {
         if(opened)
@@ -394,6 +397,7 @@ public class JavaEncoder
      *
      * @return null
      */
+    @Override
     public Component getControlComponent()
     {
         return null;

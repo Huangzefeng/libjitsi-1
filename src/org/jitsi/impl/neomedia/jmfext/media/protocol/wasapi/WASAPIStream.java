@@ -2824,6 +2824,7 @@ public class WASAPIStream
     public synchronized void start()
         throws IOException
     {
+        Log.logMediaStackObjectStarted(this);
         if (capture != null)
         {
             waitWhileCaptureIsBusy();
@@ -2881,6 +2882,7 @@ public class WASAPIStream
     public synchronized void stop()
         throws IOException
     {
+        Log.logMediaStackObjectStopped(this);
         started = false;
 
         if (capture != null)

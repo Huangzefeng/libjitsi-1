@@ -107,6 +107,7 @@ public class JNIEncoder
     @Override
     protected synchronized void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         if (avctx != 0)
         {
             FFmpeg.avcodec_close(avctx);
@@ -133,6 +134,7 @@ public class JNIEncoder
     protected synchronized void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         long encoder = FFmpeg.avcodec_find_encoder(FFmpeg.CODEC_ID_MP3);
 
         if (encoder == 0)
