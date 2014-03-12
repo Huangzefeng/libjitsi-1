@@ -78,6 +78,7 @@ public class JavaDecoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         dec = null;
         inputLength = 0;
     }
@@ -90,6 +91,7 @@ public class JavaDecoder
     @Override
     protected void doOpen()
     {
+        Log.logMediaStackObjectStarted(this);
     }
 
     /**

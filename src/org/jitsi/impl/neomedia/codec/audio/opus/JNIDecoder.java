@@ -128,6 +128,7 @@ public class JNIDecoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         if (decoder != 0)
         {
             Opus.decoder_destroy(decoder);
@@ -150,6 +151,7 @@ public class JNIDecoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         if (decoder == 0)
         {
             decoder = Opus.decoder_create(outputSampleRate, channels);
@@ -320,6 +322,7 @@ public class JNIDecoder
      *
      * @return the number of packets decoded with FEC
      */
+    @Override
     public int fecPacketsDecoded()
     {
         return nbDecodedFec;
@@ -332,6 +335,7 @@ public class JNIDecoder
      * @return <tt>null</tt> to signify that <tt>JNIDecoder</tt> does not
      * provide user interface of its own
      */
+    @Override
     public Component getControlComponent()
     {
         return null;

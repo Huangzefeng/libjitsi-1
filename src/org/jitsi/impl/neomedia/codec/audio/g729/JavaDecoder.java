@@ -94,6 +94,7 @@ public class JavaDecoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         serial = null;
         sp16 = null;
         decoder = null;
@@ -114,6 +115,7 @@ public class JavaDecoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         serial = new short[SERIAL_SIZE];
         sp16 = new short[L_FRAME];
         decoder = new Decoder();

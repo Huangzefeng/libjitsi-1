@@ -1555,7 +1555,7 @@ public class WASAPIRenderer
     @Override
     public synchronized void start()
     {
-        logger.debug("WASAPIRenderer.start() on " + this.hashCode());
+        Log.logMediaStackObjectStarted(this);
         if (iAudioClient == 0)
         {
             /*
@@ -1671,7 +1671,7 @@ public class WASAPIRenderer
     @Override
     public synchronized void stop()
     {
-        logger.debug("WASAPIRenderer.stop() on " + this.hashCode());
+        Log.logMediaStackObjectStopped(this);
         if (iAudioClient == 0)
         {
             /*

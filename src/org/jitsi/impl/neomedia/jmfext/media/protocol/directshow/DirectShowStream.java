@@ -298,6 +298,7 @@ public class DirectShowStream
      * @throws IOException if anything goes wrong while reading media data from
      * this <tt>PushBufferStream</tt> into the specified <tt>buffer</tt>
      */
+    @Override
     public void read(Buffer buffer) throws IOException
     {
         synchronized (dataSyncRoot)
@@ -683,6 +684,7 @@ public class DirectShowStream
         throws IOException
     {
         logger.logEntry();
+        Log.logMediaStackObjectStarted(this);
         super.start();
 
         try
@@ -731,6 +733,7 @@ public class DirectShowStream
         throws IOException
     {
         logger.logEntry();
+        Log.logMediaStackObjectStopped(this);
         try
         {
             device.stop();

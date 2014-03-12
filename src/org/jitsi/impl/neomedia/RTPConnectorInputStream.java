@@ -94,6 +94,7 @@ public abstract class RTPConnectorInputStream
                      */
                     private long numberOfPackets = 0;
 
+                    @Override
                     public boolean accept(DatagramPacket p)
                     {
                         numberOfPackets++;
@@ -159,6 +160,7 @@ public abstract class RTPConnectorInputStream
      *
      * @return <tt>false</tt>, no matter what.
      */
+    @Override
     public boolean endOfStream()
     {
         return false;
@@ -171,6 +173,7 @@ public abstract class RTPConnectorInputStream
      *
      * @return <tt>null</tt>, no matter what.
      */
+    @Override
     public ContentDescriptor getContentDescriptor()
     {
         return null;
@@ -183,6 +186,7 @@ public abstract class RTPConnectorInputStream
      *
      * @return <tt>LENGTH_UNKNOWN</tt>, no matter what.
      */
+    @Override
     public long getContentLength()
     {
         return pkt.getLength();
@@ -197,6 +201,7 @@ public abstract class RTPConnectorInputStream
      *
      * @return <tt>null</tt>, no matter what.
      */
+    @Override
     public Object getControl(String controlType)
     {
         return null;
@@ -209,6 +214,7 @@ public abstract class RTPConnectorInputStream
      *
      * @return <tt>EMPTY_CONTROLS</tt>, no matter what.
      */
+    @Override
     public Object[] getControls()
     {
         return EMPTY_CONTROLS;
@@ -221,6 +227,7 @@ public abstract class RTPConnectorInputStream
      *
      * @return <tt>2 * 1024</tt>, no matter what.
      */
+    @Override
     public int getMinimumTransferSize()
     {
         return 2 * 1024; // twice the MTU size, just to be safe.
@@ -242,6 +249,7 @@ public abstract class RTPConnectorInputStream
      * @throws IOException if <tt>length</tt> is less than the size of the
      * packet.
      */
+    @Override
     public int read(byte[] buffer, int offset, int length)
         throws IOException
     {
@@ -285,8 +293,10 @@ public abstract class RTPConnectorInputStream
      * <tt>read</tt> method and notifies the local <tt>transferHandler</tt>
      * that there's data to be read.
      */
+    @Override
     public void run()
     {
+        Log.logMediaStackObjectStarted(this);
         DatagramPacket p
             = new DatagramPacket(buffer, 0, PACKET_RECEIVE_BUFFER_LENGTH);
 
@@ -349,6 +359,7 @@ public abstract class RTPConnectorInputStream
                     transferHandler.transferData(this);
             }
         }
+        Log.logMediaStackObjectStopped(this);
     }
 
     /**
@@ -358,6 +369,7 @@ public abstract class RTPConnectorInputStream
      * @param transferHandler the <tt>transferHandler</tt> that this connector
      * should be notifying when new data is available for reading.
      */
+    @Override
     public void setTransferHandler(SourceTransferHandler transferHandler)
     {
         if (!closed)

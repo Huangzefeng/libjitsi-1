@@ -79,6 +79,7 @@ public class JNIDecoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         g722_decoder_close(decoder);
     }
 
@@ -91,6 +92,7 @@ public class JNIDecoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         decoder = g722_decoder_open();
         if (decoder == 0)
             throw new ResourceUnavailableException("g722_decoder_open");

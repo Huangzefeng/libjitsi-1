@@ -144,6 +144,7 @@ public class JavaEncoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         prevInput = null;
         prevInputLength = 0;
 
@@ -167,6 +168,7 @@ public class JavaEncoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         prevInput = new byte[INPUT_FRAME_SIZE_IN_BYTES];
         prevInputLength = 0;
 
