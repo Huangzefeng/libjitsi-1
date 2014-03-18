@@ -77,6 +77,7 @@ public class MediaStreamImpl
     private final PropertyChangeListener deviceSessionPropertyChangeListener
         = new PropertyChangeListener()
         {
+            @Override
             public void propertyChange(PropertyChangeEvent event)
             {
                 String propertyName = event.getPropertyName();
@@ -426,6 +427,7 @@ public class MediaStreamImpl
      * <tt>MediaStream</tt> with <tt>rtpPayloadType</tt>
      * @see MediaStream#addDynamicRTPPayloadType(byte, MediaFormat)
      */
+    @Override
     public void addDynamicRTPPayloadType(
             byte rtpPayloadType,
             MediaFormat format)
@@ -455,6 +457,7 @@ public class MediaStreamImpl
      * @param extensionID the ID that is being mapped to <tt>rtpExtension</tt>
      * @param rtpExtension the <tt>RTPExtension</tt> that we are mapping.
      */
+    @Override
     public void addRTPExtension(byte extensionID, RTPExtension rtpExtension)
     {
         synchronized (activeRTPExtensions)
@@ -504,6 +507,7 @@ public class MediaStreamImpl
      * @return a map containing all currently active <tt>RTPExtension</tt>s in
      * use by this stream.
      */
+    @Override
     public Map<Byte, RTPExtension> getActiveRTPExtensions()
     {
         synchronized (activeRTPExtensions)
@@ -554,6 +558,7 @@ public class MediaStreamImpl
      *
      * @see MediaStream#close()
      */
+    @Override
     public void close()
     {
         /* Some statistics cannot be taken from the RTP manager and have to
@@ -584,6 +589,7 @@ public class MediaStreamImpl
             rtpManager.removeRemoteListener(this);
             try
             {
+                logger.debug("Call dispose()");
                 rtpManager.dispose();
                 rtpManager = null;
             }
@@ -975,6 +981,7 @@ public class MediaStreamImpl
      * capture media
      * @see MediaStream#getDevice()
      */
+    @Override
     public AbstractMediaDevice getDevice()
     {
         MediaDeviceSession deviceSession = getDeviceSession();
@@ -1019,6 +1026,7 @@ public class MediaStreamImpl
      * allowed to stream media
      * @see MediaStream#getDirection()
      */
+    @Override
     public MediaDirection getDirection()
     {
         return (direction == null) ? getDeviceDirection() : direction;
@@ -1040,6 +1048,7 @@ public class MediaStreamImpl
      * modifications to it are not reflected on the internal storage
      * @see MediaStream#getDynamicRTPPayloadTypes()
      */
+    @Override
     public Map<Byte, MediaFormat> getDynamicRTPPayloadTypes()
     {
         synchronized (dynamicRTPPayloadTypes)
@@ -1083,6 +1092,7 @@ public class MediaStreamImpl
      * transmitting in
      * @see MediaStream#getFormat()
      */
+    @Override
     public MediaFormat getFormat()
     {
         MediaDeviceSession deviceSession = getDeviceSession();
@@ -1098,6 +1108,7 @@ public class MediaStreamImpl
      * or <tt>-1</tt> if it is not yet known
      * @see MediaStream#getLocalSourceID()
      */
+    @Override
     public long getLocalSourceID()
     {
         return this.localSourceID;
@@ -1110,6 +1121,7 @@ public class MediaStreamImpl
      * that this stream is sending RTCP traffic to
      * @see MediaStream#getRemoteControlAddress()
      */
+    @Override
     public InetSocketAddress getRemoteControlAddress()
     {
         StreamConnector connector =
@@ -1139,6 +1151,7 @@ public class MediaStreamImpl
      * that this stream is sending RTP traffic to
      * @see MediaStream#getRemoteDataAddress()
      */
+    @Override
     public InetSocketAddress getRemoteDataAddress()
     {
         StreamConnector connector =
@@ -1223,6 +1236,7 @@ public class MediaStreamImpl
      * @return the transport protocol (UDP or TCP) used by the streams. null if
      * the stream connector is not instanciated.
      */
+    @Override
     public StreamConnector.Protocol getTransportProtocol()
     {
         StreamConnector connector =
@@ -1244,6 +1258,7 @@ public class MediaStreamImpl
      *
      * @see MediaStream#getRemoteSourceID()
      */
+    @Override
     public long getRemoteSourceID()
     {
         return remoteSourceIDs.isEmpty() ? -1 : remoteSourceIDs.lastElement();
@@ -1254,6 +1269,7 @@ public class MediaStreamImpl
      *
      * @return the synchronization source (SSRC) identifiers of the remote peer
      */
+    @Override
     public List<Long> getRemoteSourceIDs()
     {
         /*
@@ -1325,6 +1341,7 @@ public class MediaStreamImpl
      *
      * @return the <tt>SrtpControl</tt> which controls the SRTP of this stream
      */
+    @Override
     public SrtpControl getSrtpControl()
     {
         return srtpControl;
@@ -1341,6 +1358,7 @@ public class MediaStreamImpl
      * <tt>false</tt>, otherwise
      * @see MediaStream#isMute()
      */
+    @Override
     public boolean isMute()
     {
         MediaDeviceSession deviceSession = getDeviceSession();
@@ -1358,6 +1376,7 @@ public class MediaStreamImpl
      * afterwards
      * @see MediaStream#isStarted()
      */
+    @Override
     public boolean isStarted()
     {
         return started;
@@ -1503,6 +1522,7 @@ public class MediaStreamImpl
      * @param connector the <tt>StreamConnector</tt> to be used by this instance
      * for sending and receiving media
      */
+    @Override
     public void setConnector(StreamConnector connector)
     {
         if (connector == null)
@@ -1618,6 +1638,7 @@ public class MediaStreamImpl
      * play back and capture media
      * @see MediaStream#setDevice(MediaDevice)
      */
+    @Override
     public void setDevice(MediaDevice device)
     {
         if (device == null)
@@ -1706,6 +1727,7 @@ public class MediaStreamImpl
      * <tt>MediaStream</tt> is to stream media when it is started
      * @see MediaStream#setDirection(MediaDirection)
      */
+    @Override
     public void setDirection(MediaDirection direction)
     {
         if (direction == null)
@@ -1758,6 +1780,7 @@ public class MediaStreamImpl
      * should transmit in
      * @see MediaStream#setFormat(MediaFormat)
      */
+    @Override
     public void setFormat(MediaFormat format)
     {
         MediaDeviceSession deviceSession = getDeviceSession();
@@ -1815,6 +1838,7 @@ public class MediaStreamImpl
      * captured from the <tt>MediaDevice</tt> of this <tt>MediaStream</tt>
      * @see MediaStream#setMute(boolean)
      */
+    @Override
     public void setMute(boolean mute)
     {
         if (this.mute != mute)
@@ -1842,6 +1866,7 @@ public class MediaStreamImpl
      * <tt>MediaStream</tt> is to send and from which it is to receive
      * @see MediaStream#setTarget(MediaStreamTarget)
      */
+    @Override
     public MediaStreamTarget getTarget()
     {
         return rtpConnectorTarget;
@@ -1856,6 +1881,7 @@ public class MediaStreamImpl
      * <tt>MediaStream</tt> is to send and from which it is to receive
      * @see MediaStream#setTarget(MediaStreamTarget)
      */
+    @Override
     public void setTarget(MediaStreamTarget target)
     {
         // Short-circuit if setting the same target.
@@ -1879,6 +1905,7 @@ public class MediaStreamImpl
      *
      * @see MediaStream#start()
      */
+    @Override
     public void start()
     {
         start(getDirection());
@@ -1912,6 +1939,8 @@ public class MediaStreamImpl
                 && ((startedDirection == null)
                         || !startedDirection.allowsSending()))
         {
+            logger.info("Start sending media on stream: " + this);
+
             /*
              * The startSendStreams method will be called so the getRTPManager
              * method will be called as part of the execution of the former.
@@ -1953,6 +1982,8 @@ public class MediaStreamImpl
                 && ((startedDirection == null)
                         || !startedDirection.allowsReceiving()))
         {
+            logger.info("Start receiving media on stream: " + this);
+
             /*
              * The startReceiveStreams method will be called so the
              * getRTPManager method will be called as part of the execution of
@@ -2062,10 +2093,11 @@ public class MediaStreamImpl
 
         StreamRTPManager rtpManager = getRTPManager();
         @SuppressWarnings("unchecked")
-        Iterable<SendStream> sendStreams = rtpManager.getSendStreams();
+        Vector<SendStream> sendStreams = rtpManager.getSendStreams();
 
         if (sendStreams != null)
         {
+            logger.debug("Starting " + sendStreams.size() + " in " + this);
             for (SendStream sendStream : sendStreams)
             {
                 try
@@ -2100,6 +2132,7 @@ public class MediaStreamImpl
      *
      * @see MediaStream#stop()
      */
+    @Override
     public void stop()
     {
         stop(MediaDirection.SENDRECV);
@@ -2366,6 +2399,7 @@ public class MediaStreamImpl
      * of the event
      * @see ReceiveStreamListener#update(ReceiveStreamEvent)
      */
+    @Override
     public void update(ReceiveStreamEvent event)
     {
         if (event instanceof NewReceiveStreamEvent)
@@ -2498,6 +2532,7 @@ public class MediaStreamImpl
      * the event
      * @see SendStreamListener#update(SendStreamEvent)
      */
+    @Override
     public void update(SendStreamEvent event)
     {
         if (event instanceof NewSendStreamEvent)
@@ -2519,6 +2554,7 @@ public class MediaStreamImpl
      * very type of the event
      * @see SessionListener#update(SessionEvent)
      */
+    @Override
     public void update(SessionEvent event)
     {
         // TODO Auto-generated method stub
@@ -2531,6 +2567,7 @@ public class MediaStreamImpl
      *
      * @param remoteEvent the event
      */
+    @Override
     public void update(RemoteEvent remoteEvent)
     {
         if(remoteEvent instanceof SenderReportEvent ||
@@ -2845,6 +2882,7 @@ public class MediaStreamImpl
      * @param rtpTranslator the <tt>RTPTranslator</tt> which is to forward RTP
      * and RTCP traffic between this and other <tt>MediaStream</tt>s
      */
+    @Override
     public void setRTPTranslator(RTPTranslator rtpTranslator)
     {
         if (this.rtpTranslator != rtpTranslator)
@@ -2858,6 +2896,7 @@ public class MediaStreamImpl
      * @return the MediaStreamStats object used to compute the statistics about
      * this MediaStream.
      */
+    @Override
     public MediaStreamStats getMediaStreamStats()
     {
         return this.mediaStreamStatsImpl;

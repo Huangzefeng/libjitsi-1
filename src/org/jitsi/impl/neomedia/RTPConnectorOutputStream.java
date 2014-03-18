@@ -78,6 +78,7 @@ public abstract class RTPConnectorOutputStream
      */
     public RTPConnectorOutputStream()
     {
+        Log.logMediaStackObjectStarted(this);
     }
 
     /**
@@ -100,6 +101,7 @@ public abstract class RTPConnectorOutputStream
      */
     public void close()
     {
+        Log.logMediaStackObjectStopped(this);
         if (maxPacketsPerMillisPolicy != null)
         {
             maxPacketsPerMillisPolicy.close();
@@ -311,6 +313,7 @@ public abstract class RTPConnectorOutputStream
      *
      * @return the number of bytes read
      */
+    @Override
     public int write(byte[] buffer, int offset, int length)
     {
         /*

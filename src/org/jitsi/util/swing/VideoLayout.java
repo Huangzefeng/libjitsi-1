@@ -9,6 +9,7 @@ package org.jitsi.util.swing;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import javax.swing.*;
 
@@ -47,6 +48,12 @@ public class VideoLayout
      * <tt>VideoLayout</tt>.
      */
     private static final int HGAP = 10;
+    
+    /**
+     * The maximum initial size of the video - we don't want to create a
+     * massive window when video is fist added
+     */
+    private static final Dimension MAX_INITIAL_SIZE = new Dimension(640, 480);
 
     /**
      * The local video constraint.
@@ -488,14 +495,27 @@ public class VideoLayout
 
         if (!conference && (remoteCount == 1))
         {
-            /*
-             * If the videos are to be laid out as in a one-to-one call, the
-             * remote video has to fill the parent and the local video will be
-             * placed on top of the remote video. The remote video will be laid
-             * out now and the local video will be laid out later/further
-             * bellow.
-             */
+            // The super call gets the size according to the resolution of the
+            // video that we are displaying. However this can sometimes be too
+            // large. Thus we scale it to make sure that it is a sensible size
+            // to start with.
             prefLayoutSize = super.preferredLayoutSize(parent);
+            
+            if (prefLayoutSize.height > MAX_INITIAL_SIZE.height)
+            {
+                float scaleFactor = 
+                         (float)prefLayoutSize.height / MAX_INITIAL_SIZE.height;
+                prefLayoutSize = new Dimension((int)(prefLayoutSize.width / scaleFactor),
+                                               (int)(prefLayoutSize.height / scaleFactor));
+            }
+            
+            if (prefLayoutSize.width > MAX_INITIAL_SIZE.width)
+            {
+                float scaleFactor =
+                           (float)prefLayoutSize.width / MAX_INITIAL_SIZE.width;
+                prefLayoutSize = new Dimension((int)(prefLayoutSize.width / scaleFactor),
+                                               (int)(prefLayoutSize.height / scaleFactor));
+            }
         }
         else if (remoteCount > 0)
         {

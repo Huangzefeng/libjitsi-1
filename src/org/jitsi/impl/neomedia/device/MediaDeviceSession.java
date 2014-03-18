@@ -17,6 +17,8 @@ import javax.media.format.*;
 import javax.media.protocol.*;
 import javax.media.rtp.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.impl.neomedia.protocol.*;
@@ -479,6 +481,7 @@ public class MediaDeviceSession
                      * the very type of the event
                      * @see ControllerListener#controllerUpdate(ControllerEvent)
                      */
+                    @Override
                     public void controllerUpdate(ControllerEvent event)
                     {
                         playerControllerUpdate(event);
@@ -556,6 +559,7 @@ public class MediaDeviceSession
                          * @see ControllerListener#controllerUpdate(
                          * ControllerEvent)
                          */
+                        @Override
                         public void controllerUpdate(ControllerEvent event)
                         {
                             processorControllerUpdate(event);
@@ -2073,6 +2077,7 @@ public class MediaDeviceSession
      */
     public void start(MediaDirection direction)
     {
+        Log.logMediaStackObjectStarted(this);
         if (direction == null)
             throw new NullPointerException("direction");
 
@@ -2100,6 +2105,9 @@ public class MediaDeviceSession
             MediaDirection oldValue,
             MediaDirection newValue)
     {
+        logger.debug("Media direction changed from " + oldValue + " to " +
+                                                      newValue + " in " + this);
+
         if (newValue.allowsSending())
         {
             Processor processor = getProcessor();
@@ -2152,6 +2160,7 @@ public class MediaDeviceSession
      */
     public void stop(MediaDirection direction)
     {
+        Log.logMediaStackObjectStopped(this);
         if (direction == null)
             throw new NullPointerException("direction");
 
