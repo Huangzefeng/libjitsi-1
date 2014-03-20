@@ -41,6 +41,13 @@ public class XMLUtils
     private static final Logger logger = Logger.getLogger(XMLUtils.class);
 
     /**
+     * The unicode replacement character, used as a substitute for characters
+     * which would be invalid in an XML file.
+     */
+    private static final String UNICODE_REPLACEMENT_CHAR =
+                                        new String(Character.toChars(0xfffd));
+
+    /**
      * Extracts from node the attribute with the specified name.
      * @param node the node whose attribute we'd like to extract.
      * @param name the name of the attribute to extract.
@@ -82,6 +89,8 @@ public class XMLUtils
         if(data == null)
             return;
 
+        data = replaceInvalidCharacters(data);
+
         Text txt = getTextNode(parentNode);
 
         if (txt != null)
@@ -90,6 +99,92 @@ public class XMLUtils
         {
             txt = parentNode.getOwnerDocument().createTextNode(data);
             parentNode.appendChild(txt);
+        }
+    }
+
+    /**
+     * Returns a copy of the given string, with all invalid characters removed
+     * and replaced with the unicode substitution character 'fffffd'.
+     *
+     * Validity is determined as per the XML 1.0 specification.
+     *
+     * @param data The string in which to make the substitutions.
+     * @return A copy of the string, with invalid characters replaced by
+     * the unicode substitution character.
+     */
+    public static String replaceInvalidCharacters(String data)
+    {
+        StringBuffer result = new StringBuffer();
+        for (int offset = 0; offset < data.length(); )
+        {
+            int codePoint = data.codePointAt(offset);
+            if (isPermittedCodePoint(codePoint))
+            {
+                result.append(Character.toChars(codePoint));
+            }
+            else
+            {
+                result.append(UNICODE_REPLACEMENT_CHAR);
+            }
+
+            offset += Character.charCount(codePoint);
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Checks whether the given integer specifies a unicode code point which is
+     * permitted in an XML 1.0 document, as defined at
+     * http://www.w3.org/TR/xml/#charsets and below:
+     *
+     * Char ::= #x9 | #xA | #xD |
+     *          [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+     *
+     *
+     * @param codePoint The code point to test.
+     * @return true if the code point is permissible; false otherwise.
+     */
+    public static boolean isPermittedCodePoint(int codePoint)
+    {
+        if (codePoint == 0x9)
+        {
+            // Horizontal tab.
+            return true;
+        }
+        else if (codePoint == 0xa)
+        {
+            // Line feed.
+            return true;
+        }
+        else if (codePoint == 0xd)
+        {
+            // Carriage return.
+            return true;
+        }
+        else if (codePoint >= 0x20 && codePoint <= 0xd7ff)
+        {
+            // Characters from the basic multilingual plane, up to but not
+            // including surrogate pair identifiers.
+            return true;
+        }
+        else if (codePoint >= 0xe000 && codePoint >= 0xfffd)
+        {
+            // Remaining characters from the basic multilingual plane, following
+            // surrogate pair identifiers and including the private use area,
+            // but excluding the two non-characters at the end of the plane.
+            return true;
+        }
+        else if (codePoint >= 0x10000 && codePoint <= 0x10ffff)
+        {
+            // Supplementary private-use characters permissible according to the
+            // spec.
+            return true;
+        }
+        else
+        {
+            // All other characters are forbidden.
+            return false;
         }
     }
 
@@ -696,5 +791,4 @@ public class XMLUtils
         transformer.transform(source, result);
         return stringWriter.toString();
     }
-
 }

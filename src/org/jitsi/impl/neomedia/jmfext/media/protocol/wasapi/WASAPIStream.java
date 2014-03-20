@@ -548,6 +548,11 @@ public class WASAPIStream
     private long iMediaObject;
 
     /**
+     * Lock used to protect access to the <tt>iMediaObject</tt> handle.
+     */
+    private Object iMediaLock;
+
+    /**
      * The <tt>MediaLocator</tt> which identifies the audio endpoint device this
      * <tt>SourceStream</tt> is to capture data from.
      */
@@ -781,6 +786,7 @@ public class WASAPIStream
     public WASAPIStream(DataSource dataSource, FormatControl formatControl)
     {
         super(dataSource, formatControl);
+        iMediaLock = new Object();
     }
 
     /**
@@ -2086,10 +2092,21 @@ public class WASAPIStream
 
             try
             {
-                dwFlags
-                    = IMediaObject_GetInputStatus(
-                            iMediaObject,
-                            dwInputStreamIndex);
+                synchronized(iMediaLock)
+                {
+                    if (iMediaObject != 0)
+                    {
+                        dwFlags
+                            = IMediaObject_GetInputStatus(
+                                    iMediaObject,
+                                    dwInputStreamIndex);
+                    }
+                    else
+                    {
+                        logger.warn("iMediaObject was unexpectedly null");
+                        dwFlags = 0;
+                    }
+                }
             }
             catch (HResultException hre)
             {
@@ -2211,14 +2228,24 @@ public class WASAPIStream
                  */
                 try
                 {
-                    hresult
-                        = IMediaObject_ProcessInput(
-                                iMediaObject,
-                                dwInputStreamIndex,
-                                pBuffer,
-                                /* dwFlags */ 0,
-                                /* rtTimestamp */ 0,
-                                /* rtTimelength */ 0);
+                    synchronized(iMediaLock)
+                    {
+                        if (iMediaObject != 0)
+                        {
+                            hresult = IMediaObject_ProcessInput(
+                                                        iMediaObject,
+                                                        dwInputStreamIndex,
+                                                        pBuffer,
+                                                        /* dwFlags */ 0,
+                                                        /* rtTimestamp */ 0,
+                                                        /* rtTimelength */ 0);
+                        }
+                        else
+                        {
+                            logger.warn("iMediaObject was unexpectedly null");
+                            break;
+                        }
+                    }
                 }
                 catch (HResultException hre)
                 {
@@ -2245,64 +2272,8 @@ public class WASAPIStream
 
         do
         {
-            try
-            {
-                IMediaObject_ProcessOutput(
-                        iMediaObject,
-                        /* dwFlags */ 0,
-                        1,
-                        dmoOutputDataBuffer);
-                dwStatus
-                    = DMO_OUTPUT_DATA_BUFFER_getDwStatus(dmoOutputDataBuffer);
-            }
-            catch (HResultException hre)
-            {
-                dwStatus = 0;
-                logger.error("IMediaObject_ProcessOutput", hre);
+            dwStatus = safeIMediaObjectProcessOutput();
 
-                if (hre.getHResult() == CO_E_NOTINITIALIZED)
-                {
-                    /* Error - we evidently haven't called CoInitializeEx on the
-                     * underlying OS thread.  Do that now and then try again.
-                     */
-                    logger.info("Calling CoInitializeEx, then will try again");
-                    try
-                    {
-                        WASAPISystem.CoInitializeEx();
-                        logger.debug("Try ProcessOutput again");
-                        IMediaObject_ProcessOutput(
-                                iMediaObject,
-                                /* dwFlags */ 0,
-                                1,
-                                dmoOutputDataBuffer);
-                        dwStatus = DMO_OUTPUT_DATA_BUFFER_getDwStatus(
-                                                           dmoOutputDataBuffer);
-                    }
-                    catch (HResultException e)
-                    {
-                        logger.error("Failed: ", hre);
-                        dwStatus = 0;
-                    }
-                }
-                else if (HRESULT_BLACKLIST.contains(hre.getHResult()))
-                {
-                  // We have hit an error that we cannot recover the device
-                  // from, so reset it here. This causes the current audio
-                  // stream to collapse and the user will lose their call if
-                  // they are in one.
-                  // TODO Tear down and re-establish the renderer so the user
-                  // does not lose their call.
-                  logger.error("Device needs to be reset");
-                  try
-                  {
-                    stop();
-                  }
-                  catch (IOException e)
-                  {
-                    logger.error("Failed to stop the WASAPI stream", e);
-                  }
-                }
-            }
             try
             {
                 int toRead = IMediaBuffer_GetLength(iMediaBuffer);
@@ -2367,6 +2338,118 @@ public class WASAPIStream
         }
         while ((dwStatus & DMO_OUTPUT_DATA_BUFFERF_INCOMPLETE)
                 == DMO_OUTPUT_DATA_BUFFERF_INCOMPLETE);
+    }
+
+    /**
+     * Wrapper method for calling <tt>IMediaObject_ProcessOutput</tt>, and
+     * handling various errors.
+     *
+     * @return dwStatus The DwStatus code from running the
+     * <tt>_ProcessOutput</tt> command.
+     */
+    private int safeIMediaObjectProcessOutput()
+    {
+        int dwStatus;
+
+        try
+        {
+            synchronized(iMediaLock)
+            {
+                if (iMediaObject != 0)
+                {
+                    IMediaObject_ProcessOutput(
+                            iMediaObject,
+                            /* dwFlags */ 0,
+                            1,
+                            dmoOutputDataBuffer);
+                    dwStatus
+                      = DMO_OUTPUT_DATA_BUFFER_getDwStatus(dmoOutputDataBuffer);
+                }
+                else
+                {
+                    logger.warn("iMediaObject was unexpectedly null");
+                    dwStatus = 0;
+                }
+            }
+        }
+        catch (HResultException hre)
+        {
+            dwStatus = 0;
+            logger.error("IMediaObject_ProcessOutput", hre);
+
+            if (hre.getHResult() == CO_E_NOTINITIALIZED)
+            {
+                /* Error - we evidently haven't called CoInitializeEx on the
+                 * underlying OS thread.  Do that now and then try again.
+                 */
+                logger.info("Calling CoInitializeEx, then will try again");
+                try
+                {
+                    WASAPISystem.CoInitializeEx();
+                    synchronized(iMediaLock)
+                    {
+                        logger.debug("Try ProcessOutput again");
+                        if (iMediaObject != 0)
+                        {
+                            IMediaObject_ProcessOutput(
+                                    iMediaObject,
+                                    /* dwFlags */ 0,
+                                    1,
+                                    dmoOutputDataBuffer);
+                            dwStatus = DMO_OUTPUT_DATA_BUFFER_getDwStatus(
+                                                           dmoOutputDataBuffer);
+                        }
+                        else
+                        {
+                            logger.warn("iMediaObject was unexpectedly null");
+                            dwStatus = 0;
+                        }
+                    }
+                }
+                catch (HResultException e)
+                {
+                    logger.error("Failed: ", hre);
+                    dwStatus = 0;
+                }
+            }
+            else if (HRESULT_BLACKLIST.contains(hre.getHResult()))
+            {
+                // We have hit an error that we cannot recover the device from,
+                // so reset it here. This causes the current audio stream to
+                // collapse and the user will lose their call if they are in
+                // one.
+                // TODO Tear down and re-establish the renderer so the user
+                // does not lose their call.
+
+                // Note: we use a separate thread to do this as stop()
+                // deadlocks when called within the processThread (as it waits
+                // for the processThread to finish before exiting).
+                logger.error("Device needs to be reset");
+                Thread streamResetter = new Thread("WASAPI Stream stopper")
+                {
+                    @Override
+                    public void run()
+                    {
+                        try
+                        {
+                            logger.debug("Disconnect...");
+                            WASAPIStream.this.disconnect();
+                            logger.debug("(Re)connect...");
+                            WASAPIStream.this.connect();
+                            logger.debug("Done");
+                        }
+                        catch (IOException e)
+                        {
+                            logger.error("Failed to reset WASAPIStream", e);
+                        }
+                    }
+                };
+                logger.warn("Attempt to restart stream on a new thread");
+                streamResetter.start();
+            }
+        }
+
+        return dwStatus;
     }
 
     /**
@@ -2556,10 +2639,21 @@ public class WASAPIStream
                  * XXX Make sure that the IMediaObject releases any IMediaBuffer
                  * references it holds.
                  */
-                if (SUCCEEDED(IMediaObject_Flush(iMediaObject)) && flush)
+                synchronized(iMediaLock)
                 {
-                    captureIMediaBuffer.SetLength(0);
-                    renderIMediaBuffer.SetLength(0);
+                    if (iMediaObject != 0)
+                    {
+                        if (SUCCEEDED(IMediaObject_Flush(iMediaObject)) &&
+                                                                      flush)
+                        {
+                            captureIMediaBuffer.SetLength(0);
+                            renderIMediaBuffer.SetLength(0);
+                        }
+                    }
+                    else
+                    {
+                        logger.warn("iMediaObject was unexpectedly null");
+                    }
                 }
             }
             catch (HResultException hre)
@@ -2730,6 +2824,7 @@ public class WASAPIStream
     public synchronized void start()
         throws IOException
     {
+        Log.logMediaStackObjectStarted(this);
         if (capture != null)
         {
             waitWhileCaptureIsBusy();
@@ -2787,6 +2882,7 @@ public class WASAPIStream
     public synchronized void stop()
         throws IOException
     {
+        Log.logMediaStackObjectStopped(this);
         started = false;
 
         if (capture != null)
@@ -2855,12 +2951,16 @@ public class WASAPIStream
     {
         logger.logEntry();
 
-        if (iMediaObject != 0)
+        synchronized(iMediaLock)
         {
-            logger.debug("Release iMediaObject");
-            IMediaObject_Release(iMediaObject);
-            iMediaObject = 0;
+            if (iMediaObject != 0)
+            {
+                logger.debug("Release iMediaObject");
+                IMediaObject_Release(iMediaObject);
+                iMediaObject = 0;
+            }
         }
+
         if (dmoOutputDataBuffer != 0)
         {
             logger.debug("Release dmoOutputDataBuffer");

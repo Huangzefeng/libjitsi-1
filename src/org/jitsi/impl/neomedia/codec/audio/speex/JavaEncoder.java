@@ -106,6 +106,7 @@ public class JavaEncoder
     @Override
     public void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
     }
 
     /**
@@ -123,6 +124,7 @@ public class JavaEncoder
     public void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
     }
 
     /**

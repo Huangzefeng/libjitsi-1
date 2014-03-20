@@ -1104,6 +1104,7 @@ public class AudioMixer
     void start(AudioMixerPushBufferStream outStream)
         throws IOException
     {
+        Log.logMediaStackObjectStarted(this);
         synchronized (inDataSources)
         {
             /*
@@ -1137,6 +1138,7 @@ public class AudioMixer
     void stop(AudioMixerPushBufferStream outStream)
         throws IOException
     {
+        Log.logMediaStackObjectStopped(this);
         synchronized (inDataSources)
         {
             /*

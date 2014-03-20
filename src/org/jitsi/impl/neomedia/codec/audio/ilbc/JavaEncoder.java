@@ -101,6 +101,7 @@ public class JavaEncoder
     @Override
     protected void doClose()
     {
+        Log.logMediaStackObjectStopped(this);
         enc = null;
         outputLength = 0;
         inputLength = 0;
@@ -117,6 +118,7 @@ public class JavaEncoder
     @Override
     protected void doOpen()
     {
+        Log.logMediaStackObjectStarted(this);
         int mode = Constants.ILBC_MODE;
 
         enc = new ilbc_encoder(mode);

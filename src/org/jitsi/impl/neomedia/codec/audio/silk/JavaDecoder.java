@@ -42,6 +42,7 @@ public class JavaDecoder
          * @return Returns the number packets for which FEC data was decoded in
          * <tt>JavaDecoder.this</tt>
          */
+        @Override
         public int fecPacketsDecoded()
         {
             return nbFECDecoded;
@@ -52,6 +53,7 @@ public class JavaDecoder
          *
          * @return <tt>null</tt>
          */
+        @Override
         public Component getControlComponent()
         {
             return null;
@@ -174,6 +176,7 @@ public class JavaDecoder
     {
         if (logger.isDebugEnabled())
         {
+            Log.logMediaStackObjectStopped(this);
             logger.debug("Packets decoded normally: " + nbPacketsDecoded);
             logger.debug("Packets decoded with FEC: " + nbFECDecoded);
             logger.debug("Packets lost (subsequent missing):"
@@ -190,6 +193,7 @@ public class JavaDecoder
     protected void doOpen()
         throws ResourceUnavailableException
     {
+        Log.logMediaStackObjectStarted(this);
         decState = new SKP_Silk_decoder_state();
         if (DecAPI.SKP_Silk_SDK_InitDecoder(decState) != 0)
         {

@@ -174,6 +174,7 @@ public class CachingPushBufferStream
      * @return <tt>true</tt> if this <tt>PushBufferStream</tt> has reached the
      * end of the content it makes available; otherwise, <tt>false</tt>
      */
+    @Override
     public boolean endOfStream()
     {
         /*
@@ -227,6 +228,7 @@ public class CachingPushBufferStream
      * @return a <tt>ContentDescriptor</tt> which describes the type of the
      * content made available by the wrapped <tt>PushBufferStream</tt>
      */
+    @Override
     public ContentDescriptor getContentDescriptor()
     {
         return stream.getContentDescriptor();
@@ -239,6 +241,7 @@ public class CachingPushBufferStream
      * @return the length of the content made available by the wrapped
      * <tt>PushBufferStream</tt>
      */
+    @Override
     public long getContentLength()
     {
         return stream.getContentLength();
@@ -257,6 +260,7 @@ public class CachingPushBufferStream
      * <tt>PushBufferStream</tt> with the specified type if such a control is
      * available; otherwise, <tt>null</tt>
      */
+    @Override
     public Object getControl(String controlType)
     {
         Object control = stream.getControl(controlType);
@@ -278,6 +282,7 @@ public class CachingPushBufferStream
      * @return an array of <tt>Object</tt>s which represent the control
      * available for the wrapped <tt>PushBufferStream</tt>
      */
+    @Override
     public Object[] getControls()
     {
         Object[] controls = stream.getControls();
@@ -327,6 +332,7 @@ public class CachingPushBufferStream
      * @return the <tt>Format</tt> of the media data available for reading in
      * this <tt>PushBufferStream</tt>
      */
+    @Override
     public Format getFormat()
     {
         return stream.getFormat();
@@ -386,6 +392,7 @@ public class CachingPushBufferStream
      * @throws IOException if the wrapped stream has thrown such an exception
      * when data was last read from it
      */
+    @Override
     public void read(Buffer buffer)
         throws IOException
     {
@@ -569,6 +576,7 @@ public class CachingPushBufferStream
      * by this <tt>PushBufferStream</tt> when media data is available for
      * reading
      */
+    @Override
     public void setTransferHandler(BufferTransferHandler transferHandler)
     {
         BufferTransferHandler substituteTransferHandler
@@ -744,6 +752,7 @@ public class CachingPushBufferStream
          * up to the owner of this instance to decide the length in milliseconds
          * of the buffering to perform if any
          */
+        @Override
         public long getBufferLength()
         {
             return bufferLength;
@@ -758,6 +767,7 @@ public class CachingPushBufferStream
          * exported by the owner of this instance if such a <tt>Component</tt>
          * is available; otherwise, <tt>null</tt>
          */
+        @Override
         public java.awt.Component getControlComponent()
         {
             return null;
@@ -771,6 +781,7 @@ public class CachingPushBufferStream
          * @return <tt>true</tt> if threshold calculations are enabled;
          * otherwise, <tt>false</tt>
          */
+        @Override
         public boolean getEnabledThreshold()
         {
             return enabledThreshold;
@@ -784,6 +795,7 @@ public class CachingPushBufferStream
          * @return the minimum threshold in milliseconds for the buffering
          * performed by the owner of this instance
          */
+        @Override
         public long getMinimumThreshold()
         {
             return minimumThreshold;
@@ -801,6 +813,7 @@ public class CachingPushBufferStream
          * owner of this instance that is actually in effect after the attempt
          * to set it to the specified <tt>bufferLength</tt>
          */
+        @Override
         public long setBufferLength(long bufferLength)
         {
             if ((bufferLength == DEFAULT_VALUE) || (bufferLength > 0))
@@ -817,6 +830,7 @@ public class CachingPushBufferStream
          * @param enabledThreshold <tt>true</tt> if threshold calculations are
          * to be enabled; otherwise, <tt>false</tt>
          */
+        @Override
         public void setEnabledThreshold(boolean enabledThreshold)
         {
             this.enabledThreshold = enabledThreshold;
@@ -835,6 +849,7 @@ public class CachingPushBufferStream
          * after the attempt to set it to the specified
          * <tt>minimumThreshold</tt>
          */
+        @Override
         public long setMinimumThreshold(long minimumThreshold)
         {
             /*

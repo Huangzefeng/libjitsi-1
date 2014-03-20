@@ -326,16 +326,33 @@ public class ChangeEventDispatcher
         if (oldValue != null && newValue != null && oldValue.equals(newValue))
             return;
 
-        if (propertyChangeListeners != null)
+        // Copy the change listeners list to prevent concurrent modifications
+        List<PropertyChangeListener> changeListeners = null;
+        Map<String, ChangeEventDispatcher> changeChildren = null;
+        synchronized (this)
         {
-            for (PropertyChangeListener target : propertyChangeListeners)
+            if (propertyChangeListeners != null)
+            {
+                changeListeners = new ArrayList<PropertyChangeListener>
+                (propertyChangeListeners);
+            }
+            if (propertyChangeChildren != null)
+            {
+                changeChildren =  new HashMap<String, ChangeEventDispatcher>
+                (propertyChangeChildren);
+            }
+        }
+
+        if (changeListeners != null)
+        {
+            for (PropertyChangeListener target : changeListeners)
                 target.propertyChange(evt);
         }
 
-        if (propertyChangeChildren != null && propertyName != null)
+        if (changeChildren != null && propertyName != null)
         {
             ChangeEventDispatcher child
-                = propertyChangeChildren.get(propertyName);
+                = changeChildren.get(propertyName);
 
             if (child != null)
                 child.firePropertyChange(evt);

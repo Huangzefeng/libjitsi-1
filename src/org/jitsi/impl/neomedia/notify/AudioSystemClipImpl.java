@@ -349,8 +349,12 @@ public class AudioSystemClipImpl
                         rendererProcess = renderer.process(rendererBuffer);
                         if (rendererProcess == Renderer.BUFFER_PROCESSED_FAILED)
                         {
+                            String error = "Failed to render audio stream " +
+                                                                            uri;
+                            Object bufferData = rendererBuffer.getData();
                             logger.error("Failed to render audio stream " +
                                          uri);
+
                             return false;
                         }
 
@@ -493,7 +497,7 @@ public class AudioSystemClipImpl
             }
         }
 
-        logger.error("Invalid audio file at " + uri + " started with:\n"+
+        logger.error("Failed to play audio file at " + uri + " started with:\n"+
                      Arrays.toString(header));
 
         LimitedQueue<Integer> lastFewBytes =
