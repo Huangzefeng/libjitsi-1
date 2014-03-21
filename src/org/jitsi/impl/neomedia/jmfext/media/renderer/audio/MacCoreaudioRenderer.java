@@ -14,6 +14,8 @@ import java.util.concurrent.locks.*;
 import javax.media.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.control.*;
 import org.jitsi.impl.neomedia.device.*;
@@ -136,6 +138,7 @@ public class MacCoreaudioRenderer
     {
         private boolean start = false;
 
+        @Override
         public void didUpdateAvailableDeviceList()
             throws Exception
         {
@@ -150,6 +153,7 @@ public class MacCoreaudioRenderer
             }
         }
 
+        @Override
         public void willUpdateAvailableDeviceList()
             throws Exception
         {
@@ -215,6 +219,7 @@ public class MacCoreaudioRenderer
      *
      * @return the descriptive/human-readable name of this JMF plug-in
      */
+    @Override
     public String getName()
     {
         return PLUGIN_NAME;
@@ -382,6 +387,7 @@ public class MacCoreaudioRenderer
      * @return <tt>BUFFER_PROCESSED_OK</tt> if the specified <tt>buffer</tt> has
      * been successfully processed
      */
+    @Override
     public int process(Buffer buffer)
     {
         synchronized(startStopMutex)
@@ -424,6 +430,7 @@ public class MacCoreaudioRenderer
                         nbBufferData,
                         length);
                 nbBufferData += length;
+                Log.logReadBytes(this, length);
             }
         }
         return BUFFER_PROCESSED_OK;
@@ -451,6 +458,7 @@ public class MacCoreaudioRenderer
      * resources associated with this <tt>MacCoreaudioRenderer</tt> will begin
      * being rendered.
      */
+    @Override
     public void start()
     {
         // Start the stream
@@ -458,13 +466,14 @@ public class MacCoreaudioRenderer
         {
             if(stream == 0 && deviceUID != null)
             {
+                Log.logMediaStackObjectStarted(this);
                 int nbChannels = inputFormat.getChannels();
                 if (nbChannels == Format.NOT_SPECIFIED)
                     nbChannels = 1;
 
                 MacCoreaudioSystem.willOpenStream();
                 boolean isEchoCancelActivated = MacCoreaudioSystem.isEchoCancelActivated();
-                logger.debug("Call on MacCoreAudioDevice: startStream(" + 
+                logger.debug("Call on MacCoreAudioDevice: startStream(" +
                                                isEchoCancelActivated + ")");
                 stream = MacCoreAudioDevice.startStream(
                         deviceUID,
@@ -485,6 +494,7 @@ public class MacCoreaudioRenderer
     /**
      * Stops the rendering process.
      */
+    @Override
     public void stop()
     {
         boolean doStop = false;
@@ -492,6 +502,7 @@ public class MacCoreaudioRenderer
         {
             if(stream != 0 && deviceUID != null && !isStopping)
             {
+                logger.debug("About to stop stream");
                 doStop = true;
                 this.isStopping = true;
                 long timeout = 500;
@@ -522,7 +533,7 @@ public class MacCoreaudioRenderer
                 {
                     if(stream != 0 && deviceUID != null)
                     {
-                        logger.debug("Call on MacCoreAudioDevice: stopStream()");
+                        Log.logMediaStackObjectStopped(this);
                         MacCoreAudioDevice.stopStream(deviceUID, stream);
 
                         stream = 0;

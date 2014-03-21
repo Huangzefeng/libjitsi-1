@@ -14,6 +14,8 @@ import javax.media.*;
 import javax.media.control.*;
 import javax.media.format.*;
 
+import net.sf.fmj.media.Log;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.control.*;
@@ -116,6 +118,7 @@ public class MacCoreaudioStream
 
                 private boolean start = false;
 
+                @Override
                 public void didUpdateAvailableDeviceList()
                     throws Exception
                 {
@@ -131,6 +134,7 @@ public class MacCoreaudioStream
                     }
                 }
 
+                @Override
                 public void willUpdateAvailableDeviceList()
                     throws Exception
                 {
@@ -251,6 +255,7 @@ public class MacCoreaudioStream
      * @throws IOException if anything goes wrong while reading media data from
      * this <tt>PullBufferStream</tt> into the specified <tt>buffer</tt>
      */
+    @Override
     public void read(Buffer buffer)
         throws IOException
     {
@@ -304,6 +309,7 @@ public class MacCoreaudioStream
         buffer.setOffset(0);
         buffer.setSequenceNumber(sequenceNumber++);
         buffer.setTimeStamp(bufferTimeStamp);
+        Log.logReadBytes(this, length);
     }
 
     /**
@@ -357,6 +363,7 @@ public class MacCoreaudioStream
         {
             if(stream == 0 && deviceUID != null)
             {
+                Log.logMediaStackObjectStarted(this);
                 buffer = new byte[bytesPerBuffer];
                 nbBufferData = 0;
                 this.fullBufferList.clear();
@@ -396,7 +403,7 @@ public class MacCoreaudioStream
             {
                 if(stream != 0 && deviceUID != null)
                 {
-                    logger.debug("Call on MacCoreAudioDevice: stopStream()");
+                    Log.logMediaStackObjectStopped(this);
                     MacCoreAudioDevice.stopStream(deviceUID, stream);
 
                     stream = 0;
