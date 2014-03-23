@@ -755,10 +755,11 @@ public class ConfigurationServiceImpl
     /*
      * Implements ConfigurationService#reloadConfiguration().
      */
-    public void reloadConfiguration()
+    public synchronized void reloadConfiguration()
         throws IOException
     {
         this.configurationFile = null;
+        this.failSafeTransaction = null;
 
         File file = getConfigurationFile();
 
@@ -883,10 +884,10 @@ public class ConfigurationServiceImpl
      * a new one is created.
      * @return the configuration File currently used by the implementation.
      */
-    private File getConfigurationFile()
+    private synchronized File getConfigurationFile()
         throws IOException
     {
-        if (this.configurationFile == null)
+        if (configurationFile == null)
         {
             if (logger.isDebugEnabled())
                 logger.debug("Configuration file not set");
@@ -905,11 +906,12 @@ public class ConfigurationServiceImpl
         if ((failSafeTransaction == null) &&
             (faService != null))
         {
+            logger.debug("Creating fail safe transaction for: " + configurationFile);
             failSafeTransaction =
-                    faService.createFailSafeTransaction(this.configurationFile);
+                    faService.createFailSafeTransaction(configurationFile);
         }
 
-        return this.configurationFile;
+        return configurationFile;
     }
 
     /**
