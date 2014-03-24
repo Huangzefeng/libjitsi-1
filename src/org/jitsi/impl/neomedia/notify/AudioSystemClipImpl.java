@@ -7,10 +7,8 @@
 package org.jitsi.impl.neomedia.notify;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.LinkedList;
+import java.net.*;
+import java.util.*;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -19,7 +17,7 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.codec.audio.speex.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.audionotifier.*;
-import org.jitsi.service.libjitsi.LibJitsi;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
 
 /**
@@ -37,18 +35,20 @@ public class AudioSystemClipImpl
     private static final int DEFAULT_BUFFER_DATA_LENGTH = 8 * 1024;
 
     /**
+     * The max time to wait to render a single buffer (in ms).  It normally
+     * takes up to around 20ms.  Note this has the possible side effect that an
+     * audio clip may stop being played if the device is swapped part-way
+     * through (and rebuilding the renderer takes a while) but that's
+     * acceptable.
+     */
+    private static final long MAX_RENDER_TIME = 500;
+
+    /**
      * The <tt>Logger</tt> used by the <tt>AudioSystemClipImpl</tt> class and
      * its instances for logging output.
      */
     private static final Logger logger
         = Logger.getLogger(AudioSystemClipImpl.class);
-
-    /**
-     * The minimum duration in milliseconds to be assumed for the audio streams
-     * played by <tt>AudioSystemClipImpl</tt> in order to ensure that they are
-     * played back long enough to be heard.
-     */
-    private static final long MIN_AUDIO_STREAM_DURATION = 200;
 
     private final AudioSystem audioSystem;
 
@@ -206,15 +206,11 @@ public class AudioSystemClipImpl
 
         Codec resampler = null;
         boolean success = true;
-        AudioFormat audioStreamFormat = null;
-        int audioStreamLength = 0;
         long rendererProcessStartTime = 0;
 
         try
         {
-            Format rendererFormat
-                = audioStreamFormat
-                    = audioSystem.getFormat(audioStream);
+            Format rendererFormat = audioSystem.getFormat(audioStream);
 
             if (rendererFormat == null)
             {
@@ -294,36 +290,39 @@ public class AudioSystemClipImpl
                 {
                     AudioFormat af = (AudioFormat) resamplerFormat;
                     int frameSize
-                        = af.getSampleSizeInBits() / 8 * af.getChannels();
+                        = (af.getSampleSizeInBits() / 8) * af.getChannels();
 
-                    bufferDataLength = bufferDataLength / frameSize * frameSize;
+                    // Ensure the buffer is still an integer number of frames
+                    bufferDataLength -= bufferDataLength % frameSize;
                 }
+
                 bufferData = new byte[bufferDataLength];
                 resamplerBuffer.setData(bufferData);
                 resamplerBuffer.setFormat(resamplerFormat);
-
                 resampler.open();
             }
 
             try
             {
+                // Open and start the renderer here but note that we don't
+                // close and stop it - that is done in
+                // exitRunOnceInPlayThread().
                 renderer.open();
                 renderer.start();
 
-
                 if (notifyListeners)
                 {
+                    logger.debug("Firing audio-started event.");
                     fireAudioStartedEvent();
                 }
 
                 int bufferLength;
+                boolean renderTookTooLong = false;
 
-                while (isStarted()
-                        && ((bufferLength = audioStream.read(bufferData))
-                                != -1))
+                while (isStarted() &&
+                       ((bufferLength = audioStream.read(bufferData)) != -1) &&
+                       !renderTookTooLong)
                 {
-                    audioStreamLength += bufferLength;
-
                     if (resampler == null)
                     {
                         rendererBuffer.setLength(bufferLength);
@@ -340,16 +339,32 @@ public class AudioSystemClipImpl
 
                     int rendererProcess;
 
-                    if (rendererProcessStartTime == 0)
-                        rendererProcessStartTime = System.currentTimeMillis();
+                    // We're about to call in to the renderer to process this
+                    // buffer.  We have seen hangs inside the renderer so put
+                    // in a failsafe here by checking that we don't take too
+                    // long to render the data.
+                    rendererProcessStartTime = System.currentTimeMillis();
                     do
                     {
                         rendererProcess = renderer.process(rendererBuffer);
                         if (rendererProcess == Renderer.BUFFER_PROCESSED_FAILED)
                         {
+                            String error = "Failed to render audio stream " +
+                                                                            uri;
+                            Object bufferData = rendererBuffer.getData();
                             logger.error("Failed to render audio stream " +
                                          uri);
+
                             return false;
+                        }
+
+                        if (System.currentTimeMillis() -
+                                     rendererProcessStartTime > MAX_RENDER_TIME)
+                        {
+                            logger.error("Failed to complete rendering in " +
+                                MAX_RENDER_TIME + "ms");
+                            renderTookTooLong = true;
+                            break;
                         }
                     }
                     while ((rendererProcess
@@ -387,77 +402,20 @@ public class AudioSystemClipImpl
             }
             catch (IOException ioex)
             {
-                /*
-                 * The audio stream failed to close but it doesn't mean the URL
-                 * will fail to open again so ignore the exception.
-                 */
+                // The audio stream failed to close but it doesn't mean the URL
+                // will fail to open again so just log the exception.
+                logger.info("Hit IOException attempting to close file " + ioex);
             }
 
             if (resampler != null)
+            {
                 resampler.close();
-
+            }
 
             if (notifyListeners)
             {
                 logger.debug("Firing audio-ended event.");
                 fireAudioEndedEvent();
-            }
-
-            /*
-             * XXX We do not know whether the Renderer implementation of the
-             * stop method will wait for the playback to complete.
-             */
-            if (success
-                    && (audioStreamFormat != null)
-                    && (audioStreamLength > 0)
-                    && (rendererProcessStartTime > 0)
-                    && isStarted())
-            {
-                long audioStreamDuration
-                    = (audioStreamFormat.computeDuration(audioStreamLength)
-                            + 999999)
-                        / 1000000;
-
-                if (audioStreamDuration > 0)
-                {
-                    /*
-                     * XXX The estimation is not accurate because we do not
-                     * know, for example, how much the Renderer may be buffering
-                     * before it starts the playback.
-                     */
-                    audioStreamDuration += MIN_AUDIO_STREAM_DURATION;
-
-                    boolean interrupted = false;
-
-                    synchronized (sync)
-                    {
-                        while (isStarted())
-                        {
-                            long timeout
-                                = System.currentTimeMillis()
-                                    - rendererProcessStartTime;
-
-                            if ((timeout >= audioStreamDuration)
-                                    || (timeout <= 0))
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    sync.wait(timeout);
-                                }
-                                catch (InterruptedException ie)
-                                {
-                                    interrupted = true;
-                                }
-                            }
-                        }
-                    }
-                    if (interrupted)
-                        Thread.currentThread().interrupt();
-                }
             }
         }
 
@@ -513,12 +471,6 @@ public class AudioSystemClipImpl
             return;
         }
 
-        if (audioStream == null)
-        {
-            logger.error("Could not log data: " +
-                         "Audio stream " + uri + " unexpectedly null.");
-        }
-
         int maxHeaderSize = 50;
 
         // Obtain the first n bytes of the file for debugging.
@@ -545,7 +497,7 @@ public class AudioSystemClipImpl
             }
         }
 
-        logger.error("Invalid audio file at " + uri + " started with:\n"+
+        logger.error("Failed to play audio file at " + uri + " started with:\n"+
                      Arrays.toString(header));
 
         LimitedQueue<Integer> lastFewBytes =
