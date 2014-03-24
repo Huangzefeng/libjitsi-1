@@ -50,13 +50,13 @@ public class MacCoreaudioRenderer
     private long stream = 0;
 
     /**
-     * A mutual eclusion used to avoid conflict when starting / stoping the
+     * A mutual exclusion used to avoid conflict when starting / stopping the
      * stream for this renderer;
      */
     private Object startStopMutex = new Object();
 
     /**
-     * The buffer which stores th incoming data before sending them to
+     * The buffer which stores the incoming data before sending them to
      * CoreAudio.
      */
     private byte[] buffer = null;
@@ -597,7 +597,7 @@ public class MacCoreaudioRenderer
                                 nbBufferData);
                     }
                     // If the stop process is waiting, notifies that every
-                    // sample has been consummed (nbBufferData == 0).
+                    // sample has been consumed (nbBufferData == 0).
                     else
                     {
                         startStopMutex.notify();
@@ -635,7 +635,7 @@ public class MacCoreaudioRenderer
     }
 
     /**
-     * Increases the buffer length if necessary: if the new legnth is greater
+     * Increases the buffer length if necessary: if the new length is greater
      * than the current buffer length.
      *
      * @param newLength The new length requested.
