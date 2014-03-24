@@ -173,6 +173,16 @@ public class MacCoreaudioRenderer
      * Array of supported input formats.
      */
     private Format[] supportedInputFormats;
+    
+    /**
+     * Minimum size of the process buffer - enough to give us 500ms of data.
+     * Calculated as:
+     *    sample rate in bps / 8    -> bytes per second
+     *                       / 1000 -> bytes per millisecond
+     *                       * 500  -> bytes for 500ms
+     */
+    private static final int MAXIMUM_PROCESS_BUFFER_SIZE = (int)
+          Math.round(500 * (MacCoreAudioDevice.DEFAULT_SAMPLE_RATE / 8) / 1000);
 
     /**
      * Initializes a new <tt>MacCoreaudioRenderer</tt> instance.
@@ -390,6 +400,8 @@ public class MacCoreaudioRenderer
     @Override
     public int process(Buffer buffer)
     {
+    	int ret = BUFFER_PROCESSED_OK;
+    	
         synchronized(startStopMutex)
         {
             if(stream != 0 && !isStopping)
@@ -408,32 +420,62 @@ public class MacCoreaudioRenderer
 
                 int length = buffer.getLength();
 
-                // Update the buffer size if too small.
-                int timeout = 2000;
-                int maxNbBuffers
-                    = timeout / MacCoreAudioDevice.DEFAULT_MILLIS_PER_BUFFER;
-                updateBufferLength(
-                        Math.min(
-                            nbBufferData + length,
-                            length * maxNbBuffers));
+                /*
+                 * Update the buffer size if too small.  However, don't allow
+                 * the buffer to grow too large - instead we should block here
+                 * until the data is consumed.
+                 * Increase up to the smaller of the space required vs our
+                 * maximum (which is enough for 500ms of data).  The only caveat
+                 * is we must always allow at least enough room for the current
+                 * data chunk, or else we'll never process it.  In fact allow
+                 * room for 2 chunks - this prevents an audio glitch when the
+                 * chunk is consumed (since otherwise we'd have to wait for the
+                 * next chunk to be added before continuing). 
+                 */
+                updateBufferLength(Math.max(
+                		                2 * length,
+                		                Math.min(nbBufferData + length,
+                		                         MAXIMUM_PROCESS_BUFFER_SIZE)));
 
                 if(nbBufferData + length > this.buffer.length)
                 {
-                    length = this.buffer.length - nbBufferData;
-                }
+                	// Not enough space in the buffer.  Pause and then let the
+                	// caller retry.
+                	// TODO: check that data is consumed eventually? (Maybe not
+                	// needed: this is already done by AudioSystemClipImpl - tho
+                	// what about other callers??).
+                	ret |= INPUT_BUFFER_NOT_CONSUMED;
 
-                // Copy the received data.
-                System.arraycopy(
-                        (byte[]) buffer.getData(),
-                        buffer.getOffset(),
-                        this.buffer,
-                        nbBufferData,
-                        length);
-                nbBufferData += length;
-                Log.logReadBytes(this, length);
+                    boolean interrupted = false;
+                    try
+                    {
+                    	// Pause to allow one spin of the audio mixer.
+                        startStopMutex.wait(10); // 10ms - default device period? TODO
+                    }
+                    catch (InterruptedException ie)
+                    {
+                        interrupted = true;
+                    }
+                    if (interrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                else
+                {
+                    // Copy the received data.
+                    System.arraycopy(
+                            (byte[]) buffer.getData(),
+                            buffer.getOffset(),
+                            this.buffer,
+                            nbBufferData,
+                            length);
+                    nbBufferData += length;
+                    Log.logReadBytes(this, length);
+                }
             }
         }
-        return BUFFER_PROCESSED_OK;
+        return ret;
     }
 
     /**
@@ -550,6 +592,10 @@ public class MacCoreaudioRenderer
         }
     }
 
+    // Hack - only exists to provide a named object for logReadBytes calls from writeOutput().
+    class MacCoreaudioNativeRenderer { }
+    MacCoreaudioNativeRenderer nativeRenderer = new MacCoreaudioNativeRenderer();
+
     /**
      * Writes the data received to the buffer give in arguments, which is
      * provided by the CoreAudio library.
@@ -578,6 +624,7 @@ public class MacCoreaudioRenderer
                     }
 
                     System.arraycopy(this.buffer, 0, buffer, 0, length);
+                    Log.logReadBytes(nativeRenderer, length);
 
                     // Fills the end of the buffer with silence.
                     if(length < bufferLength)
