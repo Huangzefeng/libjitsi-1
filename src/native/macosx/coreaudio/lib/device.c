@@ -510,11 +510,15 @@ char* maccoreaudio_getAudioDeviceProperty(
         return NULL;
     }
 
-    // Converts the device property to ASCII.
-    CFIndex devicePropertyLength = CFStringGetLength(deviceProperty) + 1;
-    char * deviceASCIIProperty;
+    // Converts the device property to UTF-8.  CFStringGetLength returns the
+    // number of UTF-16 code-pairs (= number of unicode chars).  +1 for null
+    // terminator.
+    CFIndex devicePropertyLength = CFStringGetMaximumSizeForEncoding(
+                                             CFStringGetLength(deviceProperty),
+                                             kCFStringEncodingUTF8) + 1;
+    char * deviceUTF8Property;
     // The caller of this function must free the string.
-    if((deviceASCIIProperty
+    if((deviceUTF8Property
                 = (char *) malloc(devicePropertyLength * sizeof(char)))
             == NULL)
     {
@@ -527,11 +531,11 @@ char* maccoreaudio_getAudioDeviceProperty(
     }
     if(CFStringGetCString(
                 deviceProperty,
-                deviceASCIIProperty,
+                deviceUTF8Property,
                 devicePropertyLength,
-                kCFStringEncodingASCII))
+                kCFStringEncodingUTF8))
     {
-        return deviceASCIIProperty;
+        return deviceUTF8Property;
     }
     return NULL;
 }
@@ -1173,31 +1177,27 @@ int maccoreaudio_getDeviceUIDList(
         return -1;
     }
 
-    int i;
-    for(i = 0; i < nbDevices; ++i)
+    int i, j;
+    for(i = j = 0; i < nbDevices; ++i)
     {
-        if(((*deviceUIDList)[i] = maccoreaudio_getAudioDeviceProperty(
+        if(((*deviceUIDList)[j] = maccoreaudio_getAudioDeviceProperty(
                         devices[i],
                         kAudioDevicePropertyDeviceUID))
                 == NULL)
         {
-            int j;
-            for(j = 0; j < i; ++j)
-            {
-                free((*deviceUIDList)[j]);
-            }
-            free(*deviceUIDList);
-            free(devices);
             maccoreaudio_log(
                     "maccoreaudio_getDeviceUIDList (coreaudio/device.c): \
-                    \n\tmaccoreaudio_getAudioDeviceProperty");
-            return -1;
+                    \n\tmaccoreaudio_getAudioDeviceProperty %d", i);
+        }
+        else
+        {
+          j++;
         }
     }
 
     free(devices);
 
-    return nbDevices;
+    return j;
 }
  
 /**
