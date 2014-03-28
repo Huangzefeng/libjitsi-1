@@ -1795,5 +1795,40 @@ public class ConfigurationServiceImpl
         }
     }
 
+    /**
+     * Returns the Enum value of the specified property or a default value if
+     * the config doesn't return a specified default value.
+     *
+     * @param propertyName the name of the property that is being queried.
+     * @param type the type of enum to match against.
+     * @param defaultValue the value to be returned if the specified property
+     * name is not associated with a value in this
+     * <code>ConfigurationService</code>
+     * @return the result of matching the property against the enum and
+     * <code>defaultValue</code> in case there was no value mapped against
+     * the specified <tt>propertyName</tt>, or the returned string had zero
+     * length or contained whitespaces only.
+     */
+    @Override
+    public <T extends Enum<T>> T getEnum(Class<T> type, String propertyName,
+            T defaultValue)
+    {
+        String value = getString(propertyName);
+        try
+        {
+            if (value != null)
+            {
+                return T.valueOf(type, value);
+            }
+        }
+        catch (IllegalArgumentException e)
+        {
+            logger.info("Unknown value: " + value +
+                        " for property: " + propertyName);
+        }
+
+        return defaultValue;
+    }
+
 
 }
