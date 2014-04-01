@@ -1810,8 +1810,9 @@ public class ConfigurationServiceImpl
      * length or contained whitespaces only.
      */
     @Override
-    public <T extends Enum<T>> T getEnum(Class<T> type, String propertyName,
-            T defaultValue)
+    public <T extends Enum<T>> T getEnum(Class<T> type,
+                                         String propertyName,
+                                         T defaultValue)
     {
         String value = getString(propertyName);
         try
