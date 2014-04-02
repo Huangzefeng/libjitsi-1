@@ -256,6 +256,17 @@ public class WASAPISystem
     private long iMMDeviceEnumerator;
 
     /**
+     * Lock that must be held before doing any operations using the
+     * iMMDeviceEnumerator.<p>
+     * The holder of this lock must not take the WASAPISystem object lock as
+     * this can result in a deadlock.<p>
+     * Access to this lock should be via <tt>getIMMDeviceLock()</tt> as this
+     * ensures the object is created prior to use (which allows the lock to be
+     * accessed before the constructor has finished executing).
+     */
+    private Object iMMDeviceLock;
+
+    /**
      * The <tt>IMMNotificationClient</tt> which is to notify this
      * <tt>WASAPISystem</tt> when an audio endpoint device is added or removed,
      * when the state or properties of an endpoint device change, or when there
@@ -447,7 +458,7 @@ public class WASAPISystem
          * setPlaybackDevices in the synchronized block because they may fire
          * events which may in turn lead to deadlocks.
          */
-        synchronized (this)
+        synchronized (getIMMDeviceLock())
         {
 
         /*
@@ -569,10 +580,26 @@ public class WASAPISystem
             IMMDeviceCollection_Release(iMMDeviceCollection);
         }
 
-        } // synchronized (this)
+        } // synchronized (iMMDeviceLock)
 
         setCaptureDevices(captureDevices);
         setPlaybackDevices(playbackDevices);
+    }
+
+    /**
+     * Return the iMMDeviceLock, creating it if necessary.  Needed as the super
+     * constructor calls back down to WASAPISystem.initialize() before we've
+     * had a chance to create the lock in the constructor. <p>
+     * For safety, use this function whenever access is needed to the lock.
+     * @return The iMMDeviceLock object.
+     */
+    private Object getIMMDeviceLock()
+    {
+        if (iMMDeviceLock == null)
+        {
+            iMMDeviceLock = new Object();
+        }
+        return iMMDeviceLock;
     }
 
     /**
@@ -694,7 +721,7 @@ public class WASAPISystem
     {
         try
         {
-            synchronized (this)
+            synchronized (getIMMDeviceLock())
             {
                 if (iMMDeviceEnumerator != 0)
                 {
@@ -1012,18 +1039,21 @@ public class WASAPISystem
      * endpoint device that is identified by the specified endpoint ID string in
      * a native WASAPI function which returns an <tt>HRESULT</tt> value
      */
-    public synchronized long getIMMDevice(String id)
+    public long getIMMDevice(String id)
         throws HResultException
     {
-        long iMMDeviceEnumerator = this.iMMDeviceEnumerator;
+        synchronized(getIMMDeviceLock())
+        {
+            long iMMDeviceEnumerator = this.iMMDeviceEnumerator;
 
-        if (iMMDeviceEnumerator == 0)
-        {
-            throw new IllegalStateException("iMMDeviceEnumerator");
-        }
-        else
-        {
-            return IMMDeviceEnumerator_GetDevice(iMMDeviceEnumerator, id);
+            if (iMMDeviceEnumerator == 0)
+            {
+                throw new IllegalStateException("iMMDeviceEnumerator");
+            }
+            else
+            {
+                return IMMDeviceEnumerator_GetDevice(iMMDeviceEnumerator, id);
+            }
         }
     }
 
@@ -1133,76 +1163,80 @@ public class WASAPISystem
      * audio endpoint device identified by the specified endpoint ID string in a
      * native WASAPI function which returns an <tt>HRESULT</tt> value
      */
-    public synchronized int getIMMDeviceIndex(String id, int dataFlow)
+    public int getIMMDeviceIndex(String id, int dataFlow)
         throws HResultException
     {
-        long iMMDeviceEnumerator = this.iMMDeviceEnumerator;
-
-        if (iMMDeviceEnumerator == 0)
-        {
-            throw new IllegalStateException("iMMDeviceEnumerator");
-        }
-
-        long iMMDeviceCollection
-            = IMMDeviceEnumerator_EnumAudioEndpoints(
-                    iMMDeviceEnumerator,
-                    dataFlow,
-                    DEVICE_STATE_ACTIVE);
-
-        if (iMMDeviceCollection == 0)
-        {
-            throw new RuntimeException(
-                    "IMMDeviceEnumerator_EnumAudioEndpoints");
-        }
-
         int iMMDeviceIndex = -1;
 
-        try
+        synchronized(getIMMDeviceLock())
         {
-            int count = IMMDeviceCollection_GetCount(iMMDeviceCollection);
+            long iMMDeviceEnumerator = this.iMMDeviceEnumerator;
 
-            if (count > 0)
+            if (iMMDeviceEnumerator == 0)
             {
-                for (int i = 0; i < count; i++)
+                throw new IllegalStateException("iMMDeviceEnumerator");
+            }
+
+            long iMMDeviceCollection
+                = IMMDeviceEnumerator_EnumAudioEndpoints(
+                        iMMDeviceEnumerator,
+                        dataFlow,
+                        DEVICE_STATE_ACTIVE);
+
+            if (iMMDeviceCollection == 0)
+            {
+                throw new RuntimeException(
+                        "IMMDeviceEnumerator_EnumAudioEndpoints");
+            }
+
+            try
+            {
+                int count = IMMDeviceCollection_GetCount(iMMDeviceCollection);
+
+                if (count > 0)
                 {
-                    long iMMDevice
-                        = IMMDeviceCollection_Item(iMMDeviceCollection, i);
+                    for (int i = 0; i < count; i++)
+                    {
+                        long iMMDevice
+                            = IMMDeviceCollection_Item(iMMDeviceCollection, i);
 
-                    if (iMMDevice == 0)
-                    {
-                        throw new RuntimeException(
-                                "IMMDeviceCollection_Item");
-                    }
+                        if (iMMDevice == 0)
+                        {
+                            throw new RuntimeException(
+                                    "IMMDeviceCollection_Item");
+                        }
 
-                    String iMMDeviceID;
+                        String iMMDeviceID;
 
-                    try
-                    {
-                        iMMDeviceID = IMMDevice_GetId(iMMDevice);
-                    }
-                    finally
-                    {
-                        IMMDevice_Release(iMMDevice);
-                    }
-                    /*
-                     * The endpoint ID strings include GUIDs so case insensitive
-                     * comparison should be appropriate. If we wanted to be more
-                     * strict, we would've invoked IMMDeviceCollection_GetDevice
-                     * in order to have Windows Audio Session API (WASAPI) make
-                     * the comparison of the enpoint ID strings.
-                     */
-                    if (id.equalsIgnoreCase(iMMDeviceID))
-                    {
-                        iMMDeviceIndex = i;
-                        break;
+                        try
+                        {
+                            iMMDeviceID = IMMDevice_GetId(iMMDevice);
+                        }
+                        finally
+                        {
+                            IMMDevice_Release(iMMDevice);
+                        }
+                        /*
+                         * The endpoint ID strings include GUIDs so case
+                         * insensitive comparison should be appropriate. If we
+                         * wanted to be more strict, we would've invoked
+                         * IMMDeviceCollection_GetDevice in order to have
+                         * Windows Audio Session API (WASAPI) make the
+                         * comparison of the enpoint ID strings.
+                         */
+                        if (id.equalsIgnoreCase(iMMDeviceID))
+                        {
+                            iMMDeviceIndex = i;
+                            break;
+                        }
                     }
                 }
             }
-        }
-        finally
-        {
-            IMMDeviceCollection_Release(iMMDeviceCollection);
-        }
+            finally
+            {
+                IMMDeviceCollection_Release(iMMDeviceCollection);
+            }
+        } // synchronized(iMMDeviceLock)
         return iMMDeviceIndex;
     }
 
