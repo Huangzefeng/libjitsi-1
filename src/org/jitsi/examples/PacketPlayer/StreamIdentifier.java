@@ -8,36 +8,99 @@ import java.util.Map.Entry;
 
 public class StreamIdentifier
 {
-    public StreamIdentifier(String fileLocation)
+    private int ssrc;
+    private int packetCount;
+    private List<Byte> packetTypes;
+    private InetAddress srcIp;
+    private int srcPort;
+    private InetAddress dstIp;
+    private int dstPort;
+
+    public StreamIdentifier(int ssrc)
     {
-        readFile(fileLocation);
+        this.ssrc = ssrc;
+        srcPort = -1;
+        srcIp = null;
+        dstPort = -1;
+        dstIp = null;
+    }
+    public StreamIdentifier(RtpData d)
+    {
+        ssrc = d.ssrc;
+        srcPort = d.srcPort;
+        srcIp = d.srcIp;
+        dstPort = d.dstPort;
+        dstIp = d.dstIp;
+        packetCount = 1;
+        packetTypes = new ArrayList<Byte>();
+        packetTypes.add(d.pt);
     }
 
-    public static void main(String[] args)
+    public boolean matches(RtpData d)
     {
-        long startTime = System.nanoTime();
-        StreamIdentifier streamIdentifier = new StreamIdentifier("media0.pcap");
-        System.out.println(String.format("Took %.3f seconds.",
-            ((double) (System.nanoTime() - startTime)) / 1000000000));
-
-        for (Entry<Integer, Integer> entry : streamIdentifier.ssrcPacketCounts
-            .entrySet())
+        if ((ssrc == d.ssrc || ssrc == -1) &&
+            (srcIp == null || srcIp.equals(d.srcIp)) &&
+            (dstIp == null || dstIp.equals(d.dstIp)) &&
+            (srcPort == -1 || srcPort == d.srcPort) &&
+            (dstPort == -1 || dstPort == d.dstPort)
+           )
         {
-            System.out.println(String.format("0x%S = %s packets\n PTs: %s",
-                Integer.toHexString(entry.getKey()), entry.getValue(),
-                streamIdentifier.ssrcPayloadTypes.get(entry.getKey())));
+            return true;
         }
 
+        return false;
     }
 
-    public Map<Integer, Integer> ssrcPacketCounts =
-        new HashMap<Integer, Integer>();
-
-    public Map<Integer, List<Byte>> ssrcPayloadTypes =
-        new HashMap<Integer, List<Byte>>();
-
-    private void readFile(String fileLocation)
+    public boolean add(RtpData d)
     {
+        if (matches(d))
+        {
+            packetCount ++;
+
+            if (! packetTypes.contains(d.pt))
+            {
+                packetTypes.add(d.pt);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public String getSource()
+    {
+        return srcIp.toString() + ":" + srcPort;
+    }
+
+    public String getDestination()
+    {
+        return dstIp.toString() + ":" + dstPort;
+    }
+
+    public int getSSRC()
+    {
+        return ssrc;
+    }
+
+    public int getPacketCount()
+    {
+        return packetCount;
+    }
+
+    public List<Byte> getPacketTypes()
+    {
+        return new ArrayList<Byte>(packetTypes);
+    }
+
+    public static List<StreamIdentifier> fromFile(String fileLocation)
+    {
+        List<StreamIdentifier> streams =
+                new ArrayList<StreamIdentifier>();
+
+        Map<Integer, List<StreamIdentifier>> ssrcs =
+                new HashMap<Integer, List<StreamIdentifier>>();
+
         PCapDatagramSocket socket = null;
         try
         {
@@ -45,26 +108,50 @@ public class StreamIdentifier
 
             while (!socket.isClosed())
             {
-                DatagramPacket p = new DatagramPacket(new byte[2048], 0);
-                socket.receive(p);
+                RtpData d = new RtpData();
 
-                if (p.getLength() != 0)
+                socket.receive(d);
+
+                if (d.payloadLength != 0 && d.protocol == 17)
                 {
-                    ByteBuffer wrapped = ByteBuffer.wrap(p.getData());
-
-                    int SSRC = readSSRC(wrapped);
-                    byte payloadType = readPayloadType(wrapped);
-
-                    if (isRTCPPayload(payloadType))
+                    if (d.isRtcp())
                     {
                         continue;
                     }
 
-                    ensureSSRCCountsInit(SSRC);
-                    recordSSRCCount(SSRC);
+                    List<StreamIdentifier> ssrcStreams = ssrcs.get(d.ssrc);
 
-                    ensureSSRCPayloadTypesInit(SSRC);
-                    recordSSRCPayloadType(SSRC, payloadType);
+                    if (ssrcStreams != null)
+                    {
+                        boolean found = false;
+
+                        for (StreamIdentifier s: ssrcStreams)
+                        {
+                            if (!found && s.add(d))
+                            {
+                                found = true;
+                            }
+                        }
+
+                        if (! found)
+                        {
+                            StreamIdentifier s = new StreamIdentifier(d);
+                            ssrcStreams.add(s);
+                            streams.add(s);
+                        }
+                    }
+                    else
+                    {
+                        List<StreamIdentifier> newSsrcStreams =
+                                new ArrayList<StreamIdentifier>();
+
+                        StreamIdentifier s = new StreamIdentifier(d);
+
+                        newSsrcStreams.add(s);
+                        ssrcs.put(d.ssrc, newSsrcStreams);
+
+                        streams.add(s);
+                    }
                 }
             }
         }
@@ -76,55 +163,25 @@ public class StreamIdentifier
         {
             socket.close();
         }
+
+        return streams;
     }
 
-    public static int readSSRC(ByteBuffer wrapped)
+    public static void main(String[] args)
     {
-        int SSRC = wrapped.getInt(8);
-        return SSRC;
-    }
+        long startTime = System.nanoTime();
+        List<StreamIdentifier> streams = StreamIdentifier.fromFile("media0.pcap");
+        System.out.println(String.format("Took %.3f seconds.",
+            ((double) (System.nanoTime() - startTime)) / 1000000000));
 
-    public static byte readPayloadType(ByteBuffer wrapped)
-    {
-        // This include the marker bit so mask the first bit
-        byte payloadType = wrapped.get(1);
-        payloadType = (byte) (payloadType & ((byte) 0x7f));
-        return payloadType;
-    }
-
-    private void recordSSRCPayloadType(int SSRC, byte payloadType)
-    {
-        if (!ssrcPayloadTypes.get(SSRC).contains(payloadType))
+        for (StreamIdentifier stream : streams)
         {
-            List<Byte> payloadList = ssrcPayloadTypes.get(SSRC);
-            payloadList.add(payloadType);
-            ssrcPayloadTypes.put(SSRC, payloadList);
+            System.out.println(String.format("0x%S = %s packets\n PTs: %s",
+                Integer.toHexString(stream.getSSRC()),
+                stream.getPacketCount(),
+                stream.getPacketTypes()
+            ));
         }
-    }
 
-    private void recordSSRCCount(int SSRC)
-    {
-        ssrcPacketCounts.put(SSRC, ssrcPacketCounts.get(SSRC) + 1);
-    }
-
-    private void ensureSSRCPayloadTypesInit(int SSRC)
-    {
-        if (!ssrcPayloadTypes.containsKey(SSRC))
-        {
-            ssrcPayloadTypes.put(SSRC, new LinkedList<Byte>());
-        }
-    }
-
-    private void ensureSSRCCountsInit(int SSRC)
-    {
-        if (!ssrcPacketCounts.containsKey(SSRC))
-        {
-            ssrcPacketCounts.put(SSRC, 0);
-        }
-    }
-
-    private boolean isRTCPPayload(byte payloadType)
-    {
-        return payloadType >= 72 && payloadType <= 76;
     }
 }

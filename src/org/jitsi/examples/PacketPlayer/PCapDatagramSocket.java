@@ -3,6 +3,9 @@ package org.jitsi.examples.PacketPlayer;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+
+import org.jitsi.util.Logger;
 
 /**
  * A datagram socket that gets its data from a pcap file.
@@ -11,6 +14,7 @@ import java.net.*;
  */
 public class PCapDatagramSocket extends DatagramSocket
 {
+    private static Logger logger = Logger.getLogger(PCapDatagramSocket.class);
     private boolean connected = true;
     private final FileInputStream fis;
 
@@ -29,15 +33,22 @@ public class PCapDatagramSocket extends DatagramSocket
                (b[3] & 0xFF) << 24;
     }
 
+    private static int byteArrayToShort(byte[] b)
+    {
+        return (0 | (b[0] & 0xFF | (b[1] & 0xFF) << 8));
+    }
+
     @Override
     public synchronized void receive(DatagramPacket p) throws IOException
     {
         receiveWithTimeStamp(p);
     }
 
-    public synchronized long receiveWithTimeStamp(DatagramPacket p) throws IOException
+    public synchronized void receive(RtpData d) throws IOException
     {
         byte[] intByteArray = new byte[4];
+        byte[] shortByteArray = new byte[2];
+        byte[] byteByteArray = new byte[1];
 
         //  First 4 bytes are ts in seconds
         //  Next 4 bytes are ts in nano seconds
@@ -51,38 +62,80 @@ public class PCapDatagramSocket extends DatagramSocket
         {
             //End of file has been reached - assumes that EOF is aligned with packets
             close();
-            return 0;
+            d.payloadLength = 0;
+            return;
         }
 
-        long timeStampNanoSeconds = combineTimestamps(timeStampSeconds, timeStampMicroSecondsOnly);
-//        System.out.println(String.format("Timestamp from packet %s secs, %s nanos (%s))", timeStampNanoSeconds/1000000000, timeStampNanoSeconds % 1000000000, new Date(timeStampNanoSeconds / 1000000)));
+        d.timestamp = combineTimestamps(timeStampSeconds, timeStampMicroSecondsOnly);
 
         //  next 4 bytes are total packet length
-        fis.read(intByteArray);
-        int payloadLength = byteArrayToInt(intByteArray);
-        // subtract 42 for the ethernet, IP and UDP headers.
-        payloadLength -= 42;
-        p.setLength(payloadLength);
+        fis.read(intByteArray, 0, 4);
+        d.payloadLength = byteArrayToInt(intByteArray);
 
         //  next 4 bytes are just the last four repeated
         fis.skip(4);
 
         //  skip 14 bytes for ethernet header
         fis.skip(14);
+        d.payloadLength -= 14;
 
-        //  skip 20 bytes for IP header
-        fis.skip(20);
+        // 20 bytes for IP header
+        // 4 for version, lengths, dscp, ecn, identification, flags
+        // 4 for identification, flags, fragment offset
+        // 1 for TTL
+        // 1 for Protocol
+        // 2 for a checksum
+        // 4 for Source IP
+        // 4 for Destination IP
+        fis.skip(9);
+        fis.read(byteByteArray, 0, 1);
+        d.protocol = byteByteArray[0] & 0xFF;
 
-        //  skip UDP header - 8 bytes
-        fis.skip(8);
+        fis.skip(2);
+        fis.read(intByteArray, 0, 4);
+        d.srcIp = InetAddress.getByAddress(intByteArray);
+        fis.read(intByteArray, 0, 4);
+        d.dstIp = InetAddress.getByAddress(intByteArray);
+        d.payloadLength -= 20;
 
-        //  Next read the payload - which is total packet length - 42 bytes long.
-        fis.read(p.getData(), 0, payloadLength);
+        // If this isn't UDP continue
+        if (d.protocol != 17)
+        {
+            fis.skip(d.payloadLength);
+            return;
+        }
 
-        //Set a random port - I don't know if this is required.
-        p.setPort(5000);
+        // UDP header - 8 bytes
+        // 2 for Source Port
+        // 2 for Destination Port
+        // 4 for Length and Checksum
+        fis.read(shortByteArray, 0, 2);
+        d.srcPort = byteArrayToShort(shortByteArray);
+        fis.read(shortByteArray, 0, 2);
+        d.dstPort = byteArrayToShort(shortByteArray);
+        fis.skip(4);
+        d.payloadLength -= 8;
 
-        return timeStampNanoSeconds;
+        if (d.payloadLength != 0)
+        {
+            //  Next read the payload
+            fis.read(d.data, d.offset, d.payloadLength);
+
+            ByteBuffer b = ByteBuffer.wrap(d.data);
+            d.ssrc = b.getInt(8);
+            d.pt = b.get(1);
+        }
+    }
+
+    public synchronized long receiveWithTimeStamp(DatagramPacket p) throws IOException
+    {
+        RtpData rtp = new RtpData(p);
+
+        // Set a random port - I don't know if this is required.
+        p.setPort(rtp.dstPort);
+        p.setLength(rtp.payloadLength);
+
+        return rtp.timestamp;
     }
 
 	@Override

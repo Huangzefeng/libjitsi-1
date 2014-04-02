@@ -13,21 +13,12 @@ public class PCapStreamConnector
 {
 
     private String filename;
-    private int ssrc;
-    private int pt;
+    private StreamIdentifier stream;
 
-    public PCapStreamConnector(String filename, int ssrc)
+    public PCapStreamConnector(String filename, StreamIdentifier stream)
     {
         this.filename = filename;
-        this.ssrc = ssrc;
-        this.pt = -1;
-    }
-
-    public PCapStreamConnector(String filename, int ssrc, int pt)
-    {
-        this(filename, ssrc);
-        System.out.println(filename + " : " + ssrc + " : " + pt);
-        this.pt = pt;
+        this.stream = stream;
     }
 
     DatagramSocket sock = null;
@@ -39,14 +30,7 @@ public class PCapStreamConnector
         {
             try
             {
-              if (pt != -1)
-              {
-                sock = new TimedPCapDatagramSocket(filename, ssrc, pt);
-              }
-              else
-              {
-                sock = new TimedPCapDatagramSocket(filename, ssrc);
-              }
+                sock = new TimedPCapDatagramSocket(filename, stream);
             }
             catch (SocketException e)
             {

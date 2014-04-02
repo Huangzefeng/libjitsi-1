@@ -11,31 +11,29 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
     // An offset between the time the packet was written and the current nano time reading
     // It's the amount of time to add to the media time to make it system time.
     long mediaTimeOffset = Long.MIN_VALUE;
-    int ssrc;
-    int pt;
+    StreamIdentifier stream;
 
-    public TimedPCapDatagramSocket(String xiFilename, int ssrc) throws IOException
+    public TimedPCapDatagramSocket(String xiFilename, StreamIdentifier stream) throws IOException
     {
         super(xiFilename);
-        this.ssrc = ssrc;
-        this.pt = -1;
-    }
-
-    public TimedPCapDatagramSocket(String xiFilename, int ssrc, int pt) throws IOException
-    {
-        this(xiFilename, ssrc);
-        this.pt = pt;
+        this.stream = stream;
     }
 
     @Override
     public synchronized void receive(DatagramPacket p) throws IOException
     {
         long timeStampNanoSeconds;
+        RtpData d;
         do
         {
-            timeStampNanoSeconds = super.receiveWithTimeStamp(p);
+            d = new RtpData(p);
+            super.receive(d);
+            timeStampNanoSeconds = d.timestamp;
         }
-        while ((!isInterestingSSRC(p)) || (!isInterestingPT(p)));
+        while (!stream.matches(d));
+
+        p.setPort(d.dstPort);
+        p.setLength(d.payloadLength);
 
         try
         {
@@ -78,31 +76,6 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
         {
             e.printStackTrace();
         }
-    }
-
-    private boolean isInterestingPT(DatagramPacket p)
-    {
-        if (pt == -1)
-        {
-            return true;
-        }
-        int readSSRC = StreamIdentifier.readPayloadType(ByteBuffer.wrap(p.getData()));
-        if (readSSRC == pt)
-        {
-          return true;
-        }
-        return false;
-    }
-
-
-    private boolean isInterestingSSRC(DatagramPacket p)
-    {
-        if (ssrc == -1)
-        {
-            return true;
-        }
-        int readSSRC = StreamIdentifier.readSSRC(ByteBuffer.wrap(p.getData()));
-        return readSSRC == ssrc;
     }
 
     private long convertMediaToSystemTime(long timeStampNanoSeconds)
