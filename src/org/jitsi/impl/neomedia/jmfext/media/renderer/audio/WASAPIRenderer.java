@@ -1409,11 +1409,11 @@ public class WASAPIRenderer
                         if (resampler == null)
                         {
                         	Charting.wroteToWasapi(toWrite);
-                            Log.logReadBytes(this, toWrite);
                             written
                                 = maybeIAudioRenderClientWrite(
                                         remainder, 0, toWrite,
                                         srcSampleSize, srcChannels);
+                            Log.logReadBytes(this, written);
                         }
                         else
                         {
@@ -1427,13 +1427,12 @@ public class WASAPIRenderer
                                         * resamplerFrameSize;
 
                                 Charting.wroteToWasapi(toWrite);
-                                Log.logReadBytes(this, toWrite);
-                                maybeIAudioRenderClientWrite(
+                                written = maybeIAudioRenderClientWrite(
                                         (byte[]) resamplerOutBuffer.getData(),
                                         resamplerOutBuffer.getOffset(),
                                         resamplerOutLength,
                                         resamplerSampleSize, resamplerChannels);
-                                written = toWrite;
+                                Log.logReadBytes(this, written);
                             }
                             else
                             {
