@@ -606,10 +606,9 @@ public class DirectShowStream
     void setDevice(DSCaptureDevice device)
         throws IOException
     {
-        Log.dumpStack(new Exception(
-            "setDevice.  Changed? " + ((device == this.device) ?
-                              ("No (" + this.device + ")") :
-                              ("Yes (" + this.device + " to " + device +")"))));
+        Log.dumpStack("setDevice.  Changed? " + ((device == this.device) ?
+                               ("No (" + this.device + ")") :
+                               ("Yes (" + this.device + " to " + device +")")));
         if (this.device != device)
         {
             if (this.device != null)
@@ -705,8 +704,7 @@ public class DirectShowStream
                             }
                         };
 
-                    Log.dumpStack(new Exception(
-                                  "Start DirectShowStream transferDataThread"));
+                    Log.dumpStack("Start DirectShowStream transferDataThread");
                     transferDataThread.start();
                 }
             }
