@@ -41,4 +41,10 @@ public class NotifyDevices
     {
         return PROP_DEVICE;
     }
+
+    @Override
+    protected String getDataflowType()
+    {
+        return "NOTIFY";
+    }
 }

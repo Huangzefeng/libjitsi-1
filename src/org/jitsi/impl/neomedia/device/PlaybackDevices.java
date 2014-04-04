@@ -42,4 +42,10 @@ public class PlaybackDevices
     {
         return PROP_DEVICE;
     }
+
+    @Override
+    protected String getDataflowType()
+    {
+        return "PLAYBACK";
+    }
 }

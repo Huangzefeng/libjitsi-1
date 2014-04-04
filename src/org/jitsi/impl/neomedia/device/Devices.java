@@ -189,7 +189,8 @@ public abstract class Devices
     {
         if (activeDevices != null)
         {
-            logger.debug("Got " + activeDevices.size() + " active devices");
+            logger.debug("Got " + activeDevices.size() + " " +
+                         getDataflowType() + " active devices");
             String property = getPropDevice();
 
             loadDevicePreferences(property);
@@ -203,11 +204,14 @@ public abstract class Devices
             for (int i = activeDevices.size() - 1; i >= 0; i--)
             {
                 CaptureDeviceInfo2 activeDevice = activeDevices.get(i);
-                logger.debug("Examining " + activeDevice.getName());
+                logger.debug("Examining " + getDataflowType() + " device: " +
+                             activeDevice.getName());
 
                 if (!devicePreferences.contains(activeDevice.getName()))
                 {
-                    logger.debug("Device preferences does not contain: " + activeDevice.getName());
+                    logger.debug(getDataflowType() +
+                                 "device preferences do not contain: " +
+                                 activeDevice.getName());
 
                     // By default, select automatically the USB devices.
                     boolean isSelected
@@ -304,7 +308,8 @@ public abstract class Devices
                 String newProperty = audioSystem.getPropertyName(property + "_list");
                 String deviceIdentifiersString = cfg.getString(newProperty);
 
-                logger.debug("Loading device preferences to be " +
+                logger.debug("Loading " + getDataflowType() + " " +
+                		"device preferences to be " +
                         deviceIdentifiersString);
 
                 if (deviceIdentifiersString != null)
@@ -436,7 +441,8 @@ public abstract class Devices
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
                 device.getName();
 
-        logger.info("Saving: " + device +
+        logger.info("Saving " + getDataflowType() +
+                    " device:" + device +
                     " to: " + property +
                     " selected: " + isSelected);
 
@@ -524,4 +530,6 @@ public abstract class Devices
             cfg.setProperty(property, value.toString());
         }
     }
+
+    protected abstract String getDataflowType();
 }
