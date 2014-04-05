@@ -513,22 +513,39 @@ public class MacCoreaudioRenderer
                 if (nbChannels == Format.NOT_SPECIFIED)
                     nbChannels = 1;
 
-                MacCoreaudioSystem.willOpenStream();
-                boolean isEchoCancelActivated = MacCoreaudioSystem.isEchoCancelActivated();
-                logger.debug("Call on MacCoreAudioDevice: startStream(" +
+                audioSystem.willOpenStream();
+                try
+                {
+                    /*
+                     * XXX A Renderer will participate in the acoustic echo
+                     * cancellation if (acoustic echo cancellation is enabled,
+                     * of course, and) the Renderer is not sounding a
+                     * notification.
+                     */
+                    boolean isEchoCancel
+                        = AudioSystem.DataFlow.PLAYBACK.equals(dataFlow)
+                            && audioSystem.isEchoCancel();
+
+                    logger.debug("Call on MacCoreAudioDevice: startStream(" +
                                                isEchoCancelActivated + ")");
-                stream = MacCoreAudioDevice.startStream(
-                        deviceUID,
-                        this,
-                        (float) inputFormat.getSampleRate(),
-                        nbChannels,
-                        inputFormat.getSampleSizeInBits(),
-                        false,
-                        inputFormat.getEndian() == AudioFormat.BIG_ENDIAN,
-                        false,
-                        false,
-                        isEchoCancelActivated);
-                MacCoreaudioSystem.didOpenStream();
+                    stream
+                        = MacCoreAudioDevice.startStream(
+                                deviceUID,
+                                this,
+                                (float) inputFormat.getSampleRate(),
+                                nbChannels,
+                                inputFormat.getSampleSizeInBits(),
+                                false,
+                                inputFormat.getEndian()
+                                    == AudioFormat.BIG_ENDIAN,
+                                false,
+                                false,
+                                isEchoCancel);
+                }
+                finally
+                {
+                    audioSystem.didOpenStream();
+                }
             }
         }
     }
@@ -619,28 +636,22 @@ public class MacCoreaudioRenderer
                     int i = 0;
                     int length = nbBufferData;
                     if(bufferLength < length)
-                    {
                         length = bufferLength;
-                    }
 
                     System.arraycopy(this.buffer, 0, buffer, 0, length);
                     Log.logReadBytes(nativeRenderer, length);
 
                     // Fills the end of the buffer with silence.
                     if(length < bufferLength)
-                    {
                         Arrays.fill(buffer, length, bufferLength, (byte) 0);
-                    }
 
 
                     nbBufferData -= length;
                     if(nbBufferData > 0)
                     {
                         System.arraycopy(
-                                this.buffer,
-                                length,
-                                this.buffer,
-                                0,
+                                this.buffer, length,
+                                this.buffer, 0,
                                 nbBufferData);
                     }
                     // If the stop process is waiting, notifies that every
@@ -700,10 +711,8 @@ public class MacCoreaudioRenderer
             {
                 byte[] newBuffer = new byte[newLength];
                 System.arraycopy(
-                        this.buffer,
-                        0,
-                        newBuffer,
-                        0,
+                        this.buffer, 0,
+                        newBuffer, 0,
                         nbBufferData);
                 this.buffer = newBuffer;
             }
