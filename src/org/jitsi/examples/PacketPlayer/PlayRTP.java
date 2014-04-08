@@ -99,7 +99,7 @@ public class PlayRTP
      */
     private StreamConnector playMedia(String filename, MediaFormat initialFormat,
         List<Byte> dynamicRTPPayloadTypes, List<MediaFormat> dynamicFormats,
-        int ssrc, boolean auto) throws Exception
+        StreamIdentifier stream, boolean auto) throws Exception
     {
         /*
          * Prepare for the start of the transmission i.e. initialize the
@@ -109,7 +109,7 @@ public class PlayRTP
         MediaDevice device = mediaService.getDefaultDevice(
             initialFormat.getMediaType(), MediaUseCase.CALL);
         MediaDevice mixer = mediaService.createMixer(device);
-        final StreamConnector connector = new PCapStreamConnector(filename, ssrc);
+        final StreamConnector connector = new PCapStreamConnector(filename, stream);
         mediaStream = mediaService.createMediaStream(connector, mixer);
         mediaStream.setDirection(MediaDirection.SENDRECV);
 
@@ -248,10 +248,10 @@ public class PlayRTP
      */
     public void playFile(String filename, MediaFormat initialFormat,
         List<Byte> dynamicRTPPayloadTypes, List<MediaFormat> dynamicFormats,
-        int ssrc)
+        StreamIdentifier stream)
     {
         playFile(filename, initialFormat, dynamicRTPPayloadTypes,
-            dynamicFormats, ssrc, false);
+            dynamicFormats, stream, false);
     }
 
     /**
@@ -259,7 +259,7 @@ public class PlayRTP
      */
     private void playFile(String filename, MediaFormat initialFormat,
         List<Byte> dynamicRTPPayloadTypes, List<MediaFormat> dynamicFormats,
-        int ssrc, boolean auto)
+        StreamIdentifier stream, boolean auto)
     {
         // Now play the stream
         maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
@@ -269,7 +269,7 @@ public class PlayRTP
         try
         {
             mConnector = playMedia(filename, initialFormat,
-                dynamicRTPPayloadTypes, dynamicFormats, ssrc, auto);
+                dynamicRTPPayloadTypes, dynamicFormats, stream, auto);
             while ((mConnector != null) && mConnector.getDataSocket().isConnected())
             {
                 Thread.sleep(100);
@@ -302,7 +302,7 @@ public class PlayRTP
      */
     public void playFileInAutoMode(String filename, MediaFormat initialFormat,
         List<Byte> dynamicPayloadTypes, List<MediaFormat> dynamicFormats,
-        int ssrc, int n_iterations, boolean stop_if_iter_had_no_audio)
+        StreamIdentifier stream, int n_iterations, boolean stop_if_iter_had_no_audio)
     {
         int ix = 0;
         while ((ix < n_iterations) || (n_iterations == 0))
@@ -313,7 +313,7 @@ public class PlayRTP
             maxStreamAudioLevel.set(SimpleAudioLevelListener.MIN_LEVEL);
             
             playFile(filename, initialFormat, dynamicPayloadTypes,
-                dynamicFormats, ssrc, true);
+                dynamicFormats, stream, true);
 
             int audioLevel = maxStreamAudioLevel.get();
             logger.info("Max local audio level recorded: " + audioLevel);
@@ -366,7 +366,7 @@ public class PlayRTP
                 MediaFormat format = LibJitsi.getMediaService()
                     .getFormatFactory().createMediaFormat("SILK", (double)8000);
                 playRTP.playFile(argMap.get(FILENAME), format, pts,
-                    Arrays.asList(format), -1);
+                    Arrays.asList(format), new StreamIdentifier(-1));
             }
             finally
             {

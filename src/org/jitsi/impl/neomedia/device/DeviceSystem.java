@@ -371,7 +371,7 @@ public abstract class DeviceSystem
             final String className = deviceSystem.getClass().getName();
             final Throwable[] exception = new Throwable[1];
             Thread thread
-                = new Thread(className + ".initialize()")
+                = new Thread()
                 {
                     @Override
                     public void run()
@@ -397,6 +397,7 @@ public abstract class DeviceSystem
                     }
                 };
 
+            thread.setName(className + ".initialize() [" + thread.getId() + "]");
             thread.setDaemon(true);
             thread.start();
 

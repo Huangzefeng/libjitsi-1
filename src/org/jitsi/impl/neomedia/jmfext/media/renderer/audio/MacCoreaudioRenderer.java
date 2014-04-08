@@ -173,7 +173,7 @@ public class MacCoreaudioRenderer
      * Array of supported input formats.
      */
     private Format[] supportedInputFormats;
-    
+
     /**
      * Minimum size of the process buffer - enough to give us 500ms of data.
      * Calculated as:
@@ -401,7 +401,7 @@ public class MacCoreaudioRenderer
     public int process(Buffer buffer)
     {
     	int ret = BUFFER_PROCESSED_OK;
-    	
+
         synchronized(startStopMutex)
         {
             if(stream != 0 && !isStopping)
@@ -430,7 +430,7 @@ public class MacCoreaudioRenderer
                  * data chunk, or else we'll never process it.  In fact allow
                  * room for 2 chunks - this prevents an audio glitch when the
                  * chunk is consumed (since otherwise we'd have to wait for the
-                 * next chunk to be added before continuing). 
+                 * next chunk to be added before continuing).
                  */
                 updateBufferLength(Math.max(
                 		                2 * length,

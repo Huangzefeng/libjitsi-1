@@ -251,6 +251,23 @@ public interface ConfigurationService
     public String getString(String propertyName, String defaultValue);
 
     /**
+     * Returns the Enum value of the specified property or a default value if
+     * the config doesn't return a specified default value.
+     *
+     * @param type the type of enum to match against.
+     * @param propertyName the name of the property that is being queried.
+     * @param defaultValue the value to be returned if the specified property
+     * name is not associated with a value in this
+     * <code>ConfigurationService</code>
+     * @return the result of matching the property against the enum and
+     * <code>defaultValue</code> in case the value mapped against the
+     * propertyName doesn't match any valid value in the enumeration.
+     */
+    public <T extends Enum<T>> T getEnum(Class<T> type,
+                                         String propertyName,
+                                         T defaultValue);
+
+    /**
      * Gets the value of a specific property as a boolean. If the specified
      * property name is associated with a value in this
      * <code>ConfigurationService</code>, the string representation of the value

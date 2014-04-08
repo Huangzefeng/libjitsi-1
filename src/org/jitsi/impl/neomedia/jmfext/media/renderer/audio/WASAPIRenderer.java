@@ -1409,11 +1409,11 @@ public class WASAPIRenderer
                         if (resampler == null)
                         {
                         	Charting.wroteToWasapi(toWrite);
-                            Log.logReadBytes(this, toWrite);
                             written
                                 = maybeIAudioRenderClientWrite(
                                         remainder, 0, toWrite,
                                         srcSampleSize, srcChannels);
+                            Log.logReadBytes(this, written);
                         }
                         else
                         {
@@ -1427,13 +1427,22 @@ public class WASAPIRenderer
                                         * resamplerFrameSize;
 
                                 Charting.wroteToWasapi(toWrite);
-                                Log.logReadBytes(this, toWrite);
-                                maybeIAudioRenderClientWrite(
+                                written = maybeIAudioRenderClientWrite(
                                         (byte[]) resamplerOutBuffer.getData(),
                                         resamplerOutBuffer.getOffset(),
                                         resamplerOutLength,
                                         resamplerSampleSize, resamplerChannels);
-                                written = toWrite;
+                                // We've resampled the audio, so the number of
+                                // bytes actually sent to WASAPI doesn't match
+                                // the number of bytes we've effectively
+                                // consumed from the input.  We do still want to
+                                //
+                                // We want (1) to know when we didn't consume
+                                // any bytes; (2) to continue in this function
+                                // knowing the number of effectively-consumed
+                                // bytes.
+                                written = (written > 0) ? toWrite : 0;
+                                Log.logReadBytes(this, written);
                             }
                             else
                             {

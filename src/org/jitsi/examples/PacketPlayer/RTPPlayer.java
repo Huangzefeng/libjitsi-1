@@ -25,6 +25,8 @@ import org.jitsi.service.neomedia.format.*;
 
 public class RTPPlayer
 {
+    private final static int PLAY = 6;
+
     private final class TableMouseListener
         implements MouseListener
     {
@@ -34,21 +36,21 @@ public class RTPPlayer
             int row = mtable.rowAtPoint(event.getPoint());
             int col = mtable.columnAtPoint(event.getPoint());
 
-            if (col == 4)
+            if (col == PLAY)
             {
                 // This is the play column
                 if (threads[row] == null)
                 {
-                    myTable.fireTableCellUpdated(row, col);
                     playRow(row);
+                    myTable.fireTableCellUpdated(row, col);
                 }
                 else
                 {
                     // Stop playing
                     System.out.println("Stop playing row");
-                    myTable.fireTableCellUpdated(row, col);
                     threads[row].playRTP.stopPlaying();
                     threads[row] = null;
+                    myTable.fireTableCellUpdated(row, col);
                 }
             }
         }
@@ -124,10 +126,10 @@ public class RTPPlayer
 
     private org.jitsi.examples.PacketPlayer.PlayRTPThread[] threads;
 
-    public void playRow(int row)
+    public void playRow(final int row)
     {
-        final int ssrc = (Integer) (rows.get(row)[1]);
-        List<Byte> payloadList = (List<Byte>) rows.get(row)[3];
+        final StreamIdentifier stream = streams.get(row);
+        List<Byte> payloadList = stream.getPacketTypes();
         final byte initialPT = payloadList.get(0);
         final List<Byte> dynamicPayloadTypes = new LinkedList<Byte>();
         final List<MediaFormat> dynamicFormats = new LinkedList<MediaFormat>();
@@ -155,26 +157,25 @@ public class RTPPlayer
         }
         LibJitsi.stop();
 
-        org.jitsi.examples.PacketPlayer.PlayRTPThread myThread = new PlayRTPThread()
+        final org.jitsi.examples.PacketPlayer.PlayRTPThread myThread = new PlayRTPThread()
         {
-
             @Override
             public void run()
             {
-              playRTP = new PlayRTP(); // Also initializes Libjitsi
+                playRTP = new PlayRTP(); // Also initializes Libjitsi
 
-              // Set the appropriate output device
-              String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
-              CaptureDeviceInfo2 selectedDevice = null;
-              AudioSystem audioSystem = ((MediaServiceImpl)LibJitsi.getMediaService()).getDeviceConfiguration().getAudioSystem();
-              for (CaptureDeviceInfo2 device : audioSystem.getDevices(DataFlow.PLAYBACK)) {
-                if (device.getName().equals(selectedDeviceStr)) {
-                  selectedDevice = device;
-                  break;
+                // Set the appropriate output device
+                String selectedDeviceStr = (String)audioDeviceComboBox.getSelectedItem();
+                CaptureDeviceInfo2 selectedDevice = null;
+                AudioSystem audioSystem = ((MediaServiceImpl)LibJitsi.getMediaService()).getDeviceConfiguration().getAudioSystem();
+                for (CaptureDeviceInfo2 device : audioSystem.getDevices(DataFlow.PLAYBACK)) {
+                  if (device.getName().equals(selectedDeviceStr)) {
+                    selectedDevice = device;
+                    break;
+                  }
                 }
-              }
-              System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
-              audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
+                System.out.println((selectedDevice == null) ? "Couldn't find output device." : "Selected device: " + selectedDevice.getName());
+                audioSystem.setDevice(DataFlow.PLAYBACK, selectedDevice, true);
 
                 // Set the initial format of this stream from the initial
                 // payload type - it's either a standard payload type or the
@@ -196,7 +197,7 @@ public class RTPPlayer
                 {
                   // Auto mode - loop round a bunch of times.
                   playRTP.playFileInAutoMode(lblFileName.getText(),
-                      initialFormat, dynamicPayloadTypes, dynamicFormats, ssrc,
+                      initialFormat, dynamicPayloadTypes, dynamicFormats, stream,
                       Integer.parseInt(autoItersInput.getText()),
                       (Boolean)stopOnNoAudioComboBox.getSelectedItem());
                 }
@@ -204,8 +205,21 @@ public class RTPPlayer
                 {
                   // Regular mode - play once.
                   playRTP.playFile(lblFileName.getText(), initialFormat,
-                                dynamicPayloadTypes, dynamicFormats, ssrc);
+                                dynamicPayloadTypes, dynamicFormats, stream);
                 }
+
+                final PlayRTPThread player = this;
+
+                SwingUtilities.invokeLater(new Runnable(){
+                    public void run()
+                    {
+                        if (threads[row] == player)
+                        {
+                            threads[row] = null;
+                            myTable.fireTableCellUpdated(row, PLAY);
+                        }
+                    }
+                });
             }
 
         };
@@ -227,9 +241,8 @@ public class RTPPlayer
      */
     private void initialize()
     {
-        mframe.setBounds(100, 100, 517, 366);
+        mframe.setBounds(100, 100, 800, 366);
         mframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
 
         JButton btnChooseFile = new JButton("Choose File");
         btnChooseFile.setDropTarget(new DropTarget() {
@@ -310,14 +323,14 @@ public class RTPPlayer
             SpringLayout.SOUTH, lblCurrentFile);
         springLayout.putConstraint(SpringLayout.WEST, lblFileName, 10,
             SpringLayout.WEST, mframe.getContentPane());
-        springLayout.putConstraint(SpringLayout.EAST, lblFileName, 434,
+        springLayout.putConstraint(SpringLayout.EAST, lblFileName, 600,
             SpringLayout.WEST, mframe.getContentPane());
         mframe.getContentPane().add(lblFileName);
 
         myTable = new AbstractTableModel()
         {
             String[] columnNames =
-            { "SSRC", "SSRC", "Packets", "PT", "Play" };
+            { "SSRC", "SSRC", "SRC", "DST", "Packets", "PT", "Play" };
 
             public String getColumnName(int col)
             {
@@ -326,7 +339,7 @@ public class RTPPlayer
 
             public int getRowCount()
             {
-                return rows.size();
+                return streams.size();
             }
 
             public int getColumnCount()
@@ -336,17 +349,33 @@ public class RTPPlayer
 
             public Object getValueAt(int row, int col)
             {
-                if (col == 4)
+                StreamIdentifier stream = streams.get(row);
+                switch(col)
                 {
+                case 0:
+                    return String.format("0x%08x",stream.getSSRC());
+                case 1:
+                    return stream.getSSRC();
+                case 2:
+                    return stream.getSource();
+                case 3:
+                    return stream.getDestination();
+                case 4:
+                    return stream.getPacketCount();
+                case 5:
+                    return stream.getPacketTypes();
+                case 6:
                     if (threads[row] == null)
+                    {
                         return "Click to Play";
+                    }
                     else
+                    {
                         return "Click to Stop";
+                    }
                 }
-                else
-                {
-                    return rows.get(row)[col];
-                }
+
+                return null;
             }
 
             public boolean isCellEditable(int row, int col)
@@ -515,34 +544,24 @@ public class RTPPlayer
         mtable.setRowSelectionAllowed(false);
     }
 
-    ArrayList<Object[]> rows = new ArrayList<Object[]>();
+    List<StreamIdentifier> streams = new ArrayList<StreamIdentifier>();
 
     protected void loadFile(File file)
     {
         clearUpLastRun();
 
         lblFileName.setText(file.toString());
-        rows.clear();
 
-        StreamIdentifier streamIdentifier =
-            new StreamIdentifier(file.toString());
-        for (Entry<Integer, Integer> entry : streamIdentifier.ssrcPacketCounts
-            .entrySet())
+        streams = StreamIdentifier.fromFile(file.toString());
+
+        for (StreamIdentifier stream : streams)
         {
-            int ssrc = entry.getKey();
-            Integer packets = entry.getValue();
-            List<Byte> ptList =
-                streamIdentifier.ssrcPayloadTypes.get(entry.getKey());
-
-            rows.add(new Object[]
-                { String.format("0x%08X", ssrc), ssrc, packets, ptList });
-
             System.out.println(String.format("0x%08x = %s packets\n PTs: %s",
-                ssrc, packets, ptList));
+                stream.getSSRC(), stream.getPacketCount(), stream.getPacketTypes()));
         }
         myTable.fireTableDataChanged();
 
-        threads = new org.jitsi.examples.PacketPlayer.PlayRTPThread[rows.size()];
+        threads = new org.jitsi.examples.PacketPlayer.PlayRTPThread[streams.size()];
     }
 
     private void clearUpLastRun()

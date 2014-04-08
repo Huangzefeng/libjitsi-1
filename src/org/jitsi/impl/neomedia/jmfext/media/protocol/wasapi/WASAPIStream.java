@@ -2425,18 +2425,14 @@ public class WASAPIStream
                 // deadlocks when called within the processThread (as it waits
                 // for the processThread to finish before exiting).
                 logger.error("Device needs to be reset");
-                Thread streamResetter = new Thread("WASAPI Stream stopper")
+                Thread streamResetter = new Thread("WASAPI Stream resetter")
                 {
                     @Override
                     public void run()
                     {
                         try
                         {
-                            logger.debug("Disconnect...");
-                            WASAPIStream.this.disconnect();
-                            logger.debug("(Re)connect...");
-                            WASAPIStream.this.connect();
-                            logger.debug("Done");
+                            WASAPIStream.this.resetStream();
                         }
                         catch (IOException e)
                         {
@@ -2444,7 +2440,7 @@ public class WASAPIStream
                         }
                     }
                 };
-                logger.warn("Attempt to restart stream on a new thread");
+                logger.warn("Attempt to reset stream on a new thread");
                 streamResetter.start();
             }
         }
@@ -2524,19 +2520,32 @@ public class WASAPIStream
              * indexes within the IMMDeviceCollection interface, re-connect this
              * instance.
              */
-            waitWhileCaptureIsBusy();
-            waitWhileRenderIsBusy();
+            resetStream();
+        }
+    }
 
-            boolean connected = (capture != null) || (iMediaObject != 0);
+    /**
+     * Reset this stream.
+     *
+     * @throws IOException
+     */
+    private void resetStream() throws IOException
+    {
+        logger.debug("Reset this stream");
+        waitWhileCaptureIsBusy();
+        waitWhileRenderIsBusy();
 
-            if (connected)
+        boolean connected = (capture != null) || (iMediaObject != 0);
+
+        if (connected)
+        {
+            boolean started = this.started;
+
+            disconnect();
+            connect();
+            if (started)
             {
-                boolean started = this.started;
-
-                disconnect();
-                connect();
-                if (started)
-                    start();
+                start();
             }
         }
     }

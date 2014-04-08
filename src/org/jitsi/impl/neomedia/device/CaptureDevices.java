@@ -117,4 +117,10 @@ public class CaptureDevices
             }
         }
     }
+
+    @Override
+    protected String getDataflowType()
+    {
+        return "CAPTURE";
+    }
 }

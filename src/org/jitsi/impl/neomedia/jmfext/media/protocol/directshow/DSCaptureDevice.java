@@ -31,7 +31,7 @@ public class DSCaptureDevice
          * @param a pointer to the native <tt>DSCaptureDevice</tt> which is the
          * source of the notification
          * @param ptr a pointer to the captured/grabbed video frame i.e. to the
-         * data of the DirectShow <tt>IMediaSample</tt> 
+         * data of the DirectShow <tt>IMediaSample</tt>
          * @param length the length in bytes of the valid data pointed to by
          * <tt>ptr</tt>
          */
@@ -69,8 +69,7 @@ public class DSCaptureDevice
         if (ptr == 0)
             throw new IllegalArgumentException("ptr");
 
-        Log.dumpStack(new Exception("Contruct new DSCaptureDevice with ptr " +
-                                                                          ptr));
+        Log.dumpStack("Contruct new DSCaptureDevice with ptr " + ptr);
         this.ptr = ptr;
     }
 
@@ -79,7 +78,7 @@ public class DSCaptureDevice
      */
     public void connect()
     {
-        Log.dumpStack(new Exception("connect (ptr " + ptr + ")"));
+        Log.dumpStack("connect (ptr " + ptr + ")");
         connect(ptr);
     }
 
@@ -95,7 +94,7 @@ public class DSCaptureDevice
      */
     public void disconnect()
     {
-        Log.dumpStack(new Exception("disconnect (ptr " + ptr + ")"));
+        Log.dumpStack("disconnect (ptr " + ptr + ")");
         disconnect(ptr);
     }
 
@@ -115,9 +114,8 @@ public class DSCaptureDevice
     public DSFormat getFormat()
     {
         DSFormat format = getFormat(ptr);
-        Log.dumpStack(new Exception("getFormat: " +
-                             ((format == null) ? "null" : format.toString()) +
-                                                         " (ptr " + ptr + ")"));
+        Log.dumpStack("getFormat: " + ((format == null) ?
+                            "null" : format.toString()) + " (ptr " + ptr + ")");
         return format;
     }
 
@@ -137,7 +135,7 @@ public class DSCaptureDevice
     public String getName()
     {
         String name = getName(ptr).trim();
-        Log.dumpStack(new Exception("getName: " + name + " (ptr " + ptr + ")"));
+        Log.dumpStack("getName: " + name + " (ptr " + ptr + ")");
         return name;
     }
 
@@ -158,8 +156,8 @@ public class DSCaptureDevice
     {
         DSFormat[] formats = getSupportedFormats(ptr);
         formats = (formats == null) ? EMPTY_FORMATS : formats;
-        Log.dumpStack(new Exception("getSupportedFormats: " +
-                              Arrays.toString(formats) + " (ptr " + ptr + ")"));
+        Log.dumpStack("getSupportedFormats: " +
+                               Arrays.toString(formats) + " (ptr " + ptr + ")");
 
         return formats;
     }
@@ -178,8 +176,8 @@ public class DSCaptureDevice
      */
     public void setDelegate(ISampleGrabberCB delegate)
     {
-        Log.dumpStack(new Exception("setDelegate: ptr " + ptr + " delegate " +
-                          ((delegate == null) ? "null" : delegate.toString())));
+        Log.dumpStack("setDelegate: ptr " + ptr + " delegate " +
+                           ((delegate == null) ? "null" : delegate.toString()));
         setDelegate(ptr, delegate);
     }
 
@@ -196,13 +194,12 @@ public class DSCaptureDevice
      * @param format format to set
      * @return an <tt>HRESULT</tt> value indicating whether the specified
      * <tt>format</tt> was successfully set or describing a failure
-     * 
+     *
      */
     public int setFormat(DSFormat format)
     {
-        Log.dumpStack(new Exception("setFormat: " +
-                              ((format == null) ? "null" : format.toString()) +
-                                                         " (ptr " + ptr + ")"));
+        Log.dumpStack("setFormat: " + ((format == null) ?
+                            "null" : format.toString()) + " (ptr " + ptr + ")");
         return setFormat(ptr, format);
     }
 
@@ -218,7 +215,7 @@ public class DSCaptureDevice
 
     public int start()
     {
-        Log.dumpStack(new Exception("start (ptr " + ptr + ")"));
+        Log.dumpStack("start (ptr " + ptr + ")");
         return start(ptr);
     }
 
@@ -226,7 +223,7 @@ public class DSCaptureDevice
 
     public int stop()
     {
-        Log.dumpStack(new Exception("stop (ptr " + ptr + ")"));
+        Log.dumpStack("stop (ptr " + ptr + ")");
         return stop(ptr);
     }
 
