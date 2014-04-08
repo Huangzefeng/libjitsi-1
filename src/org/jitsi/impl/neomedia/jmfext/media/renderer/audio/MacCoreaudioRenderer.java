@@ -527,7 +527,7 @@ public class MacCoreaudioRenderer
                             && audioSystem.isEchoCancel();
 
                     logger.debug("Call on MacCoreAudioDevice: startStream(" +
-                                               isEchoCancelActivated + ")");
+                                               isEchoCancel + ")");
                     stream
                         = MacCoreAudioDevice.startStream(
                                 deviceUID,
