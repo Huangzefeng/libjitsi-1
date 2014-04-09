@@ -9,6 +9,8 @@ package org.jitsi.service.audionotifier;
 import java.util.*;
 import java.util.concurrent.*;
 
+import org.jitsi.util.*;
+
 /**
  * An abstract base implementation of {@link SCAudioClip} which is provided in
  * order to aid implementers by allowing them to extend
@@ -21,6 +23,8 @@ import java.util.concurrent.*;
 public abstract class AbstractSCAudioClip
     implements SCAudioClip
 {
+    private static final Logger sLog = Logger.getLogger(AbstractSCAudioClip.class);
+    
     /**
      * The thread pool used by the <tt>AbstractSCAudioClip</tt> instances in
      * order to reduce the impact of thread creation/initialization.
@@ -164,15 +168,27 @@ public abstract class AbstractSCAudioClip
      */
     protected void internalStop()
     {
+        sLog.debug("Internal stop called");
         boolean interrupted = false;
 
         synchronized (sync)
         {
+            sLog.trace("Obtained lock for internal stop");
+            int loopCount = 0;
             started = false;
             sync.notifyAll();
 
             while (command != null)
-            {
+            {                
+                if (loopCount > 10)
+                {
+                    // If we've waited 5 seconds for the command to complete  
+                    // then something has gone wrong.  However, we shouldn't
+                    // block this thread indefinitely.
+                    sLog.error("Command not completing in 5 seconds");
+                    break;
+                }
+                
                 try
                 {
                     /*
@@ -181,6 +197,7 @@ public abstract class AbstractSCAudioClip
                      * be in trouble. Anyway, use a timeout just in case.
                      */
                     sync.wait(500);
+                    loopCount++;
                 }
                 catch (InterruptedException ie)
                 {
@@ -257,7 +274,10 @@ public abstract class AbstractSCAudioClip
         synchronized (sync)
         {
             if (command != null)
+            {
+                sLog.debug("Play called but command already exists " + command);
                 return;
+            }
 
             setLoopInterval(loopInterval);
             setLooping(loopInterval >= 0);
@@ -287,6 +307,8 @@ public abstract class AbstractSCAudioClip
                     {
                         public void run()
                         {
+                            sLog.debug("Running command " + this);
+                            
                             try
                             {
                                 synchronized (sync)
@@ -303,13 +325,15 @@ public abstract class AbstractSCAudioClip
                                         return;
                                 }
 
+                                sLog.trace("Command still running " + command);
                                 runInPlayThread(loopCondition);
+                                sLog.trace("runInPlayThread complete " + command);
                             }
                             finally
                             {
                                 synchronized (sync)
                                 {
-                                    if (equals(command))
+                                    if (equals(command) || command == null)
                                     {
                                         command = null;
                                         started = false;
@@ -319,6 +343,8 @@ public abstract class AbstractSCAudioClip
                             }
                         }
                     };
+
+                sLog.debug("Created new command " + command);
                 executorService.execute(command);
                 started = true;
             }

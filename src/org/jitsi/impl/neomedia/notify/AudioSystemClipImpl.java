@@ -307,7 +307,10 @@ public class AudioSystemClipImpl
                 // Open and start the renderer here but note that we don't
                 // close and stop it - that is done in
                 // exitRunOnceInPlayThread().
+                logger.debug("Opening renderer");
                 renderer.open();
+                logger.debug("Opened renderer");
+                
                 renderer.start();
 
                 if (notifyListeners)
