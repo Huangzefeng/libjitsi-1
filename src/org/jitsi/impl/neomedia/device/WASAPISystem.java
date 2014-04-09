@@ -264,7 +264,7 @@ public class WASAPISystem
      * ensures the object is created prior to use (which allows the lock to be
      * accessed before the constructor has finished executing).
      */
-    private Object iMMDeviceLock;
+    private volatile Object iMMDeviceLock;
 
     /**
      * The <tt>IMMNotificationClient</tt> which is to notify this
