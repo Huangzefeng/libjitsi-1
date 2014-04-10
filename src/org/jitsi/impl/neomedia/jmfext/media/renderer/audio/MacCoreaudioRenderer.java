@@ -406,18 +406,6 @@ public class MacCoreaudioRenderer
         {
             if(stream != 0 && !isStopping)
             {
-                // Take into account the user's preferences with respect to the
-                // output volume.
-                GainControl gainControl = getGainControl();
-                if (gainControl != null)
-                {
-                    BasicVolumeControl.applyGain(
-                            gainControl,
-                            (byte[]) buffer.getData(),
-                            buffer.getOffset(),
-                            buffer.getLength());
-                }
-
                 int length = buffer.getLength();
 
                 /*
@@ -463,6 +451,19 @@ public class MacCoreaudioRenderer
                 }
                 else
                 {
+                    // Take into account the user's preferences with respect to
+                    // the output volume.  Only do this when we're about to
+                    // consume the buffer.
+                    GainControl gainControl = getGainControl();
+                    if (gainControl != null)
+                    {
+                        BasicVolumeControl.applyGain(
+                                gainControl,
+                                (byte[]) buffer.getData(),
+                                buffer.getOffset(),
+                                buffer.getLength());
+                    }
+                    
                     // Copy the received data.
                     System.arraycopy(
                             (byte[]) buffer.getData(),
