@@ -38,6 +38,17 @@ public class PCapDatagramSocket extends DatagramSocket
         return (0 | (b[0] & 0xFF | (b[1] & 0xFF) << 8));
     }
 
+    private static int byteArrayToShort(byte[] b, boolean reverse)
+    {
+        if (reverse)
+        {
+            byte temp = b[0];
+            b[0] = b[1];
+            b[1] = temp;
+        }
+        return byteArrayToShort(b);
+    }
+
     @Override
     public synchronized void receive(DatagramPacket p) throws IOException
     {
@@ -110,9 +121,9 @@ public class PCapDatagramSocket extends DatagramSocket
         // 2 for Destination Port
         // 4 for Length and Checksum
         fis.read(shortByteArray, 0, 2);
-        d.srcPort = byteArrayToShort(shortByteArray);
+        d.srcPort = byteArrayToShort(shortByteArray, true);
         fis.read(shortByteArray, 0, 2);
-        d.dstPort = byteArrayToShort(shortByteArray);
+        d.dstPort = byteArrayToShort(shortByteArray, true);
         fis.skip(4);
         d.payloadLength -= 8;
 
