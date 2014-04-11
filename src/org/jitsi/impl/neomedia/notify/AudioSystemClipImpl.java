@@ -159,6 +159,7 @@ public class AudioSystemClipImpl
     /**
      * {@inheritDoc}
      */
+    @Override
     protected boolean runOnceInPlayThread()
     {
         logger.debug("Run once in play thread called");
@@ -310,7 +311,7 @@ public class AudioSystemClipImpl
                 logger.debug("Opening renderer");
                 renderer.open();
                 logger.debug("Opened renderer");
-                
+
                 renderer.start();
 
                 if (notifyListeners)
@@ -355,8 +356,7 @@ public class AudioSystemClipImpl
                             String error = "Failed to render audio stream " +
                                                                             uri;
                             Object bufferData = rendererBuffer.getData();
-                            logger.error("Failed to render audio stream " +
-                                         uri);
+                            logger.error(error);
 
                             return false;
                         }
@@ -433,6 +433,7 @@ public class AudioSystemClipImpl
     {
         new Thread("AudioFileLogger")
         {
+            @Override
             public void run()
             {
                 logAudioData();

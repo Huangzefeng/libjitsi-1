@@ -81,7 +81,7 @@ public class BasicVolumeControl
             // Assign a maximum of MAX_VOLUME_PERCENT to the volume scale.
             float level = gainControl.getLevel() * (MAX_VOLUME_PERCENT / 100);
 
-            if (level != 1)
+            if (Float.compare(level, 1.0f) != 0)
             {
                 for (int i = offset, toIndex = offset + length;
                         i < toIndex;
@@ -243,6 +243,7 @@ public class BasicVolumeControl
      *
      * @param listener The object to deliver events to.
      */
+    @Override
     public void addGainChangeListener(GainChangeListener listener)
     {
         if(listener != null)
@@ -259,6 +260,7 @@ public class BasicVolumeControl
      *
      * @param listener volume change listener.
      */
+    @Override
     public void addVolumeChangeListener(VolumeChangeListener listener)
     {
         synchronized (volumeChangeListeners)
@@ -338,6 +340,7 @@ public class BasicVolumeControl
      *
      * @return null
      */
+    @Override
     public Component getControlComponent()
     {
         return null;
@@ -348,6 +351,7 @@ public class BasicVolumeControl
      *
      * @return The gain in dB.
      */
+    @Override
     public float getDB()
     {
         return this.db;
@@ -359,6 +363,7 @@ public class BasicVolumeControl
      * @return The gain in the level scale (0.0-1.0).
      * @see javax.media.GainControl
      */
+    @Override
     public float getLevel()
     {
         return volumeLevel;
@@ -370,6 +375,7 @@ public class BasicVolumeControl
      * @return the maximum allowed volume value.
      * @see org.jitsi.service.neomedia.VolumeControl
      */
+    @Override
     public float getMaxValue()
     {
         return MAX_VOLUME_LEVEL;
@@ -381,6 +387,7 @@ public class BasicVolumeControl
      * @return the minimum allowed volume value.
      * @see org.jitsi.service.neomedia.VolumeControl
      */
+    @Override
     public float getMinValue()
     {
         return MIN_VOLUME_LEVEL;
@@ -391,6 +398,7 @@ public class BasicVolumeControl
      *
      * @return mute state of sound.
      */
+    @Override
     public boolean getMute()
     {
         return mute;
@@ -403,6 +411,7 @@ public class BasicVolumeControl
      *
      * @see org.jitsi.service.neomedia.VolumeControl
      */
+    @Override
     public float getVolume()
     {
         return volumeLevel;
@@ -441,6 +450,7 @@ public class BasicVolumeControl
      *
      * @param listener The object that has been receiving events.
      */
+    @Override
     public void removeGainChangeListener(GainChangeListener listener)
     {
         if(listener != null && gainChangeListeners != null)
@@ -452,6 +462,7 @@ public class BasicVolumeControl
      *
      * @param listener the volume change listener to be removed.
      */
+    @Override
     public void removeVolumeChangeListener(VolumeChangeListener listener)
     {
         synchronized (volumeChangeListeners)
@@ -478,6 +489,7 @@ public class BasicVolumeControl
      * @return The gain that was actually set.
      * @see javax.media.GainControl
      */
+    @Override
     public float setDB(float gain)
     {
         if(this.db != gain)
@@ -500,6 +512,7 @@ public class BasicVolumeControl
      * @return The level that was actually set.
      * @see javax.media.GainControl
      */
+    @Override
     public float setLevel(float level)
     {
         return this.setVolumeLevel(level);
@@ -510,6 +523,7 @@ public class BasicVolumeControl
      *
      * @param mute mutes/unmutes.
      */
+    @Override
     public void setMute(boolean mute)
     {
         if (this.mute != mute)
@@ -529,6 +543,7 @@ public class BasicVolumeControl
      *
      * @see org.jitsi.service.neomedia.VolumeControl
      */
+    @Override
     public float setVolume(float value)
     {
         return setVolumeLevel(value);
