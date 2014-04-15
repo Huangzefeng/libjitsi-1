@@ -490,7 +490,6 @@ public class DePacketizer
         case 5 /* Coded slice of an IDR picture */:
             lastKeyFrameTime = System.currentTimeMillis();
             // Do fall through to prevent the request of a key frame.
-
         /*
          * While it seems natural to not request a key frame in the presence of
          * 5, 7 and 8 often seem to be followed by 5 so do not request a key
@@ -669,23 +668,24 @@ public class DePacketizer
                     continue;
                 }
             }
-
             KeyFrameControl keyFrameControl = this.keyFrameControl;
 
             if (keyFrameControl != null)
             {
                 List<KeyFrameControl.KeyFrameRequester> keyFrameRequesters
                     = keyFrameControl.getKeyFrameRequesters();
-
                 if (keyFrameRequesters != null)
                 {
+                    // Request a key frame using all available methods. The
+                    // peer should handle receiving two requests in quick
+                    // succession.
                     for (KeyFrameControl.KeyFrameRequester keyFrameRequester
                             : keyFrameRequesters)
                     {
                         try
                         {
-                            if (keyFrameRequester.requestKeyFrame())
-                                break;
+                            logger.debug("Requesting a key frame from " + keyFrameRequester.getClass());
+                            keyFrameRequester.requestKeyFrame();
                         }
                         catch (Exception e)
                         {
