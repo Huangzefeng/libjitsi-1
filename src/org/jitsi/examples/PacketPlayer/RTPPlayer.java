@@ -130,7 +130,15 @@ public class RTPPlayer
     {
         final StreamIdentifier stream = streams.get(row);
         List<Byte> payloadList = stream.getPacketTypes();
-        final byte initialPT = payloadList.get(0);
+        byte ipt;
+        int i = 0;
+        do
+        {
+            ipt = payloadList.get(i);
+            i ++;
+        } while(ipt < 0);
+
+        final byte initialPT = ipt;
         final List<Byte> dynamicPayloadTypes = new LinkedList<Byte>();
         final List<MediaFormat> dynamicFormats = new LinkedList<MediaFormat>();
         boolean first = true;
@@ -180,8 +188,13 @@ public class RTPPlayer
                 // Set the initial format of this stream from the initial
                 // payload type - it's either a standard payload type or the
                 // same as the dynamic format we just calculated.
-                MediaFormat initialFormat;
-                if (initialPT <= 34)
+                MediaFormat initialFormat = null;
+                if (initialPT < 0)
+                {
+                    // Ignore me.
+                    System.err.print("Assert : PT shouldn't be < 0");
+                }
+                else if (initialPT <= 34)
                 {
                     String codec = SdpConstants.avpTypeNames[initialPT];
                     initialFormat = LibJitsi.getMediaService()

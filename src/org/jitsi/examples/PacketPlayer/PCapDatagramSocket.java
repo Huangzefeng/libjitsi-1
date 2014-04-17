@@ -134,7 +134,9 @@ public class PCapDatagramSocket extends DatagramSocket
 
             ByteBuffer b = ByteBuffer.wrap(d.data);
             d.ssrc = b.getInt(8);
-            d.pt = b.get(1);
+            byte pt_mark = b.get(1);
+            byte mask = 0x7f;
+            d.pt = (byte) (pt_mark & mask);
         }
     }
 
