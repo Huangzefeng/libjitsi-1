@@ -959,7 +959,6 @@ public class WASAPIStream
         }
         finally
         {
-            setReadIsMalfunctioning(false);
             uninitializeAEC();
             uninitializeRender();
             uninitializeCapture();
@@ -2892,6 +2891,7 @@ public class WASAPIStream
         throws IOException
     {
         Log.logMediaStackObjectStopped(this);
+        setReadIsMalfunctioning(false);
         started = false;
 
         if (capture != null)
@@ -3112,6 +3112,7 @@ public class WASAPIStream
         {
             if (readIsMalfunctioningSince == DiagnosticsControl.NEVER)
             {
+                logger.debug("Read has started malfunctioning: " + this);
                 readIsMalfunctioningSince = System.currentTimeMillis();
                 WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
             }

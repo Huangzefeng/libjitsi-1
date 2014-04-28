@@ -764,7 +764,7 @@ public abstract class AudioSystem
          * which the respective <tt>DiagnosticsControl</tt> is to be reported
          * (to the user).
          */
-        private static final long MALFUNCTIONING_TIMEOUT = 1000;
+        private static final long MALFUNCTIONING_TIMEOUT = 1500;
 
         /**
          * The interval of time in milliseconds between subsequent checks upon
@@ -910,6 +910,7 @@ public abstract class AudioSystem
              * error reporting code.
              */
             new Thread() {
+                @Override
                 public void run()
                 {
                     // Just throw an exception with our malfunctioning message

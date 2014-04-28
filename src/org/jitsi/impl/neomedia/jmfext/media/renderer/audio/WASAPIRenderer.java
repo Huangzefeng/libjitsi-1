@@ -1548,6 +1548,7 @@ public class WASAPIRenderer
         {
             if (writeIsMalfunctioningSince == DiagnosticsControl.NEVER)
             {
+                logger.debug("Write has started malfunctioning: " + this);
                 writeIsMalfunctioningSince = System.currentTimeMillis();
                 WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
             }
@@ -1681,6 +1682,7 @@ public class WASAPIRenderer
     public synchronized void stop()
     {
         Log.logMediaStackObjectStopped(this);
+        setWriteIsMalfunctioning(false);
         if (iAudioClient == 0)
         {
             /*
@@ -1706,15 +1708,13 @@ public class WASAPIRenderer
                  */
                 IAudioClient_Stop(iAudioClient);
                 started = false;
-
-                waitWhileEventHandleCmd();
-
-                setWriteIsMalfunctioning(false);
             }
             catch (HResultException hre)
             {
                 logger.error("IAudioClient_Stop", hre);
             }
+
+            waitWhileEventHandleCmd();
         }
     }
 
