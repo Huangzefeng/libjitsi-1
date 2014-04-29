@@ -3112,7 +3112,6 @@ public class WASAPIStream
         {
             if (readIsMalfunctioningSince == DiagnosticsControl.NEVER)
             {
-                logger.debug("Read has started malfunctioning: " + this);
                 readIsMalfunctioningSince = System.currentTimeMillis();
                 WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
             }

@@ -1548,7 +1548,6 @@ public class WASAPIRenderer
         {
             if (writeIsMalfunctioningSince == DiagnosticsControl.NEVER)
             {
-                logger.debug("Write has started malfunctioning: " + this);
                 writeIsMalfunctioningSince = System.currentTimeMillis();
                 WASAPISystem.monitorFunctionalHealth(diagnosticsControl);
             }
