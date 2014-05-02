@@ -6,11 +6,9 @@ import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.List;
 import java.util.logging.*;
-import java.util.prefs.BackingStoreException;
-import java.util.prefs.Preferences;
+import java.util.prefs.*;
 
 import javax.sdp.*;
 import javax.swing.*;
@@ -22,9 +20,12 @@ import org.jitsi.impl.neomedia.device.AudioSystem.DataFlow;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.Logger;
 
 public class RTPPlayer
 {
+    private static final Logger logger = Logger.getLogger(RTPPlayer.class);
+
     private final static int PLAY = 6;
 
     private final class TableMouseListener
@@ -443,7 +444,9 @@ public class RTPPlayer
         LibJitsi.start();
         MediaService mediaService = LibJitsi.getMediaService();
         final AudioSystem audioSystem = ((MediaServiceImpl)mediaService).getDeviceConfiguration().getAudioSystem();
-        String [] deviceList = audioSystem.getAllDevices(DataFlow.PLAYBACK);
+        LinkedHashMap<String, String> deviceListMap = audioSystem.getAllDevices(DataFlow.PLAYBACK);
+        String [] deviceList = (String[])deviceListMap.keySet().toArray();
+        logger.error("Got devices: " + Arrays.toString(deviceList));
         LibJitsi.stop();
 
         audioDeviceComboBox = new JComboBox<>();

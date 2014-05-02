@@ -7,6 +7,7 @@
 package org.jitsi.impl.neomedia.device;
 
 import java.util.*;
+import java.util.regex.*;
 
 import javax.media.*;
 
@@ -48,10 +49,17 @@ public abstract class Devices
     private CaptureDeviceInfo2 device = null;
 
     /**
-     * The list of device ID/names saved by the configuration service and
+     * The list of device names saved by the configuration service and
      * previously saved given user preference order.
      */
     private final List<String> devicePreferences = new ArrayList<String>();
+
+    /**
+     * A map from device name to their UIDs saved by the configuration service
+     * and previously saved given user preference order.
+     */
+    private final HashMap<String, List<String>> deviceUIDs =
+                                      new LinkedHashMap<String, List<String>>();
 
     /**
      * Whether we have already loaded device configuration from the config
@@ -83,25 +91,85 @@ public abstract class Devices
      * @param isSelected True if the device is the selected one.
      */
     private void addToDevicePreferences(
-            String newDeviceIdentifier,
+            String newDeviceName,
+            String newDeviceUID,
             boolean isSelected)
     {
+        // Nothing to do if we already know about this device and it is not
+        // selected
+
+        if (!isSelected &&
+            devicePreferences.contains(newDeviceName) &&
+            !isNewUID(newDeviceUID))
+        {
+            logger.debug("Not adding device " + newDeviceName + " because we already know about it");
+            return;
+        }
+
         synchronized(devicePreferences)
         {
-            devicePreferences.remove(newDeviceIdentifier);
+            devicePreferences.remove(newDeviceName);
             // A selected device is placed on top of the list: this is the new
             // preferred device.
             if(isSelected)
             {
-                devicePreferences.add(0, newDeviceIdentifier);
+                devicePreferences.add(0, newDeviceName);
             }
             // If there is no active device or the device is not selected, then
             // set the new device to the end of the device preference list.
             else
             {
-                devicePreferences.add(newDeviceIdentifier);
+                devicePreferences.add(newDeviceName);
             }
         }
+
+        // The same process is repeated for the UIDs existing for this device
+        synchronized (deviceUIDs)
+        {
+            List<String> uids = deviceUIDs.get(newDeviceName);
+
+            if (uids != null)
+            {
+                uids.remove(newDeviceUID);
+                if (isSelected)
+                {
+                    uids.add(0, newDeviceUID);
+                }
+                else
+                {
+                    uids.add(newDeviceUID);
+                }
+            }
+            else
+            {
+                uids = new ArrayList<String>();
+                uids.add(newDeviceUID);
+            }
+            deviceUIDs.put(newDeviceName, uids);
+        }
+
+        logger.debug("Added device: " + newDeviceName + " with UID: " + newDeviceUID + " to list of audio devices");
+    }
+
+    /**
+     * Determines if the given UID is one we haven't seen before
+     *
+     * @param newDeviceUID the devie UID to check
+     * @return Whether this is a new UID
+     */
+    private boolean isNewUID(String newDeviceUID)
+    {
+        boolean isNew = true;
+
+        for (List<String> uidList : deviceUIDs.values())
+        {
+            for (String uid : uidList)
+            {
+                isNew = false;
+            }
+        }
+
+        return isNew;
     }
 
     /**
@@ -162,13 +230,51 @@ public abstract class Devices
      * @return the list of the <tt>CaptureDeviceInfo2</tt>s which have ever
      * been seen
      */
-    public String[] getAllDevices()
+    public LinkedHashMap<String, String> getAllDevices()
     {
+        LinkedHashMap<String, String> deviceNames = new LinkedHashMap<String, String>();
+
         synchronized(devicePreferences)
         {
-            return devicePreferences.toArray(
-                new String[devicePreferences.size()]);
+            for (String devicePref : devicePreferences)
+            {
+                boolean isActiveDevice = false;
+                List<String> matchingDevicesList = new ArrayList<String>();
+
+                // Find the list of active devices that match this device
+                // preference
+                for (CaptureDeviceInfo2 activeDevice : activeDevices)
+                {
+                    if (devicePref.equals(activeDevice.getName()))
+                    {
+                        matchingDevicesList.add(activeDevice.getUID());
+                    }
+                }
+
+                for (CaptureDeviceInfo2 activeDevice : activeDevices)
+                {
+                    if (devicePref.equals(activeDevice.getName()))
+                    {
+                        String deviceName = (matchingDevicesList.size() > 1) ?
+                                            devicePref + " " + (matchingDevicesList.indexOf(activeDevice.getUID())+1) :
+                                            devicePref;
+
+                        // This device is currently plugged in
+                        deviceNames.put(deviceName, activeDevice.getUID());
+                        isActiveDevice = true;
+                    }
+                }
+
+                // If this device is not plugged in, we still want to show it
+                // in the preferences list
+                if (!isActiveDevice)
+                {
+                    deviceNames.put(devicePref, null);
+                }
+            }
         }
+
+        return deviceNames;
     }
 
     /**
@@ -205,8 +311,9 @@ public abstract class Devices
             {
                 CaptureDeviceInfo2 activeDevice = activeDevices.get(i);
                 logger.debug("Examining " + getDataflowType() + " device: " +
-                             activeDevice.getName());
+                             activeDevice.getName() + " UID: " + activeDevice.getUID());
 
+                boolean isSelected = false;
                 if (!devicePreferences.contains(activeDevice.getName()))
                 {
                     logger.debug(getDataflowType() +
@@ -214,7 +321,7 @@ public abstract class Devices
                                  activeDevice.getName());
 
                     // By default, select automatically the USB devices.
-                    boolean isSelected
+                    isSelected
                         = activeDevice.isSameTransportType("USB");
                     ConfigurationService cfg
                         = LibJitsi.getConfigurationService();
@@ -239,11 +346,11 @@ public abstract class Devices
                         isSelected = true;
                     }
                     logger.debug("Is selected " + isSelected);
-
-                    // Adds the device in the preference list (to the end of the
-                    // list, or on top if selected.
-                    saveDevice(property, activeDevice, isSelected);
                 }
+
+                // Adds the device in the preference list (to the end of the
+                // list, or on top if selected.
+                saveDevice(property, activeDevice, isSelected);
             }
 
             // Search if an active device match one of the previously configured
@@ -255,6 +362,11 @@ public abstract class Devices
                     logger.debug("Searching preferred devices, looking at " +
                                                               devicePreference);
 
+                    List<CaptureDeviceInfo2> matchingDevices =
+                                            new ArrayList<CaptureDeviceInfo2>();
+
+                    // Go through each active device and check for a device
+                    // name match with user preferences
                     for (CaptureDeviceInfo2 activeDevice : activeDevices)
                     {
                         // If we have found the "preferred" device among active
@@ -262,7 +374,8 @@ public abstract class Devices
                         if (devicePreference.equals(activeDevice.getName()))
                         {
                             logger.debug("Selected device: " + activeDevice.getName());
-                            return activeDevice;
+
+                            matchingDevices.add(activeDevice);
                         }
                         // If the "none" device is the "preferred" device among
                         // "active" device.
@@ -271,6 +384,43 @@ public abstract class Devices
                         {
                             logger.debug("Found a none device");
                             return null;
+                        }
+                    }
+
+                    if (matchingDevices.size() > 0)
+                    {
+                        // We have a list of devices that match on name. We
+                        // now must check the UIDs of the devices to determine
+                        // the most preferred device
+                        List<String> uids = deviceUIDs.get(devicePreference);
+
+                        if (uids != null)
+                        {
+                            // The list of UIDs is ordered, so loop through
+                            // this returning the first matching device
+                            for (String uid : uids)
+                            {
+                                for (CaptureDeviceInfo2 matchingDevice : matchingDevices)
+                                {
+                                    if (uid.equals(matchingDevice.getUID()))
+                                    {
+                                        return matchingDevice;
+                                    }
+                                }
+                            }
+
+                            // If we haven't returned yet then we have a
+                            // matching device by name, but not by UID.
+                            // Therefore return the first matching device by
+                            // name.
+                            return matchingDevices.get(0);
+                        }
+                        else
+                        {
+                            logger.debug("No UIDs stored for device " +
+                                         devicePreference +
+                                         " using first one found");
+                            return matchingDevices.get(0);
                         }
                     }
                 }
@@ -305,7 +455,7 @@ public abstract class Devices
 
             if (cfg != null)
             {
-                String newProperty = audioSystem.getPropertyName(property + "_list");
+                String newProperty = audioSystem.getPropertyName(property + "_list2");
                 String deviceIdentifiersString = cfg.getString(newProperty);
 
                 logger.debug("Loading " + getDataflowType() + " " +
@@ -314,6 +464,52 @@ public abstract class Devices
 
                 if (deviceIdentifiersString != null)
                 {
+                    devicePreferences.clear();
+                    // We must parse the string in order to load the device
+                    // list.
+                    String[] deviceIdentifiers = deviceIdentifiersString
+                        .substring(2, deviceIdentifiersString.length() - 2)
+                        .split("\", \"");
+
+                    // Device identifiers are now in the form:
+                    // "name:<name> uid:<uid>"
+                    Pattern pattern = Pattern.compile("name:(.+) uid:(.+)");
+                    for (String device : deviceIdentifiers)
+                    {
+                        Matcher m = pattern.matcher(device);
+                        if (m.find())
+                        {
+                            String deviceName = m.group(1);
+                            String[] deviceUIDsList = m.group(2).replace("[", "").replace("]", "").replace(" ", "").split(",");
+
+                            devicePreferences.add(deviceName);
+                            List<String> uids = deviceUIDs.get(deviceName);
+
+                            if (uids == null)
+                            {
+                                uids = new ArrayList<String>();
+                            }
+
+                            for (String uid : deviceUIDsList)
+                            {
+                                uids.add(uid);
+                            }
+                            deviceUIDs.put(deviceName, uids);
+                        }
+                    }
+                }
+                else
+                {
+                    // Use the old/legacy property to load the last preferred
+                    // device.
+                    String oldProperty = audioSystem.getPropertyName(property + "_list");
+                    deviceIdentifiersString = cfg.getString(oldProperty);
+                    if (deviceIdentifiersString == null)
+                    {
+                        loadedDeviceConfig = true;
+                        return;
+                    }
+
                     devicePreferences.clear();
                     // We must parse the string in order to load the device
                     // list.
@@ -341,31 +537,38 @@ public abstract class Devices
                         }
 
                         devicePreferences.add(deviceName);
-                    }
-                }
-                else
-                {
-                    // Use the old/legacy property to load the last preferred
-                    // device.
-                    String oldProperty = audioSystem.getPropertyName(property);
 
-                    deviceIdentifiersString = cfg.getString(oldProperty);
-                    if ((deviceIdentifiersString != null)
-                            && !NoneAudioSystem.LOCATOR_PROTOCOL
-                                .equalsIgnoreCase(deviceIdentifiersString))
-                    {
-                        devicePreferences.clear();
-                        devicePreferences.add(deviceIdentifiersString);
+                        // Migration code to add device UIDs to the current
+                        // list of preferences
+                        for (CaptureDeviceInfo2 activeDevice : activeDevices)
+                        {
+                            if (activeDevice.getName().equals(deviceName))
+                            {
+                                List<String> uidsList = deviceUIDs.get(deviceName);
+                                if (uidsList == null)
+                                {
+                                    uidsList = new ArrayList<String>();
+                                }
+
+                                uidsList.add(activeDevice.getUID());
+
+                                deviceUIDs.put(deviceName, uidsList);
+
+                                logger.debug("Adding uid " + activeDevice.getUID() + " to device " + deviceName);
+                            }
+                        }
+
                     }
+
+                    // Now replace any old device config (old PortAudio config) that has
+                    // the UID of the devices with the names instead.
+                    renameToDeviceNames(activeDevices);
                 }
 
                 loadedDeviceConfig = true;
             }
         }
 
-        // Now replace any old device config (old PortAudio config) that has
-        // the UID of the devices with the names instead.
-        renameToDeviceNames(activeDevices);
     }
 
     /**
@@ -449,6 +652,7 @@ public abstract class Devices
         // Sorts the user preferences to put the selected device on top.
         addToDevicePreferences(
                 selectedDeviceIdentifier,
+                device.getUID(),
                 isSelected);
 
         // Saves the user preferences.
@@ -508,7 +712,7 @@ public abstract class Devices
 
         if (cfg != null)
         {
-            property = audioSystem.getPropertyName(property + "_list");
+            property = audioSystem.getPropertyName(property + "_list2");
 
             StringBuilder value = new StringBuilder("[\"");
 
@@ -518,10 +722,16 @@ public abstract class Devices
 
                 if(devicePreferenceCount != 0)
                 {
-                    value.append(devicePreferences.get(0));
+                    String deviceName = devicePreferences.get(0);
+
+                    value.append("name:" + deviceName + " uid:" + deviceUIDs.get(deviceName));
+
                     for(int i = 1; i < devicePreferenceCount; i++)
                     {
-                        value.append("\", \"").append(devicePreferences.get(i));
+                        deviceName = devicePreferences.get(i);
+                        value.append("\", \"");
+                        value.append("name:" + deviceName);
+                        value.append(" uid:" + deviceUIDs.get(deviceName));
                     }
                 }
             }

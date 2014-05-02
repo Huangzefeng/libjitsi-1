@@ -445,7 +445,7 @@ public abstract class AudioSystem
      * or playback
      * @return the list of all devices with the specified <tt>dataFlow</tt>
      */
-    public String[] getAllDevices(DataFlow dataFlow)
+    public LinkedHashMap<String, String> getAllDevices(DataFlow dataFlow)
     {
         return devices[dataFlow.ordinal()].getAllDevices();
     }
