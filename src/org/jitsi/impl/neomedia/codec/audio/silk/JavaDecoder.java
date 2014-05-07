@@ -160,6 +160,11 @@ public class JavaDecoder
     private final short[] outputLength = new short[1];
 
     /**
+     * The sample rate for this SILK stream
+     */
+    private double sampleRate;
+
+    /**
      * Initializes a new <tt>JavaDecoder</tt> instance.
      */
     public JavaDecoder()
@@ -205,7 +210,8 @@ public class JavaDecoder
         logger.debug("Opening SILK decoder with format: " + inputFormat);
         inputFormats = new AudioFormat[] {inputFormat};
 
-        double sampleRate = inputFormat.getSampleRate();
+        sampleRate = inputFormat.getSampleRate();
+        logger.info("Setting sample rate to " + sampleRate);
         int channels = inputFormat.getChannels();
 
         decControl = new SKP_SILK_SDK_DecControlStruct();
@@ -274,12 +280,11 @@ public class JavaDecoder
             else if(DecAPI.SKP_Silk_SDK_Decode(
                         decState, decControl, 0,
                         lbrrData, 0, lbrrBytes[0],
-                        out, outOffset, outputLength)
+                        out, outOffset, outputLength, sampleRate)
                     == 0)
             {
                 // Found FEC data, decode it.
                 nbFECDecoded++;
-
                 outBuffer.setDuration(FRAME_DURATION * 1000000);
                 outBuffer.setLength(outputLength[0]);
                 outBuffer.setOffset(outOffset);
@@ -301,7 +306,9 @@ public class JavaDecoder
             }
         }
         else if (lostSeqNoCount != 0)
+        {
             this.nbPacketsLost += lostSeqNoCount;
+        }
 
         int processed;
 
@@ -312,7 +319,7 @@ public class JavaDecoder
                         decState, decControl,
                         lostFlag,
                         in, inOffset, inLength,
-                        out, outOffset, outputLength)
+                        out, outOffset, outputLength, sampleRate)
                     == 0)
             {
                 outBuffer.setDuration(FRAME_DURATION * 1000000);

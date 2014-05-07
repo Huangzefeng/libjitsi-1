@@ -30,14 +30,13 @@ public class DecodeParameters
             final int                   fullDecoding       /* I    Flag to tell if only arithmetic decoding    */
         )
     {
-        int   i, k, Ix, fs_kHz_dec, nBytesUsed;
+        int   i, k, Ix, nBytesUsed;
         int[] Ix_ptr = new int[1];
         int[]   Ixs = new int[ Define.NB_SUBFR ];
         int[]   GainsIndices = new int[ Define.NB_SUBFR ];
         int[]   NLSFIndices = new int[ Define.NLSF_MSVQ_MAX_CB_STAGES ];
         int[]   pNLSF_Q15 = new int[ Define.MAX_LPC_ORDER ];
         int []  pNLSF0_Q15 = new int[ Define.MAX_LPC_ORDER ];
-
         short[] cbk_ptr_Q14;
         SKP_Silk_NLSF_CB_struct psNLSF_CB = null;
 
@@ -55,8 +54,6 @@ public class DecodeParameters
                 psRC.error = Define.RANGE_CODER_ILLEGAL_SAMPLING_RATE;
                 return;
             }
-            fs_kHz_dec = TablesOther.SKP_Silk_SamplingRates_table[ Ix ];
-            DecoderSetFs.SKP_Silk_decoder_set_fs( psDec, fs_kHz_dec );
         }
 
         /*******************************************/
@@ -147,7 +144,6 @@ public class DecodeParameters
                 System.arraycopy(psDecCtrl.PredCoef_Q12[1], 0, psDecCtrl.PredCoef_Q12[0], 0, psDec.LPC_order);
             }
         }
-
         System.arraycopy(pNLSF_Q15, 0, psDec.prevNLSF_Q15, 0, psDec.LPC_order);
 
         /* After a packet loss do BWE of LPC coefs */
@@ -267,3 +263,4 @@ public class DecodeParameters
         }
     }
 }
+

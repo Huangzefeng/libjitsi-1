@@ -6,6 +6,7 @@
  */
 package org.jitsi.impl.neomedia.codec.audio.silk;
 
+
 /**
  * Decode frame
  *
@@ -37,7 +38,8 @@ public class DecodeFrame
         int                           pCode_offset,
         final int                     nBytes,             /* I    Payload length                              */
         int                           action,             /* I    Action from Jitter Buffer                   */
-        int[]                         decBytes           /* O    Used bytes to decode this frame             */
+        int[]                         decBytes,           /* O    Used bytes to decode this frame             */
+        double                        frameRate
     )
     {
         SKP_Silk_decoder_control sDecCtrl = new SKP_Silk_decoder_control();
@@ -59,25 +61,21 @@ public class DecodeFrame
             /********************************************/
             /* Initialize arithmetic coder              */
             /********************************************/
-            fs_Khz_old    = psDec.fs_kHz;
             LPC_order_old = psDec.LPC_order;
             if( psDec.nFramesDecoded == 0 ) {
                 /* Initialize range decoder state */
                 RangeCoder.SKP_Silk_range_dec_init( psDec.sRC, pCode, pCode_offset, nBytes );
             }
-
             /********************************************/
             /* Decode parameters and pulse signal       */
             /********************************************/
             DecodeParameters.SKP_Silk_decode_parameters( psDec, sDecCtrl, Pulses, 1 );
-
+            DecoderSetFs.SKP_Silk_decoder_set_fs( psDec, (int)(frameRate/1000) );
             if( psDec.sRC.error !=0 ) {
                 psDec.nBytesLeft = 0;
 
                 action              = 1; /* PLC operation */
                 /* revert fs if changed in decode_parameters */
-                DecoderSetFs.SKP_Silk_decoder_set_fs( psDec, fs_Khz_old );
-
                 /* Avoid crashing */
                 decBytes[0] = psDec.sRC.bufferLength;
 
@@ -89,10 +87,8 @@ public class DecodeFrame
             } else {
                 decBytes[0] = psDec.sRC.bufferLength - psDec.nBytesLeft;
                 psDec.nFramesDecoded++;
-
                 /* Update lengths. Sampling frequency could have changed */
                 L = psDec.frame_length;
-
                 /********************************************************/
                 /* Run inverse NSQ                                      */
                 /********************************************************/

@@ -16,7 +16,6 @@ import java.util.*;
  */
 public class DecAPI
 {
-
     /**
      * Reset the decoder state.
      *
@@ -59,7 +58,8 @@ public class DecAPI
             final int                            nBytesIn,       /* I:   Number of input Bytes                           */
             short[]                              samplesOut,    /* O:   Decoded output speech vector                    */
             int                                     samplesOut_offset,
-            short[]                              nSamplesOut    /* I/O: Number of samples (vector/decoded)              */
+            short[]                              nSamplesOut,    /* I/O: Number of samples (vector/decoded)              */
+            double                               sampleRate
     )
     {
         int ret = 0, used_bytes, prev_fs_kHz;
@@ -89,7 +89,7 @@ public class DecAPI
         /* Call decoder for one frame */
         int[] used_bytes_ptr =new int[1];
         ret += DecodeFrame.SKP_Silk_decode_frame( psDec, samplesOut, samplesOut_offset, nSamplesOut, inData, inData_offset,
-                nBytesIn, lostFlag, used_bytes_ptr );
+                nBytesIn, lostFlag, used_bytes_ptr, sampleRate);
         used_bytes = used_bytes_ptr[0];
 
         if( used_bytes !=0) /* Only Call if not a packet loss */
