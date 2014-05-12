@@ -108,6 +108,9 @@ public class DtmfRawPacket
                 " Marker = " + marker + " End = " + end);
         }
 
+        // Reset the CSRC count to zero
+        setCsrcCount(0);
+
         // Set the payload type and the marker
         setMarker(marker);
 
@@ -116,9 +119,6 @@ public class DtmfRawPacket
 
         // Create the RTP data
         setDtmfPayload(code, end, duration, volume);
-
-        // Reset the CSRC count to zero
-        setCsrcCount(0);
     }
 
     /**
