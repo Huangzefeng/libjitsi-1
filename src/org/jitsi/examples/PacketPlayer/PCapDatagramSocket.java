@@ -18,13 +18,33 @@ public class PCapDatagramSocket extends DatagramSocket
     private boolean connected = true;
     private final FileInputStream fis;
 
+    private final int mDataLinkLayer;
+
+    // From http://www.tcpdump.org/linktypes.html
+    /**
+     * Ethernet (10,100,1000 etc).
+     */
+    private final static int LINKTYPE_ETHERNET = 1;
+    /**
+     * Linux cooked capture (e.g. tcpdump -i any)
+     */
+    private final static int LINKTYPE_LINUX_SLL = 113;
+
     public PCapDatagramSocket(String filename) throws IOException
     {
         super();
         fis = new FileInputStream(filename);
 
-        //Skip the global header
-        fis.skip(24);
+        // Global header.
+
+        // We don't care about the first 20 bytes.
+        fis.skip(20);
+
+        byte[] intByteArray = new byte[4];
+        fis.read(intByteArray, 0, 4);
+        mDataLinkLayer = byteArrayToInt(intByteArray);
+
+        System.out.println("Loading " + filename + " of type: " + mDataLinkLayer);
     }
 
     private static int byteArrayToInt(byte[] b)
@@ -86,9 +106,21 @@ public class PCapDatagramSocket extends DatagramSocket
         //  next 4 bytes are just the last four repeated
         fis.skip(4);
 
-        //  skip 14 bytes for ethernet header
-        fis.skip(14);
-        d.payloadLength -= 14;
+        switch (mDataLinkLayer)
+        {
+        case LINKTYPE_LINUX_SLL:
+            fis.skip(16); 
+            d.payloadLength -= 16;
+            break;
+        case LINKTYPE_ETHERNET:
+            fis.skip(14);
+            d.payloadLength -= 14;
+            break;
+        default:
+            close();
+            d.payloadLength = 0;
+            return;
+        }
 
         // 20 bytes for IP header
         // 4 for version, lengths, dscp, ecn, identification, flags

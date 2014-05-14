@@ -445,12 +445,16 @@ public class RTPPlayer
         MediaService mediaService = LibJitsi.getMediaService();
         final AudioSystem audioSystem = ((MediaServiceImpl)mediaService).getDeviceConfiguration().getAudioSystem();
         LinkedHashMap<String, String> deviceListMap = audioSystem.getAllDevices(DataFlow.PLAYBACK);
-        String [] deviceList = (String[])deviceListMap.keySet().toArray();
-        logger.error("Got devices: " + Arrays.toString(deviceList));
+        List<String> devices = new ArrayList<String>();
+        for (String device: deviceListMap.keySet())
+        {
+            devices.add(device);
+            System.out.println("Found device: " + device);
+        }
         LibJitsi.stop();
 
         audioDeviceComboBox = new JComboBox<>();
-        audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(deviceList));
+        audioDeviceComboBox.setModel(new DefaultComboBoxModel<>(devices.toArray(new String[0])));
         springLayout.putConstraint(SpringLayout.NORTH, audioDeviceComboBox, 0,
                 SpringLayout.SOUTH, codecComboBox2);
         springLayout.putConstraint(SpringLayout.EAST, audioDeviceComboBox, 0,

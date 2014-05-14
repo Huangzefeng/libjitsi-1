@@ -22,6 +22,18 @@ public class RtpData
         return pt >= 72 && pt <= 76;
     }
 
+    @Override
+    public String toString()
+    {
+        return "RtpData[length:" + payloadLength +
+                ",protocol:" + protocol +
+                ",pt:" + pt +
+                ",ssrc:" + ssrc +
+                ",src:" + srcIp + ":" + srcPort +
+                ",dst:" + dstIp + ":" + dstPort +
+                "]";
+    }
+
     int offset;
     long timestamp;
     byte[] data;

@@ -112,6 +112,8 @@ public class StreamIdentifier
 
                 socket.receive(d);
 
+                // Ignore empty packets, or packets without UDP
+                // as the protocol
                 if (d.payloadLength != 0 && d.protocol == 17)
                 {
                     if (d.isRtcp())
