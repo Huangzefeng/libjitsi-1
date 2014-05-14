@@ -70,7 +70,7 @@ public abstract class Devices
     /**
      * The list of <tt>CaptureDeviceInfo2</tt>s which are active/plugged-in.
      */
-    private List<CaptureDeviceInfo2> activeDevices;
+    private List<CaptureDeviceInfo2> activeDevices = new ArrayList<CaptureDeviceInfo2>();
 
     /**
      * Initializes the device list management.
@@ -86,8 +86,8 @@ public abstract class Devices
      * Adds a new device in the preferences (at the first active position if the
      * isSelected argument is true).
      *
-     * @param newsDeviceIdentifier The identifier of the device to add int first
-     * active position of the preferences.
+     * @param newDeviceName The name of the new device
+     * @param newDeviceIdentifier The identifier of the device to add
      * @param isSelected True if the device is the selected one.
      */
     private void addToDevicePreferences(
@@ -97,17 +97,16 @@ public abstract class Devices
     {
         // Nothing to do if we already know about this device and it is not
         // selected
-
-        if (!isSelected &&
-            devicePreferences.contains(newDeviceName) &&
-            !isNewUID(newDeviceUID))
-        {
-            logger.debug("Not adding device " + newDeviceName + " because we already know about it");
-            return;
-        }
-
         synchronized(devicePreferences)
         {
+            if (!isSelected &&
+                devicePreferences.contains(newDeviceName) &&
+                !isNewUID(newDeviceUID))
+            {
+                logger.debug("Not adding device " + newDeviceName + " because we already know about it");
+                return;
+            }
+
             devicePreferences.remove(newDeviceName);
             // A selected device is placed on top of the list: this is the new
             // preferred device.
@@ -154,7 +153,7 @@ public abstract class Devices
     /**
      * Determines if the given UID is one we haven't seen before
      *
-     * @param newDeviceUID the devie UID to check
+     * @param newDeviceUID the device UID to check
      * @return Whether this is a new UID
      */
     private boolean isNewUID(String newDeviceUID)
@@ -163,9 +162,10 @@ public abstract class Devices
 
         for (List<String> uidList : deviceUIDs.values())
         {
-            for (String uid : uidList)
+            if (uidList.contains(newDeviceUID))
             {
                 isNew = false;
+                break;
             }
         }
 
@@ -251,6 +251,10 @@ public abstract class Devices
                     }
                 }
 
+                // If there are multiple connected devices of the same name
+                // then we number the duplicates so the user can tell them
+                // apart. We must update the map so we can correctly associate
+                // a device UID with the new name we have given it.
                 for (CaptureDeviceInfo2 activeDevice : activeDevices)
                 {
                     if (devicePref.equals(activeDevice.getName()))
@@ -300,63 +304,62 @@ public abstract class Devices
             String property = getPropDevice();
 
             loadDevicePreferences(property);
-
-            boolean isEmptyList = devicePreferences.isEmpty();
-
-            // Search if an active device is a new one (is not stored in the
-            // preferences yet). If true, then active this device and set it as
-            // default device (only for USB devices since the user has
-            // deliberately plugged in the device).
-            for (int i = activeDevices.size() - 1; i >= 0; i--)
-            {
-                CaptureDeviceInfo2 activeDevice = activeDevices.get(i);
-                logger.debug("Examining " + getDataflowType() + " device: " +
-                             activeDevice.getName() + " UID: " + activeDevice.getUID());
-
-                boolean isSelected = false;
-                if (!devicePreferences.contains(activeDevice.getName()))
-                {
-                    logger.debug(getDataflowType() +
-                                 "device preferences do not contain: " +
-                                 activeDevice.getName());
-
-                    // By default, select automatically the USB devices.
-                    isSelected
-                        = activeDevice.isSameTransportType("USB");
-                    ConfigurationService cfg
-                        = LibJitsi.getConfigurationService();
-
-                    // Deactivate the USB device automatic selection if the
-                    // property is set to true.
-                    if ((cfg != null) && cfg.getBoolean(
-                                PROP_DISABLE_USB_DEVICE_AUTO_SELECTION,
-                                false))
-                    {
-                        isSelected = false;
-                    }
-
-                    // When initiates the first list (when there is no user
-                    // preferences yet), set the Bluetooh and Airplay to the end
-                    // of the list (this corresponds to move all other type
-                    // of devices on top of the preference list).
-                    if(isEmptyList
-                            && !activeDevice.isSameTransportType("Bluetooth")
-                            && !activeDevice.isSameTransportType("AirPlay"))
-                    {
-                        isSelected = true;
-                    }
-                    logger.debug("Is selected " + isSelected);
-                }
-
-                // Adds the device in the preference list (to the end of the
-                // list, or on top if selected.
-                saveDevice(property, activeDevice, isSelected);
-            }
-
-            // Search if an active device match one of the previously configured
-            // in the preferences.
             synchronized(devicePreferences)
             {
+                boolean isEmptyList = devicePreferences.isEmpty();
+
+                // Search if an active device is a new one (is not stored in the
+                // preferences yet). If true, then active this device and set it as
+                // default device (only for USB devices since the user has
+                // deliberately plugged in the device).
+                for (int i = activeDevices.size() - 1; i >= 0; i--)
+                {
+                    CaptureDeviceInfo2 activeDevice = activeDevices.get(i);
+                    logger.debug("Examining " + getDataflowType() + " device: " +
+                                 activeDevice.getName() + " UID: " + activeDevice.getUID());
+
+                    boolean isSelected = false;
+                    if (!devicePreferences.contains(activeDevice.getName()))
+                    {
+                        logger.debug(getDataflowType() +
+                                     "device preferences do not contain: " +
+                                     activeDevice.getName());
+
+                        // By default, select automatically the USB devices.
+                        isSelected
+                            = activeDevice.isSameTransportType("USB");
+                        ConfigurationService cfg
+                            = LibJitsi.getConfigurationService();
+
+                        // Deactivate the USB device automatic selection if the
+                        // property is set to true.
+                        if ((cfg != null) && cfg.getBoolean(
+                                    PROP_DISABLE_USB_DEVICE_AUTO_SELECTION,
+                                    false))
+                        {
+                            isSelected = false;
+                        }
+
+                        // When initiates the first list (when there is no user
+                        // preferences yet), set the Bluetooh and Airplay to the end
+                        // of the list (this corresponds to move all other type
+                        // of devices on top of the preference list).
+                        if(isEmptyList
+                                && !activeDevice.isSameTransportType("Bluetooth")
+                                && !activeDevice.isSameTransportType("AirPlay"))
+                        {
+                            isSelected = true;
+                        }
+                        logger.debug("Is selected " + isSelected);
+                    }
+
+                    // Adds the device in the preference list (to the end of the
+                    // list, or on top if selected.
+                    saveDevice(property, activeDevice, isSelected);
+                }
+
+                // Search if an active device match one of the previously
+                // configured in the preferences.
                 for (String devicePreference : devicePreferences)
                 {
                     logger.debug("Searching preferred devices, looking at " +
@@ -451,8 +454,12 @@ public abstract class Devices
                 return;
             }
 
-            ConfigurationService cfg = LibJitsi.getConfigurationService();
+            // We attempt to load using the new config style (V2.9.00+), if it
+            // is not found then we load using the old config style (which
+            // doesn't include device UIDs), and then migrate this to the new
+            // config.
 
+            ConfigurationService cfg = LibJitsi.getConfigurationService();
             if (cfg != null)
             {
                 String newProperty = audioSystem.getPropertyName(property + "_list2");

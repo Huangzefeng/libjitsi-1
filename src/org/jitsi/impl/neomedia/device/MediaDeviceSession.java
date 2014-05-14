@@ -17,7 +17,7 @@ import javax.media.format.*;
 import javax.media.protocol.*;
 import javax.media.rtp.*;
 
-import net.sf.fmj.media.Log;
+import net.sf.fmj.media.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.format.*;
@@ -1690,7 +1690,21 @@ public class MediaDeviceSession
         MediaType mediaType = getMediaType();
         Format format = mediaFormat.getFormat();
         logger.debug(
-            "Setting processor " + processor.hashCode() + " to " + format);
+            "Setting processor " + processor.hashCode() + " to " + format + " State: " + processor.getState() + " " +
+        processor.getClass());
+        ProcessorUtility utility = (ProcessorUtility) processor.getUtility();
+        utility.controllerUpdate(null);
+        logger.error("@NJB Processor state is " + processor.getState());
+        //processor.setState(300);
+try
+{
+    Thread.sleep(1000);
+}
+catch (InterruptedException ex)
+{
+    // TODO Auto-generated catch block
+    ex.printStackTrace();
+}
 
         for (int trackIndex = 0;
                 trackIndex < trackControls.length;
@@ -1780,7 +1794,8 @@ public class MediaDeviceSession
                             "Set format of track "
                                 + trackIndex
                                 + " to "
-                                + setFormat);
+                                + setFormat
+                                + ". Processor is in state " + processor.getState());
             }
         }
     }
@@ -2213,7 +2228,10 @@ public class MediaDeviceSession
      */
     private static boolean waitForState(Processor processor, int state)
     {
-        return new ProcessorUtility().waitForState(processor, state);
+        ProcessorUtility processorUtility = new ProcessorUtility();
+        processor.setUtility(processorUtility);
+
+        return processorUtility.waitForState(processor, state);
     }
 
     /**
