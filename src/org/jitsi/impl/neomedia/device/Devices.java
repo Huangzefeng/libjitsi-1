@@ -487,7 +487,7 @@ public abstract class Devices
                         if (m.find())
                         {
                             String deviceName = m.group(1);
-                            String[] deviceUIDsList = m.group(2).replace("[", "").replace("]", "").replace(" ", "").split(",");
+                            String[] deviceUIDsList = m.group(2).replace("[", "").replace("]", "").replace(" ", "").split(";");
 
                             devicePreferences.add(deviceName);
                             List<String> uids = deviceUIDs.get(deviceName);
