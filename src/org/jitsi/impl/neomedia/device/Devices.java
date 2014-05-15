@@ -162,14 +162,14 @@ public abstract class Devices
 
         for (List<String> uidList : deviceUIDs.values())
         {
-            if (uidList.contains(newDeviceUID))
+            for (String uid : uidList)
             {
                 isNew = false;
                 break;
             }
         }
 
-        return isNew;
+        return false;
     }
 
     /**
@@ -487,7 +487,7 @@ public abstract class Devices
                         if (m.find())
                         {
                             String deviceName = m.group(1);
-                            String[] deviceUIDsList = m.group(2).replace("[", "").replace("]", "").replace(" ", "").split(";");
+                            String[] deviceUIDsList = m.group(2).replace("[", "").replace("]", "").split(";");
 
                             devicePreferences.add(deviceName);
                             List<String> uids = deviceUIDs.get(deviceName);
