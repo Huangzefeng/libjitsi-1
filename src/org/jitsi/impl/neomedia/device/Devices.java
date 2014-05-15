@@ -731,14 +731,15 @@ public abstract class Devices
                 {
                     String deviceName = devicePreferences.get(0);
 
-                    value.append("name:" + deviceName + " uid:" + deviceUIDs.get(deviceName));
+                    value.append("name:" + deviceName + " uid:" +
+                                       getUIDsList(deviceUIDs.get(deviceName)));
 
                     for(int i = 1; i < devicePreferenceCount; i++)
                     {
                         deviceName = devicePreferences.get(i);
                         value.append("\", \"");
                         value.append("name:" + deviceName);
-                        value.append(" uid:" + deviceUIDs.get(deviceName));
+                        value.append(" uid:" + getUIDsList(deviceUIDs.get(deviceName)));
                     }
                 }
             }
@@ -746,6 +747,31 @@ public abstract class Devices
 
             cfg.setProperty(property, value.toString());
         }
+    }
+
+    /**
+     * Returns a string representation of the list of UIDs, separated by
+     * semi-colons
+     *
+     * @param list the list of strings to serialize
+     * @return the string representation of the input list of UIDs
+     */
+    private String getUIDsList(List<String> list)
+    {
+        String uidList = null;
+        for (String uid : list)
+        {
+            if (uidList == null)
+            {
+                uidList = uid;
+            }
+            else
+            {
+                uidList = uidList + "; " + uid;
+            }
+        }
+
+        return uidList;
     }
 
     protected abstract String getDataflowType();
