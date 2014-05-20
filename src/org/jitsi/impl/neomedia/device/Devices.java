@@ -170,7 +170,7 @@ public abstract class Devices
         {
             for (List<String> uidList : deviceUIDs.values())
             {
-                for (@SuppressWarnings("unused") String uid : uidList)
+                if (uidList.contains(newDeviceUID))
                 {
                     return false;
                 }
