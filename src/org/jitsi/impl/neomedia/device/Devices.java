@@ -561,8 +561,19 @@ public abstract class Devices
 
                                 deviceUIDs.put(deviceName, uidsList);
 
-                                logger.debug("Adding uid " + activeDevice.getUID() + " to device " + deviceName);
+                                logger.debug("Adding uid " + activeDevice.getUID()
+                                             + " to device " + deviceName);
                             }
+                        }
+
+                        // If this device isn't currently connected then we must
+                        // write a dummy UID in order to keep the device
+                        // preference order.
+                        if (deviceUIDs.get(deviceName) == null)
+                        {
+                            List<String> uidsList = new ArrayList<String>();
+                            uidsList.add("1234");
+                            deviceUIDs.put(deviceName, uidsList);
                         }
 
                     }
