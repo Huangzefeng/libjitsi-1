@@ -39,6 +39,11 @@ public abstract class Devices
         = "org.jitsi.impl.neomedia.device.disableUsbDeviceAutoSelection";
 
     /**
+     * Dummy UID if a device isn't connected, or we don't have any UUIDs for it
+     */
+    private static final String UID_DUMMY = "1234";
+
+    /**
      * The audio system managing this device list.
      */
     private final AudioSystem audioSystem;
@@ -51,12 +56,16 @@ public abstract class Devices
     /**
      * The list of device names saved by the configuration service and
      * previously saved given user preference order.
+     *
+     * Access should be synchronized on the object.
      */
     private final List<String> devicePreferences = new ArrayList<String>();
 
     /**
      * A map from device name to their UIDs saved by the configuration service
      * and previously saved given user preference order.
+     *
+     * Access should be synchronized based on devicePreferences.
      */
     private final HashMap<String, List<String>> deviceUIDs =
                                       new LinkedHashMap<String, List<String>>();
@@ -95,10 +104,10 @@ public abstract class Devices
             String newDeviceUID,
             boolean isSelected)
     {
-        // Nothing to do if we already know about this device and it is not
-        // selected
         synchronized(devicePreferences)
         {
+            // Nothing to do if we already know about this device and it is not
+            // selected
             if (!isSelected &&
                 devicePreferences.contains(newDeviceName) &&
                 !isNewUID(newDeviceUID))
@@ -120,11 +129,8 @@ public abstract class Devices
             {
                 devicePreferences.add(newDeviceName);
             }
-        }
 
-        // The same process is repeated for the UIDs existing for this device
-        synchronized (deviceUIDs)
-        {
+            // The same process is repeated for the UIDs existing for this device
             List<String> uids = deviceUIDs.get(newDeviceName);
 
             if (uids != null)
@@ -147,7 +153,9 @@ public abstract class Devices
             deviceUIDs.put(newDeviceName, uids);
         }
 
-        logger.debug("Added device: " + newDeviceName + " with UID: " + newDeviceUID + " to list of audio devices");
+        logger.debug("Added device: " + newDeviceName +
+                     " with UID: " + newDeviceUID +
+                     " to list of audio devices");
     }
 
     /**
@@ -158,18 +166,18 @@ public abstract class Devices
      */
     private boolean isNewUID(String newDeviceUID)
     {
-        boolean isNew = true;
-
-        for (List<String> uidList : deviceUIDs.values())
+        synchronized(devicePreferences)
         {
-            for (String uid : uidList)
+            for (List<String> uidList : deviceUIDs.values())
             {
-                isNew = false;
-                break;
+                if (uidList.contains(newDeviceUID))
+                {
+                    return false;
+                }
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
@@ -561,8 +569,19 @@ public abstract class Devices
 
                                 deviceUIDs.put(deviceName, uidsList);
 
-                                logger.debug("Adding uid " + activeDevice.getUID() + " to device " + deviceName);
+                                logger.debug("Adding uid " + activeDevice.getUID()
+                                             + " to device " + deviceName);
                             }
+                        }
+
+                        // If this device isn't currently connected then we must
+                        // write a dummy UID in order to keep the device
+                        // preference order.
+                        if (deviceUIDs.get(deviceName) == null)
+                        {
+                            List<String> uidsList = new ArrayList<String>();
+                            uidsList.add(UID_DUMMY);
+                            deviceUIDs.put(deviceName, uidsList);
                         }
 
                     }
@@ -732,14 +751,14 @@ public abstract class Devices
                     String deviceName = devicePreferences.get(0);
 
                     value.append("name:" + deviceName + " uid:" +
-                                       getUIDsList(deviceUIDs.get(deviceName)));
+                                       getUIDsList(deviceName));
 
                     for(int i = 1; i < devicePreferenceCount; i++)
                     {
                         deviceName = devicePreferences.get(i);
                         value.append("\", \"");
                         value.append("name:" + deviceName);
-                        value.append(" uid:" + getUIDsList(deviceUIDs.get(deviceName)));
+                        value.append(" uid:" + getUIDsList(deviceName));
                     }
                 }
             }
@@ -756,10 +775,25 @@ public abstract class Devices
      * @param list the list of strings to serialize
      * @return the string representation of the input list of UIDs
      */
-    private String getUIDsList(List<String> list)
+    private String getUIDsList(String deviceName)
     {
+        List<String> uids;
+
+        synchronized(devicePreferences)
+        {
+            uids = deviceUIDs.get(deviceName);
+        }
+
+        if (uids == null || (uids.size() == 0))
+        {
+            logger.error("No configured UIDs for " + deviceName +
+                         " using dummy UID " + UID_DUMMY + " instead");
+
+            return UID_DUMMY;
+        }
+
         String uidList = null;
-        for (String uid : list)
+        for (String uid : uids)
         {
             if (uidList == null)
             {
