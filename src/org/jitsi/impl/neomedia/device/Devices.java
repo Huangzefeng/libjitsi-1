@@ -116,17 +116,21 @@ public abstract class Devices
                 return;
             }
 
-            devicePreferences.remove(newDeviceName);
+            logger.debug("Adding new device: " + newDeviceName +
+                    ", with uid=" + newDeviceUID +
+                    " and isSelected=" + isSelected);
+
             // A selected device is placed on top of the list: this is the new
             // preferred device.
             if(isSelected)
             {
+                devicePreferences.remove(newDeviceName);
                 devicePreferences.add(0, newDeviceName);
             }
-            // If there is no active device or the device is not selected, then
-            // set the new device to the end of the device preference list.
-            else
+            else if (!devicePreferences.contains(newDeviceName))
             {
+                logger.debug("Device name " + newDeviceName +
+                             " has not been seen before");
                 devicePreferences.add(newDeviceName);
             }
 
@@ -135,22 +139,25 @@ public abstract class Devices
 
             if (uids != null)
             {
-                uids.remove(newDeviceUID);
                 if (isSelected)
                 {
+                    uids.remove(newDeviceUID);
                     uids.add(0, newDeviceUID);
                 }
-                else
+                else if (!uids.contains(newDeviceUID))
                 {
+                    logger.debug("UID " + newDeviceUID + " has not been seen " +
+                                 "before for device " + newDeviceName);
                     uids.add(newDeviceUID);
                 }
             }
             else
             {
+                logger.debug("Create UID store for new device " + newDeviceName);
                 uids = new ArrayList<String>();
                 uids.add(newDeviceUID);
+                deviceUIDs.put(newDeviceName, uids);
             }
-            deviceUIDs.put(newDeviceName, uids);
         }
 
         logger.debug("Added device: " + newDeviceName +
@@ -502,6 +509,8 @@ public abstract class Devices
 
                             if (uids == null)
                             {
+                                logger.warn("Loaded device " + deviceName +
+                                             "had no saved UIDs");
                                 uids = new ArrayList<String>();
                             }
 
@@ -517,6 +526,7 @@ public abstract class Devices
                 {
                     // Use the old/legacy property to load the last preferred
                     // device.
+                    logger.info("Migrating old device preferences");
                     String oldProperty = audioSystem.getPropertyName(property + "_list");
                     deviceIdentifiersString = cfg.getString(oldProperty);
                     if (deviceIdentifiersString == null)
@@ -592,6 +602,10 @@ public abstract class Devices
                 }
 
                 loadedDeviceConfig = true;
+            }
+            else
+            {
+                logger.error("Failed to get config service when loading devices");
             }
         }
 
