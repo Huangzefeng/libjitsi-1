@@ -26,7 +26,8 @@ public class DecoderSetFs
         int                             fs_kHz              /* I    Sampling frequency (kHz)                    */
     )
     {
-        if( psDec.fs_kHz != fs_kHz ) {
+        if (psDec.fs_kHz != fs_kHz)
+        {
             psDec.fs_kHz  = fs_kHz;
             psDec.frame_length = Define.FRAME_LENGTH_MS*fs_kHz;
 
@@ -72,6 +73,7 @@ public class DecoderSetFs
                 Typedef.SKP_assert( false );
             }
         }
+
         /* Check that settings are valid */
         Typedef.SKP_assert( psDec.frame_length > 0 && psDec.frame_length <= Define.MAX_FRAME_LENGTH );
     }
