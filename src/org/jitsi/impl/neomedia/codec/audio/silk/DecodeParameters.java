@@ -45,7 +45,8 @@ public class DecodeParameters
         /* Decode sampling rate */
         /************************/
         /* only done for first frame of packet */
-        if( psDec.nFramesDecoded == 0 ) {
+        if (psDec.nFramesDecoded == 0)
+        {
             RangeCoder.SKP_Silk_range_decoder( Ix_ptr, 0, psRC, TablesOther.SKP_Silk_SamplingRates_CDF, 0, TablesOther.SKP_Silk_SamplingRates_offset );
             Ix = Ix_ptr[0];
 
