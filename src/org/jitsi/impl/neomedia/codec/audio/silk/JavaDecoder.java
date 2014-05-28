@@ -288,6 +288,7 @@ public class JavaDecoder
                 if(rc == 0)
                 {
                     // Found FEC data, decode it.
+                    System.out.println("F: Decoding with FEC data");
                     nbFECDecoded++;
                     outBuffer.setDuration(FRAME_DURATION * 1000000);
                     outBuffer.setLength(outputLength[0]);
@@ -302,6 +303,7 @@ public class JavaDecoder
                 }
                 else
                 {
+                    System.out.println("X: Failed to decode with FEC data: " + rc);
                     nbFECNotDecoded++;
 
                     if (lostSeqNoCount != 0)
@@ -359,8 +361,9 @@ public class JavaDecoder
                             processed = INPUT_BUFFER_NOT_CONSUMED;
                         }
                     }
-
                     lastSeqNo = seqNo;
+
+                    System.out.println("_: Decoded");
                 }
                 else
                 {
@@ -370,10 +373,14 @@ public class JavaDecoder
                     processed = INPUT_BUFFER_NOT_CONSUMED;
                     // We have decoded the expected sequence number with PLC.
                     lastSeqNo = seqNo;
+
+                    System.out.println("N: No FEC data");
                 }
             }
             else
             {
+                System.err.println("X: Failed to decode packet: " + rc);
+
                 processed = BUFFER_PROCESSED_FAILED;
                 if (lostFlag == 1)
                 {

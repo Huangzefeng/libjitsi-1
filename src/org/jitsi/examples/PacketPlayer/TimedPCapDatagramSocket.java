@@ -65,7 +65,7 @@ public class TimedPCapDatagramSocket extends PCapDatagramSocket
                 {
                     if (timeToSleepForJustMillis > 30)
                     {
-                        System.out.println("Warning: Been asked to sleep for a long time " + timeToSleepForJustMillis + "ms.");
+                        //System.out.println("Warning: Been asked to sleep for a long time " + timeToSleepForJustMillis + "ms.");
                     }
 
                     Thread.sleep(timeToSleepForJustMillis, timeToSleepForJustNanos);

@@ -191,6 +191,7 @@ public class DecAPI
         {
             /* No useful FEC in this packet */
             nLBRRBytes[0] = 0;
+            System.out.println("No useful FEC found");
             return;
         }
 
@@ -204,6 +205,7 @@ public class DecAPI
             {
                 /* Corrupt stream */
                 nLBRRBytes[0] = 0;
+                System.err.println("Corrupt stream searching for LBRR: " + sDec.sRC.error);
                 return;
             }
 
@@ -214,6 +216,7 @@ public class DecAPI
                 /* The wanted FEC is present in the packet */
                 nLBRRBytes[0] = (short)sDec.nBytesLeft;
                 System.arraycopy(inData, inData_offset+nBytesIn - sDec.nBytesLeft, LBRRData, LBRRData_offset+0, sDec.nBytesLeft);
+                System.out.println("Found FEC");
                 break;
             }
 
@@ -226,6 +229,7 @@ public class DecAPI
             {
                 LBRRData = null;
                 nLBRRBytes[0] = 0;
+                System.err.println("No FEC");
                 break;
             }
         }
