@@ -258,6 +258,7 @@ public class JavaDecoder
         {
             lbrrBytes[0] = 0;
             DecAPI.SKP_Silk_SDK_search_for_LBRR(
+                    decState,
                     in, inOffset, (short) inLength,
                     /* lost_offset */ lostSeqNoCount,
                     lbrrData, 0, lbrrBytes);
@@ -277,32 +278,40 @@ public class JavaDecoder
                 // No FEC data found, process the packet as lost.
                 lostFlag = 1;
             }
-            else if(DecAPI.SKP_Silk_SDK_Decode(
-                        decState, decControl, 0,
-                        lbrrData, 0, lbrrBytes[0],
-                        out, outOffset, outputLength, sampleRate)
-                    == 0)
-            {
-                // Found FEC data, decode it.
-                nbFECDecoded++;
-                outBuffer.setDuration(FRAME_DURATION * 1000000);
-                outBuffer.setLength(outputLength[0]);
-                outBuffer.setOffset(outOffset);
-
-                outBuffer.setFlags(outBuffer.getFlags() | BUFFER_FLAG_FEC);
-                outBuffer.setFlags(outBuffer.getFlags() & ~BUFFER_FLAG_PLC);
-
-                // We have decoded the expected sequence number from FEC data.
-                lastSeqNo = seqNo;
-                return INPUT_BUFFER_NOT_CONSUMED;
-            }
             else
             {
-                nbFECNotDecoded++;
-                if (lostSeqNoCount != 0)
-                    this.nbPacketsLost += lostSeqNoCount;
-                lastSeqNo = seqNo;
-                return BUFFER_PROCESSED_FAILED;
+                int rc = DecAPI.SKP_Silk_SDK_Decode(
+                        decState, decControl, 0,
+                        lbrrData, 0, lbrrBytes[0],
+                        out, outOffset, outputLength, sampleRate);
+
+                if(rc == 0)
+                {
+                    // Found FEC data, decode it.
+                    nbFECDecoded++;
+                    outBuffer.setDuration(FRAME_DURATION * 1000000);
+                    outBuffer.setLength(outputLength[0]);
+                    outBuffer.setOffset(outOffset);
+
+                    outBuffer.setFlags(outBuffer.getFlags() | BUFFER_FLAG_FEC);
+                    outBuffer.setFlags(outBuffer.getFlags() & ~BUFFER_FLAG_PLC);
+
+                    // We have decoded the expected sequence number from FEC data.
+                    lastSeqNo = seqNo;
+                    return INPUT_BUFFER_NOT_CONSUMED;
+                }
+                else
+                {
+                    nbFECNotDecoded++;
+
+                    if (lostSeqNoCount != 0)
+                    {
+                        this.nbPacketsLost += lostSeqNoCount;
+                    }
+
+                    lastSeqNo = seqNo;
+                    return BUFFER_PROCESSED_FAILED;
+                }
             }
         }
         else if (lostSeqNoCount != 0)
@@ -315,12 +324,12 @@ public class JavaDecoder
         /* Decode without FEC. */
         {
             outputLength[0] = frameLength;
-            if (DecAPI.SKP_Silk_SDK_Decode(
-                        decState, decControl,
-                        lostFlag,
-                        in, inOffset, inLength,
-                        out, outOffset, outputLength, sampleRate)
-                    == 0)
+            int rc = DecAPI.SKP_Silk_SDK_Decode(
+                    decState, decControl,
+                    lostFlag,
+                    in, inOffset, inLength,
+                    out, outOffset, outputLength, sampleRate);
+            if (rc == 0)
             {
                 outBuffer.setDuration(FRAME_DURATION * 1000000);
                 outBuffer.setLength(outputLength[0]);
@@ -346,8 +355,11 @@ public class JavaDecoder
                             processed = BUFFER_PROCESSED_OK;
                         }
                         else
+                        {
                             processed = INPUT_BUFFER_NOT_CONSUMED;
+                        }
                     }
+
                     lastSeqNo = seqNo;
                 }
                 else

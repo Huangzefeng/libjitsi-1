@@ -617,12 +617,18 @@ public class ControlCodecFLP {
              * For now only enable adding to next for active frames. Make more
              * complex later
              */
+
+            /* Always enable FEC.
             LBRR_usage = Define.SKP_SILK_NO_LBRR;
             if (psEnc.speech_activity > DefineFLP.LBRR_SPEECH_ACTIVITY_THRES
                     && psEnc.sCmn.PacketLoss_perc > Define.LBRR_LOSS_THRES)
             { // nb! maybe multiply loss prob and speech activity
                 LBRR_usage = Define.SKP_SILK_ADD_LBRR_TO_PLUS1;
-            }
+            } 
+            */
+
+            LBRR_usage = Define.SKP_SILK_ADD_LBRR_TO_PLUS1;
+
             psEncCtrl.LBRR_usage = LBRR_usage;
         } else {
             psEncCtrl.LBRR_usage = Define.SKP_SILK_NO_LBRR;

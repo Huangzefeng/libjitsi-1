@@ -12,9 +12,11 @@ import java.util.concurrent.*;
 
 import javax.media.*;
 
+import org.jitsi.impl.configuration.ConfigurationServiceImpl;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.audionotifier.*;
+import org.jitsi.util.Logger;
 
 /**
  * The implementation of <tt>AudioNotifierService</tt>.
@@ -26,6 +28,10 @@ public class AudioNotifierServiceImpl
     implements AudioNotifierService,
                PropertyChangeListener
 {
+
+    private static final Logger logger =
+                               Logger.getLogger(AudioNotifierServiceImpl.class);
+
     /**
      * The cache of <tt>SCAudioClip</tt> instances which we may reuse. The reuse
      * is complex because a <tt>SCAudioClip</tt> may be used by a single user at
@@ -74,9 +80,9 @@ public class AudioNotifierServiceImpl
     {
         AudioSystem audioSystem = getDeviceConfiguration().getAudioSystem();
         CaptureDeviceInfo notify
-            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY);
+            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY, true);
         CaptureDeviceInfo playback
-            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.PLAYBACK);
+            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.PLAYBACK, true);
 
         if (notify == null)
             return (playback == null);
@@ -111,6 +117,8 @@ public class AudioNotifierServiceImpl
      */
     public SCAudioClip createAudio(String uri, boolean playback)
     {
+        logger.debug("Create audio: " + uri +
+                     ". Use playpack device? " + playback);
         SCAudioClip audio;
 
         synchronized (audiosSyncRoot)
@@ -127,6 +135,7 @@ public class AudioNotifierServiceImpl
 
             if (audio == null)
             {
+                logger.debug("AudioKey " + uri + " was not cached");
                 try
                 {
                     AudioSystem audioSystem
@@ -134,15 +143,22 @@ public class AudioNotifierServiceImpl
 
                     if (audioSystem == null)
                     {
+                        logger.warn("Audio system was null when loading " + uri +
+                                "; use JavaSoundClip");
                         audio = new JavaSoundClipImpl(uri, this);
                     }
                     else if (NoneAudioSystem.LOCATOR_PROTOCOL.equalsIgnoreCase(
                             audioSystem.getLocatorProtocol()))
                     {
+                        logger.warn("NoneAudioSystem enabled when loading " +
+                                    uri + "; unable to create clip");
+
                         audio = null;
                     }
                     else
                     {
+                        logger.debug("Audio system ready for " + uri + "; " +
+                                     " create as AudioSystemClipImpl");
                         audio
                             = new AudioSystemClipImpl(
                                     uri,
@@ -153,8 +169,19 @@ public class AudioNotifierServiceImpl
                 }
                 catch (Throwable t)
                 {
+                    // Presumably we're catching Throwable not Exception here in
+                    // order to prevent crashing due to OOM when loading a large
+                    // audio file. I don't like it, but I don't feel comfortable
+                    // changing it.
+                    // If we do OOM for an unrelated reason, we'll probably
+                    // hit it again elsewhere soon and deal with it there.
+
+                    logger.error("Failed to create clip " + uri, t);
+
                     if (t instanceof ThreadDeath)
+                    {
                         throw (ThreadDeath) t;
+                    }
                     else
                     {
                         /*
@@ -223,7 +250,7 @@ public class AudioNotifierServiceImpl
                          *
                          * Returns the wrapped <tt>SCAudioClip</tt> into the
                          * cache from it has earlier been retrieved in order to
-                         * allow its reuse. 
+                         * allow its reuse.
                          */
                         @Override
                         protected void finalize()
@@ -302,17 +329,17 @@ public class AudioNotifierServiceImpl
                         {
                             return finalAudio.isStarted();
                         }
-                        
+
                         public boolean isValid()
                         {
                             return finalAudio.isValid();
                         }
-                        
+
                         public void registerAudioListener(AudioListener l)
                         {
                             finalAudio.registerAudioListener(l);
                         }
-                        
+
                         public void removeAudioListener(AudioListener l)
                         {
                             finalAudio.removeAudioListener(l);

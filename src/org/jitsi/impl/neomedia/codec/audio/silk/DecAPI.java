@@ -157,7 +157,7 @@ public class DecAPI
     }
 
     /**
-     * Find LBRR information in a packet.
+     * Find Low Bit Rate Redundancy (LBRR) information in a packet
      *
      * @param inData encoded input vector.
      * @param inData_offset offset of the valid data.
@@ -168,6 +168,7 @@ public class DecAPI
      * @param nLBRRBytes number of LBRR bytes.
      */
     static void SKP_Silk_SDK_search_for_LBRR(
+            SKP_Silk_decoder_state          inDec,  // Decoder state of input
             byte[]                          inData,        /* I:   Encoded input vector                            */
             int                             inData_offset,
             final short                     nBytesIn,       /* I:   Number of input Bytes                           */
@@ -177,43 +178,52 @@ public class DecAPI
             short[]                         nLBRRBytes     /* O:   Number of LBRR Bytes                            */
     )
     {
-        SKP_Silk_decoder_state   sDec = new SKP_Silk_decoder_state(); // Local decoder state to avoid interfering with running decoder */
+        // Local decoder state to avoid interfering with running decoder
+        // Initialise the local decoder state with the same frequency as the current decoder.
+        SKP_Silk_decoder_state sDec = new SKP_Silk_decoder_state();
+        DecoderSetFs.SKP_Silk_decoder_set_fs(sDec, inDec.fs_kHz);
+        sDec.nFramesDecoded = 0;
+
         SKP_Silk_decoder_control sDecCtrl = new SKP_Silk_decoder_control();
         int[] TempQ = new int[ Define.MAX_FRAME_LENGTH ];
 
-        if( lost_offset < 1 || lost_offset > Define.MAX_LBRR_DELAY ) {
+        if( lost_offset < 1 || lost_offset > Define.MAX_LBRR_DELAY )
+        {
             /* No useful FEC in this packet */
             nLBRRBytes[0] = 0;
             return;
         }
 
-        sDec.nFramesDecoded = 0;
-        sDec.fs_kHz         = 0; /* Force update parameters LPC_order etc */
-        Arrays.fill(sDec.prevNLSF_Q15, 0, Define.MAX_LPC_ORDER, 0);
-
-        for(int i=0; i<Define.MAX_LPC_ORDER; i++)
-            sDec.prevNLSF_Q15[i] = 0;
-
         RangeCoder.SKP_Silk_range_dec_init( sDec.sRC, inData, inData_offset, nBytesIn );
 
-        while(true) {
+        while (true)
+        {
             DecodeParameters.SKP_Silk_decode_parameters(sDec, sDecCtrl, TempQ, 0);
-            if( sDec.sRC.error!=0 ) {
+
+            if (sDec.sRC.error!=0)
+            {
                 /* Corrupt stream */
                 nLBRRBytes[0] = 0;
                 return;
             }
-//TODO:note the semicolon;
-//          };
-            if( (( sDec.FrameTermination - 1 ) & lost_offset)!=0 && sDec.FrameTermination > 0 && sDec.nBytesLeft >= 0 ) {
+
+            if ( ((sDec.FrameTermination - 1) & lost_offset) != 0 &&
+                 sDec.FrameTermination > 0 &&
+                 sDec.nBytesLeft >= 0 )
+            {
                 /* The wanted FEC is present in the packet */
                 nLBRRBytes[0] = (short)sDec.nBytesLeft;
                 System.arraycopy(inData, inData_offset+nBytesIn - sDec.nBytesLeft, LBRRData, LBRRData_offset+0, sDec.nBytesLeft);
                 break;
             }
-            if( sDec.nBytesLeft > 0 && sDec.FrameTermination == Define.SKP_SILK_MORE_FRAMES ) {
+
+            if (sDec.nBytesLeft > 0 &&
+                sDec.FrameTermination == Define.SKP_SILK_MORE_FRAMES)
+            {
                 sDec.nFramesDecoded++;
-            } else {
+            }
+            else
+            {
                 LBRRData = null;
                 nLBRRBytes[0] = 0;
                 break;
