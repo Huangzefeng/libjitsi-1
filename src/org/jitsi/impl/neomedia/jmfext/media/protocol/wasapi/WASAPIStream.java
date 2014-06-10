@@ -1030,7 +1030,7 @@ public class WASAPIStream
                      */
                     CaptureDeviceInfo2 renderDevice
                         = audioSystem.getSelectedDevice(
-                                AudioSystem.DataFlow.PLAYBACK);
+                                AudioSystem.DataFlow.PLAYBACK, false);
 
                     if (renderDevice != null)
                     {
@@ -2481,7 +2481,7 @@ public class WASAPIStream
             WASAPISystem audioSystem = dataSource.audioSystem;
             CaptureDeviceInfo2 newRenderDeviceInfo
                 = audioSystem.getSelectedDevice(
-                        AudioSystem.DataFlow.PLAYBACK);
+                        AudioSystem.DataFlow.PLAYBACK, false);
             MediaLocator newRenderDevice
                 = (newRenderDeviceInfo == null)
                     ? null

@@ -82,6 +82,11 @@ public abstract class Devices
     private List<CaptureDeviceInfo2> activeDevices = new ArrayList<CaptureDeviceInfo2>();
 
     /**
+     * The currently selected Device
+     */
+    private CaptureDeviceInfo2 selectedDevice;
+
+    /**
      * Initializes the device list management.
      *
      * @param audioSystem The audio system managing this device list.
@@ -300,13 +305,21 @@ public abstract class Devices
      * Gets the selected active device.
      *
      * @param activeDevices the list of the active devices
+     * @param useCache whether or not to use the cached selected device
      * @return the selected active device
      */
     public CaptureDeviceInfo2 getSelectedDevice(
-            List<CaptureDeviceInfo2> activeDevices)
+            List<CaptureDeviceInfo2> activeDevices,
+            boolean useCache)
     {
         if (activeDevices != null)
         {
+            if (useCache && selectedDevice != null)
+            {
+                logger.debug("Returning cached device " + selectedDevice.getUID());
+                return selectedDevice;
+            }
+
             logger.debug("Got " + activeDevices.size() + " " +
                          getDataflowType() + " active devices");
             String property = getPropDevice();
@@ -415,6 +428,7 @@ public abstract class Devices
                                 {
                                     if (uid.equals(matchingDevice.getUID()))
                                     {
+                                        selectedDevice = matchingDevice;
                                         return matchingDevice;
                                     }
                                 }
@@ -424,6 +438,7 @@ public abstract class Devices
                             // matching device by name, but not by UID.
                             // Therefore return the first matching device by
                             // name.
+                            selectedDevice = matchingDevices.get(0);
                             return matchingDevices.get(0);
                         }
                         else
@@ -431,6 +446,7 @@ public abstract class Devices
                             logger.debug("No UIDs stored for device " +
                                          devicePreference +
                                          " using first one found");
+                            selectedDevice = matchingDevices.get(0);
                             return matchingDevices.get(0);
                         }
                     }
