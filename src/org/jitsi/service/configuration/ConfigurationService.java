@@ -366,7 +366,7 @@ public interface ConfigurationService
      * Removes a PropertyChangeListener from the listener list for a specific
      * property. This method should be used to remove PropertyChangeListeners
      * that were registered for a specific property. The method has no effect
-     * when called for a listener that was not registered for that specifiec
+     * when called for a listener that was not registered for that specific
      * property.
      * <p>
      *

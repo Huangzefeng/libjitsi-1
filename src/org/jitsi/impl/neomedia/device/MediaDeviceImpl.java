@@ -158,6 +158,8 @@ public class MediaDeviceImpl
      */
     private final MediaType mediaType;
 
+    private MediaFormat mediaFormat;
+
     /**
      * Initializes a new <tt>MediaDeviceImpl</tt> instance which is to provide
      * an implementation of <tt>MediaDevice</tt> for a <tt>CaptureDevice</tt>
@@ -180,6 +182,7 @@ public class MediaDeviceImpl
 
         this.captureDeviceInfo = captureDeviceInfo;
         this.mediaType = mediaType;
+        this.mediaFormat = null;
     }
 
     /**
@@ -193,6 +196,7 @@ public class MediaDeviceImpl
     {
         this.captureDeviceInfo = null;
         this.mediaType = mediaType;
+        this.mediaFormat = null;
     }
 
     /**
@@ -315,6 +319,7 @@ public class MediaDeviceImpl
      * capture and render media
      * @see MediaDevice#getDirection()
      */
+    @Override
     public MediaDirection getDirection()
     {
         if (getCaptureDeviceInfo() != null)
@@ -334,44 +339,50 @@ public class MediaDeviceImpl
      * captures media
      * @see MediaDevice#getFormat()
      */
+    @Override
     public MediaFormat getFormat()
     {
-        // TODO : Make this implementation less insane.  Why does it need to
-        // create a CaptureDevice? Couldn't the result be cached?
-        CaptureDevice captureDevice = createCaptureDevice();
-
-        if (captureDevice != null)
+        if (mediaFormat == null)
         {
-            try
-            {
-                MediaType mediaType = getMediaType();
+            logger.debug("Figure out the media format");
+            CaptureDevice captureDevice = createCaptureDevice();
 
-                for (FormatControl formatControl
-                        : captureDevice.getFormatControls())
-                {
-                    MediaFormat format
-                        = MediaFormatImpl.createInstance(formatControl.getFormat());
-
-                    if ((format != null) && format.getMediaType().equals(mediaType))
-                        return format;
-                }
-            }
-            finally
+            if (captureDevice != null)
             {
-                // We must close the capture device we just opened as we're not
-                // actually using it.
                 try
                 {
-                    captureDevice.disconnect();
+                    MediaType mediaType = getMediaType(); // fixed & final
+
+                    for (FormatControl formatControl
+                            : captureDevice.getFormatControls())
+                    {
+                        MediaFormat format
+                            = MediaFormatImpl.createInstance(formatControl.getFormat());
+
+                        if ((format != null) && format.getMediaType().equals(mediaType))
+                        {
+                            mediaFormat = format;
+                            break;
+                        }
+                    }
                 }
-                catch (Exception e)
+                finally
                 {
-                    // just ignore any exceptions trying to clean up
-                    logger.debug("Error disconneting captureDevice", e);
+                    // We must close the capture device we just opened as we're not
+                    // actually using it.
+                    try
+                    {
+                        captureDevice.disconnect();
+                    }
+                    catch (Exception e)
+                    {
+                        // just ignore any exceptions trying to clean up
+                        logger.debug("Error disconneting captureDevice", e);
+                    }
                 }
             }
         }
-        return null;
+        return mediaFormat;
     }
 
     /**
@@ -381,6 +392,7 @@ public class MediaDeviceImpl
      * {@link MediaType#VIDEO} if this is a video device
      * @see MediaDevice#getMediaType()
      */
+    @Override
     public MediaType getMediaType()
     {
         return mediaType;
@@ -414,6 +426,7 @@ public class MediaDeviceImpl
      * @return the list of <tt>MediaFormat</tt>s supported by this device
      * @see MediaDevice#getSupportedFormats()
      */
+    @Override
     public List<MediaFormat> getSupportedFormats(
             QualityPreset sendPreset,
             QualityPreset receivePreset)
@@ -440,6 +453,7 @@ public class MediaDeviceImpl
      * and enabled in <tt>encodingConfiguration</tt>.
      * @see MediaDevice#getSupportedFormats()
      */
+    @Override
     public List<MediaFormat> getSupportedFormats(
             QualityPreset sendPreset,
             QualityPreset receivePreset,
