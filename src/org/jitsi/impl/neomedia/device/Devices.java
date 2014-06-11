@@ -819,7 +819,7 @@ public abstract class Devices
             }
             else
             {
-                uidList = uidList + "; " + uid;
+                uidList = uidList + ";" + uid;
             }
         }
 
