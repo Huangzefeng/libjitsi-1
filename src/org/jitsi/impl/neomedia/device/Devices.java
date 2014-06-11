@@ -719,7 +719,7 @@ public abstract class Devices
                                    isSelected))
         {
             // Saves the user preferences.
-            logger.info("Devices changed: saving chane to " + getDataflowType() +
+            logger.info("Devices changed: saving changed to " + getDataflowType() +
                     " device:" + device +
                     " to: " + property +
                     " selected: " + isSelected);
