@@ -119,7 +119,8 @@ public abstract class Devices
                 devicePreferences.contains(newDeviceName) &&
                 !isNewUID(newDeviceUID))
             {
-                logger.debug("Not adding device " + newDeviceName + " because we already know about it");
+                logger.debug("Not adding device: " + newDeviceName + " (" + newDeviceUID + ")" +
+                             " as it isn't selected and we already know about it");
                 return false;
             }
 
@@ -712,18 +713,16 @@ public abstract class Devices
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
                 device.getName();
 
-        logger.info("Saving " + getDataflowType() +
-                    " device:" + device +
-                    " to: " + property +
-                    " selected: " + isSelected);
-
         // Sorts the user preferences to put the selected device on top.
         if (addToDevicePreferences(selectedDeviceIdentifier,
                                    device.getUID(),
                                    isSelected))
         {
             // Saves the user preferences.
-            logger.debug("Devices changed - save changes");
+            logger.info("Devices changed: saving changed to " + getDataflowType() +
+                    " device:" + device +
+                    " to: " + property +
+                    " selected: " + isSelected);
             writeDevicePreferences(property);
         }
 
@@ -845,7 +844,7 @@ public abstract class Devices
             }
             else
             {
-                uidList = uidList + "; " + uid;
+                uidList = uidList + ";" + uid;
             }
         }
 
