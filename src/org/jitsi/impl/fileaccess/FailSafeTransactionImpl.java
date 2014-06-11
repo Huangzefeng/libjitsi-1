@@ -70,6 +70,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the file restoration
      */
+    @Override
     public synchronized void restoreFile()
         throws IllegalStateException, IOException
     {
@@ -103,6 +104,7 @@ public class FailSafeTransactionImpl
      * @throws IOException if an IOException occurs during the transaction
      * creation
      */
+    @Override
     public synchronized void beginTransaction()
         throws IllegalStateException, IOException
     {
@@ -130,6 +132,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
+    @Override
     public synchronized void commit()
         throws IllegalStateException, IOException
     {
@@ -156,6 +159,7 @@ public class FailSafeTransactionImpl
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
      */
+    @Override
     public synchronized void rollback()
         throws IllegalStateException, IOException
     {
@@ -203,6 +207,7 @@ public class FailSafeTransactionImpl
 
         File ptoF = new File(to + PART_EXT);
         if (ptoF.exists()) {
+            logger.debug("Deleting existing PART file: " + ptoF);
             if (!ptoF.delete()) {
                 // This shouldn't matter, as FileOutputStream will overwrite
                 // the target by default. But let's log it just in case.
@@ -213,7 +218,7 @@ public class FailSafeTransactionImpl
 
         try {
             in = new FileInputStream(from);
-            out = new FileOutputStream(to + PART_EXT);
+            out = new FileOutputStream(ptoF);
 
             // actually copy the file
             byte[] buf = new byte[1024];
