@@ -98,8 +98,10 @@ public abstract class Devices
      * @param newDeviceName The name of the new device
      * @param newDeviceIdentifier The identifier of the device to add
      * @param isSelected True if the device is the selected one.
+     *
+     * @return <tt>true</tt> if a change was made, <tt>false</tt> otherwise
      */
-    private void addToDevicePreferences(
+    private boolean addToDevicePreferences(
             String newDeviceName,
             String newDeviceUID,
             boolean isSelected)
@@ -112,8 +114,9 @@ public abstract class Devices
                 devicePreferences.contains(newDeviceName) &&
                 !isNewUID(newDeviceUID))
             {
-                logger.debug("Not adding device " + newDeviceName + " because we already know about it");
-                return;
+                logger.debug("Not adding device: " + newDeviceName + " (" + newDeviceUID + ")" +
+                             " as it isn't selected and we already know about it");
+                return false;
             }
 
             logger.debug("Adding new device: " + newDeviceName +
@@ -163,6 +166,7 @@ public abstract class Devices
         logger.debug("Added device: " + newDeviceName +
                      " with UID: " + newDeviceUID +
                      " to list of audio devices");
+        return true;
     }
 
     /**
@@ -684,19 +688,19 @@ public abstract class Devices
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
                 device.getName();
 
-        logger.info("Saving " + getDataflowType() +
+        // Sorts the user preferences to put the selected device on top.
+        if (addToDevicePreferences(selectedDeviceIdentifier,
+                                   device.getUID(),
+                                   isSelected))
+        {
+            // Saves the user preferences.
+            logger.info("Devices changed: saving chane to " + getDataflowType() +
                     " device:" + device +
                     " to: " + property +
                     " selected: " + isSelected);
+            writeDevicePreferences(property);
+        }
 
-        // Sorts the user preferences to put the selected device on top.
-        addToDevicePreferences(
-                selectedDeviceIdentifier,
-                device.getUID(),
-                isSelected);
-
-        // Saves the user preferences.
-        writeDevicePreferences(property);
     }
 
     /**
