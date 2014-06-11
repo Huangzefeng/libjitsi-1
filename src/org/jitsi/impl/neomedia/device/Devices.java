@@ -712,18 +712,16 @@ public abstract class Devices
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
                 device.getName();
 
-        logger.info("Saving " + getDataflowType() +
-                    " device:" + device +
-                    " to: " + property +
-                    " selected: " + isSelected);
-
         // Sorts the user preferences to put the selected device on top.
         if (addToDevicePreferences(selectedDeviceIdentifier,
                                    device.getUID(),
                                    isSelected))
         {
             // Saves the user preferences.
-            logger.debug("Devices changed - save changes");
+            logger.info("Devices changed: saving chane to " + getDataflowType() +
+                    " device:" + device +
+                    " to: " + property +
+                    " selected: " + isSelected);
             writeDevicePreferences(property);
         }
 
