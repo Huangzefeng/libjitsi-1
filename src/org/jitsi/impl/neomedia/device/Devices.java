@@ -103,8 +103,10 @@ public abstract class Devices
      * @param newDeviceName The name of the new device
      * @param newDeviceIdentifier The identifier of the device to add
      * @param isSelected True if the device is the selected one.
+     *
+     * @return <tt>true</tt> if a change was made, <tt>false</tt> otherwise
      */
-    private void addToDevicePreferences(
+    private boolean addToDevicePreferences(
             String newDeviceName,
             String newDeviceUID,
             boolean isSelected)
@@ -118,7 +120,7 @@ public abstract class Devices
                 !isNewUID(newDeviceUID))
             {
                 logger.debug("Not adding device " + newDeviceName + " because we already know about it");
-                return;
+                return false;
             }
 
             devicePreferences.remove(newDeviceName);
@@ -161,6 +163,7 @@ public abstract class Devices
         logger.debug("Added device: " + newDeviceName +
                      " with UID: " + newDeviceUID +
                      " to list of audio devices");
+        return true;
     }
 
     /**
@@ -715,13 +718,15 @@ public abstract class Devices
                     " selected: " + isSelected);
 
         // Sorts the user preferences to put the selected device on top.
-        addToDevicePreferences(
-                selectedDeviceIdentifier,
-                device.getUID(),
-                isSelected);
+        if (addToDevicePreferences(selectedDeviceIdentifier,
+                                   device.getUID(),
+                                   isSelected))
+        {
+            // Saves the user preferences.
+            logger.debug("Devices changed - save changes");
+            writeDevicePreferences(property);
+        }
 
-        // Saves the user preferences.
-        writeDevicePreferences(property);
     }
 
     /**
