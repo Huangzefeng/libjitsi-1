@@ -125,7 +125,7 @@ public class HardwareVolumeControl
         CaptureDeviceInfo2 captureDevice
             = (audioSystem == null)
                 ? null
-                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.CAPTURE, false);
+                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.CAPTURE);
 
         return (captureDevice == null) ? null : captureDevice.getUID();
     }

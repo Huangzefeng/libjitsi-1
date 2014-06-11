@@ -284,7 +284,7 @@ public class WASAPIRenderer
 
                 try
                 {
-                    CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow, false);
+                    CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow);
                     name = device.getName();
                 }
                 catch (Exception e)

@@ -246,7 +246,7 @@ public abstract class AbstractAudioRenderer<T extends AudioSystem>
 
         if ((locator == null) && (audioSystem != null))
         {
-            CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow, true);
+            CaptureDeviceInfo device = audioSystem.getSelectedDevice(dataFlow);
 
             if (device != null)
             {

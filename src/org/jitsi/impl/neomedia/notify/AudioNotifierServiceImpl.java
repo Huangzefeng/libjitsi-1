@@ -80,9 +80,9 @@ public class AudioNotifierServiceImpl
     {
         AudioSystem audioSystem = getDeviceConfiguration().getAudioSystem();
         CaptureDeviceInfo notify
-            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY, true);
+            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY);
         CaptureDeviceInfo playback
-            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.PLAYBACK, true);
+            = audioSystem.getSelectedDevice(AudioSystem.DataFlow.PLAYBACK);
 
         if (notify == null)
             return (playback == null);

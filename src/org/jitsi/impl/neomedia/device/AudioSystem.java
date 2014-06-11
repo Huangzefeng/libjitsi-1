@@ -311,7 +311,7 @@ public abstract class AudioSystem
                         if ((renderer != null) && !playback)
                         {
                             CaptureDeviceInfo device
-                                = getSelectedDevice(DataFlow.NOTIFY, false);
+                                = getSelectedDevice(DataFlow.NOTIFY);
 
                             if (device == null)
                             {
@@ -500,15 +500,26 @@ public abstract class AudioSystem
      *
      * @param dataFlow the data flow of the selected device to retrieve:
      * capture, notify or playback.
-     * @param useCache whether or not to use the selected device cache
      * @return the selected device for the specified <tt>dataFlow</tt>
      */
-    public CaptureDeviceInfo2 getSelectedDevice(DataFlow dataFlow,
-                                                boolean useCache)
+    public CaptureDeviceInfo2 getSelectedDevice(DataFlow dataFlow)
     {
         return
-            devices[dataFlow.ordinal()].getSelectedDevice(getDevices(dataFlow),
-                                                          useCache);
+            devices[dataFlow.ordinal()].getSelectedDevice(getDevices(dataFlow));
+    }
+
+    /**
+     * Refreshes the selected device and gets the new selected device for a
+     * specific data flow: capture, notify or playback.
+     *
+     * @param dataFlow the data flow of the selected device to retrieve:
+     * capture, notify or playback.
+     * @return the selected device for the specified <tt>dataFlow</tt>
+     */
+    public CaptureDeviceInfo2 getAndRefreshSelectedDevice(DataFlow dataFlow)
+    {
+        return
+            devices[dataFlow.ordinal()].getAndRefreshSelectedDevice(getDevices(dataFlow));
     }
 
     /**
@@ -602,7 +613,7 @@ public abstract class AudioSystem
         // Gets the default device.
         Devices devices = this.devices[dataFlow.ordinal()];
         CaptureDeviceInfo2 selectedActiveDevice
-            = devices.getSelectedDevice(activeDevices, false);
+            = devices.getAndRefreshSelectedDevice(activeDevices);
 
         if (logger.isDebugEnabled())
         {

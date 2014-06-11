@@ -589,7 +589,7 @@ public class DeviceConfiguration
         return
             (audioSystem == null)
                 ? null
-                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.CAPTURE, false);
+                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.CAPTURE);
     }
 
     /**
@@ -602,7 +602,7 @@ public class DeviceConfiguration
         return
             (audioSystem == null)
                 ? null
-                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY, false);
+                : audioSystem.getSelectedDevice(AudioSystem.DataFlow.NOTIFY);
     }
 
     public AudioSystem getAudioSystem()

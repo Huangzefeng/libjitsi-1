@@ -305,21 +305,43 @@ public abstract class Devices
      * Gets the selected active device.
      *
      * @param activeDevices the list of the active devices
-     * @param useCache whether or not to use the cached selected device
      * @return the selected active device
      */
     public CaptureDeviceInfo2 getSelectedDevice(
-            List<CaptureDeviceInfo2> activeDevices,
-            boolean useCache)
+            List<CaptureDeviceInfo2> activeDevices)
     {
         if (activeDevices != null)
         {
-            if (useCache && selectedDevice != null)
+            if (selectedDevice != null)
             {
                 logger.debug("Returning cached device " + selectedDevice.getUID());
                 return selectedDevice;
             }
+            else
+            {
+                // We don't yet have a cached device, refresh the cache now
+                return getAndRefreshSelectedDevice(activeDevices);
+            }
+        }
 
+        // No devices present, return null.
+        return null;
+    }
+
+
+
+    /**
+     * Gets the selected active device.
+     *
+     * @param activeDevices the list of the active devices
+     * @param useCache whether or not to use the cached selected device
+     * @return the selected active device
+     */
+    public CaptureDeviceInfo2 getAndRefreshSelectedDevice(
+            List<CaptureDeviceInfo2> activeDevices)
+    {
+        if (activeDevices != null)
+        {
             logger.debug("Got " + activeDevices.size() + " " +
                          getDataflowType() + " active devices");
             String property = getPropDevice();
@@ -375,7 +397,7 @@ public abstract class Devices
                     }
 
                     // Adds the device in the preference list (to the end of the
-                    // list, or on top if selected.
+                    // list, or on top if selected).
                     saveDevice(property, activeDevice, isSelected);
                 }
 
@@ -455,6 +477,7 @@ public abstract class Devices
         }
 
         // Else if nothing was found, then returns null.
+        selectedDevice = null;
         return null;
     }
 
