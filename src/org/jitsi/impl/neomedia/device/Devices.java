@@ -119,7 +119,8 @@ public abstract class Devices
                 devicePreferences.contains(newDeviceName) &&
                 !isNewUID(newDeviceUID))
             {
-                logger.debug("Not adding device " + newDeviceName + " because we already know about it");
+                logger.debug("Not adding device: " + newDeviceName + " (" + newDeviceUID + ")" +
+                             " as it isn't selected and we already know about it");
                 return false;
             }
 
