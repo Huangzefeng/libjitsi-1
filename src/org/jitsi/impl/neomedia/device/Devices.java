@@ -399,6 +399,31 @@ public abstract class Devices
                         }
                         logger.debug("Is selected " + isSelected);
                     }
+                    else
+                    {
+                        // Determine if this device should be the selected device
+                        if (selectedDevice == null)
+                        {
+                            // If there is no cache of currently selected device
+                            // then cache it now
+                            isSelected = true;
+                            selectedDevice = activeDevice;
+                        }
+                        else
+                        {
+                            // Get the index of the currently selected device
+                            int selectedDeviceIndex = devicePreferences.indexOf(selectedDevice.getName());
+                            int thisDeviceIndex = devicePreferences.indexOf(activeDevice.getName());
+
+                            if (thisDeviceIndex > -1)
+                            {
+                                if (thisDeviceIndex < selectedDeviceIndex)
+                                {
+                                    isSelected = true;
+                                }
+                            }
+                        }
+                    }
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected).
