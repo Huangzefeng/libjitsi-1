@@ -109,7 +109,8 @@ public abstract class Devices
     private boolean addToDevicePreferences(
             String newDeviceName,
             String newDeviceUID,
-            boolean isSelected)
+            boolean isSelected,
+            int index)
     {
         synchronized(devicePreferences)
         {
@@ -129,7 +130,14 @@ public abstract class Devices
             // preferred device.
             if(isSelected)
             {
-                devicePreferences.add(0, newDeviceName);
+                if (index > -1)
+                {
+                    devicePreferences.add(index, newDeviceName);
+                }
+                else
+                {
+                    devicePreferences.add(0, newDeviceName);
+                }
             }
             // If there is no active device or the device is not selected, then
             // set the new device to the end of the device preference list.
@@ -365,6 +373,7 @@ public abstract class Devices
                     logger.debug("Examining " + getDataflowType() + " device: " +
                                  activeDevice.getName() + " UID: " + activeDevice.getUID());
 
+                    int thisDeviceIndex = -1;
                     boolean isSelected = false;
                     if (!devicePreferences.contains(activeDevice.getName()))
                     {
@@ -401,7 +410,9 @@ public abstract class Devices
                     }
                     else
                     {
-                        // Determine if this device should be the selected device
+                        // We have an active device that is in our device
+                        // preference list. Determine if it is a new device that
+                        // may require selecting
                         if (selectedDevice == null)
                         {
                             // If there is no cache of currently selected device
@@ -412,9 +423,15 @@ public abstract class Devices
                         else
                         {
                             // Get the index of the currently selected device
-                            int selectedDeviceIndex = devicePreferences.indexOf(selectedDevice.getName());
-                            int thisDeviceIndex = devicePreferences.indexOf(activeDevice.getName());
+                            int selectedDeviceIndex = devicePreferences.indexOf(
+                                                      selectedDevice.getName());
 
+                            thisDeviceIndex = devicePreferences.indexOf(
+                                                        activeDevice.getName());
+
+                            // If we have found this active device in our device
+                            // preference list, check if it is in a higher
+                            // position than the currently selected device
                             if (thisDeviceIndex > -1)
                             {
                                 if (thisDeviceIndex < selectedDeviceIndex)
@@ -427,7 +444,7 @@ public abstract class Devices
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected).
-                    saveDevice(property, activeDevice, isSelected);
+                    saveDevice(property, activeDevice, isSelected, thisDeviceIndex);
                 }
 
                 // Search if an active device match one of the previously
@@ -732,7 +749,8 @@ public abstract class Devices
     private void saveDevice(
             String property,
             CaptureDeviceInfo2 device,
-            boolean isSelected)
+            boolean isSelected,
+            int index)
     {
         String selectedDeviceIdentifier
             = (device == null) ? NoneAudioSystem.LOCATOR_PROTOCOL :
@@ -741,7 +759,8 @@ public abstract class Devices
         // Sorts the user preferences to put the selected device on top.
         if (addToDevicePreferences(selectedDeviceIdentifier,
                                    device.getUID(),
-                                   isSelected))
+                                   isSelected,
+                                   index))
         {
             // Saves the user preferences.
             logger.info("Devices changed: saving changed to " + getDataflowType() +
@@ -772,7 +791,7 @@ public abstract class Devices
 
             // Saves the new selected device in top of the user preferences.
             if (save)
-                saveDevice(property, device, true);
+                saveDevice(property, device, true, 0);
 
             this.device = device;
 
