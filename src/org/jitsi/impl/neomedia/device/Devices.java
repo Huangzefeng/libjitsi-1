@@ -352,6 +352,8 @@ public abstract class Devices
     public CaptureDeviceInfo2 getAndRefreshSelectedDevice(
             List<CaptureDeviceInfo2> activeDevices)
     {
+        boolean wasSelectedDeviceNull = (selectedDevice == null);
+
         if (activeDevices != null)
         {
             logger.debug("Got " + activeDevices.size() + " " +
@@ -413,14 +415,7 @@ public abstract class Devices
                         // We have an active device that is in our device
                         // preference list. Determine if it is a new device that
                         // may require selecting
-                        if (selectedDevice == null)
-                        {
-                            // If there is no cache of currently selected device
-                            // then cache it now
-                            isSelected = true;
-                            selectedDevice = activeDevice;
-                        }
-                        else
+                        if (selectedDevice != null)
                         {
                             // Get the index of the currently selected device
                             int selectedDeviceIndex = devicePreferences.indexOf(
@@ -444,7 +439,13 @@ public abstract class Devices
 
                     // Adds the device in the preference list (to the end of the
                     // list, or on top if selected).
-                    saveDevice(property, activeDevice, isSelected, thisDeviceIndex);
+                    // Do not save the preference list if the selected device is
+                    // currently null. This is safe because a transition to/from
+                    // null state will never happen by a user action
+                    if (selectedDevice != null)
+                    {
+                        saveDevice(property, activeDevice, isSelected, thisDeviceIndex);
+                    }
                 }
 
                 // Search if an active device match one of the previously
@@ -497,8 +498,12 @@ public abstract class Devices
                                     if (uid.equals(matchingDevice.getUID()))
                                     {
                                         selectedDevice = matchingDevice;
-                                        return matchingDevice;
+                                        break;
                                     }
+                                }
+                                if (selectedDevice != null)
+                                {
+                                    break;
                                 }
                             }
 
@@ -506,8 +511,10 @@ public abstract class Devices
                             // matching device by name, but not by UID.
                             // Therefore return the first matching device by
                             // name.
-                            selectedDevice = matchingDevices.get(0);
-                            return matchingDevices.get(0);
+                            if (selectedDevice != null)
+                            {
+                                selectedDevice = matchingDevices.get(0);
+                            }
                         }
                         else
                         {
@@ -515,7 +522,19 @@ public abstract class Devices
                                          devicePreference +
                                          " using first one found");
                             selectedDevice = matchingDevices.get(0);
-                            return matchingDevices.get(0);
+                        }
+
+                        // If we started this method without a cached selected
+                        // device then we need to re-enter in case the device
+                        // preferences have changed and we need to save the
+                        // preference list
+                        if (wasSelectedDeviceNull && selectedDevice != null)
+                        {
+                            return getAndRefreshSelectedDevice(activeDevices);
+                        }
+                        else
+                        {
+                            return selectedDevice;
                         }
                     }
                 }
