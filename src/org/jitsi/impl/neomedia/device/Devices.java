@@ -407,6 +407,7 @@ public abstract class Devices
                                 && !activeDevice.isSameTransportType("AirPlay"))
                         {
                             isSelected = true;
+                            selectedDevice = activeDevice;
                         }
                         logger.debug("Is selected " + isSelected);
                     }
@@ -530,6 +531,7 @@ public abstract class Devices
                         // preference list
                         if (wasSelectedDeviceNull && selectedDevice != null)
                         {
+                            logger.debug("Refreshing selected device as we have no cached device");
                             return getAndRefreshSelectedDevice(activeDevices);
                         }
                         else
