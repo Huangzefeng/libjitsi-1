@@ -407,6 +407,10 @@ public abstract class Devices
                                 && !activeDevice.isSameTransportType("AirPlay"))
                         {
                             isSelected = true;
+                        }
+
+                        if (isEmptyList)
+                        {
                             selectedDevice = activeDevice;
                         }
                         logger.debug("Is selected " + isSelected);
@@ -508,11 +512,11 @@ public abstract class Devices
                                 }
                             }
 
-                            // If we haven't returned yet then we have a
-                            // matching device by name, but not by UID.
+                            // If we haven't got a selected device yet then we
+                            // have a matching device by name, but not by UID.
                             // Therefore return the first matching device by
                             // name.
-                            if (selectedDevice != null)
+                            if (selectedDevice == null)
                             {
                                 selectedDevice = matchingDevices.get(0);
                             }
@@ -525,10 +529,14 @@ public abstract class Devices
                             selectedDevice = matchingDevices.get(0);
                         }
 
-                        // If we started this method without a cached selected
-                        // device then we need to re-enter in case the device
-                        // preferences have changed and we need to save the
-                        // preference list
+                        // If we have been called when there was no existing
+                        // selected device cached then we must call ourselves
+                        // again. This is because the first time we are called
+                        // we make adjustments to the device preference list
+                        // based on what current active devices we have. As the
+                        // preference list may have changed, we must call
+                        // ourselves again to ensure the correct device is then
+                        // selected for use.
                         if (wasSelectedDeviceNull && selectedDevice != null)
                         {
                             logger.debug("Refreshing selected device as we have no cached device");
