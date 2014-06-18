@@ -137,6 +137,7 @@ public class FailSafeTransactionImpl
         throws IllegalStateException, IOException
     {
         if (this.backup == null) {
+            logger.error("No backup to delete during commit");
             return;
         }
 
@@ -154,7 +155,7 @@ public class FailSafeTransactionImpl
     }
 
     /**
-     * Closes the transation and cancel the changes. Everything written in the
+     * Closes the transaction and cancel the changes. Everything written in the
      * file during the transaction is NOT saved.
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation
@@ -255,8 +256,7 @@ public class FailSafeTransactionImpl
         // once done, rename the partial file to the final copy
         boolean success = ptoF.renameTo(toF);
         if (success) {
-            logger.trace("Failsafe copy from " + from + " to " + to +
-                         " succeeded");
+            logger.trace("Failsafe copy succeeded from " + from + " to " + to);
         }
         else {
             String error = "Failed to rename " + ptoF + "to " + toF +

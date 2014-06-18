@@ -9,6 +9,8 @@ package org.jitsi.impl.configuration;
 import java.io.*;
 import java.util.*;
 
+import org.jitsi.util.Logger;
+
 /**
  * Implements a <tt>ConfigurationStore</tt> which stores property name-value
  * associations in a <tt>Properties</tt> instance and supports its
@@ -23,12 +25,23 @@ import java.util.*;
 public class PropertyConfigurationStore
     extends HashtableConfigurationStore<Properties>
 {
+    private static Logger logger =
+                             Logger.getLogger(PropertyConfigurationStore.class);
+
+    /**
+     * Number of entries in the config last time we read from or wrote to the
+     * config file.  If this is substantially reduced on a subsequent read or
+     * write, we'll raise a warning log.
+     */
+    private int numberOfEntries;
+
     /**
      * Initializes a new <tt>PropertyConfigurationStore</tt> instance.
      */
     public PropertyConfigurationStore()
     {
         super(new SortedProperties());
+        numberOfEntries = 0;
     }
 
     /**
@@ -44,6 +57,7 @@ public class PropertyConfigurationStore
      * specified <tt>file</tt>
      * @see ConfigurationStore#reloadConfiguration(File)
      */
+    @Override
     public void reloadConfiguration(File file)
         throws IOException
     {
@@ -53,6 +67,30 @@ public class PropertyConfigurationStore
         try
         {
             properties.load(in);
+
+            if (logger.isDebugEnabled())
+            {
+                // Flag if the number of entries has been significantly reduced
+                // - this shouldn't happen in normal operation.
+                int entriesRead = properties.size();
+                if (entriesRead < (0.8 * numberOfEntries))
+                {
+                    logger.warn("Number of entries read from config has " +
+                        "reduced substantially: " + entriesRead + " was: "
+                            + numberOfEntries);
+                }
+                numberOfEntries = entriesRead;
+            }
+        }
+        catch (IOException ioex)
+        {
+            logger.error("IOException reading from config: ", ioex);
+            throw ioex;
+        }
+        catch (IllegalArgumentException iaex)
+        {
+            logger.error("IllegalArgumentException reading from config: ", iaex);
+            throw iaex;
         }
         finally
         {
@@ -94,9 +132,23 @@ public class PropertyConfigurationStore
      * <tt>file</tt>
      * @see ConfigurationStore#storeConfiguration(OutputStream)
      */
+    @Override
     public void storeConfiguration(OutputStream out)
         throws IOException
     {
+        if (logger.isDebugEnabled())
+        {
+            // Flag if the number of entries has been significantly reduced -
+            // this shouldn't happen in normal operation.
+            int entriesToWrite = properties.size();
+            if (entriesToWrite < (0.8 * numberOfEntries))
+            {
+                logger.warn("Number of entries being written to config has " +
+                    "reduced substantially: " + entriesToWrite + " was: " +
+                        numberOfEntries);
+            }
+            numberOfEntries = entriesToWrite;
+        }
         properties.store(out, null);
     }
 }
