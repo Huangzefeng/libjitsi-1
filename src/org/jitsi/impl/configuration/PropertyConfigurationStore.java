@@ -68,19 +68,16 @@ public class PropertyConfigurationStore
         {
             properties.load(in);
 
-            if (logger.isDebugEnabled())
+            // Flag if the number of entries has been significantly reduced -
+            // shouldn't happen in normal operation.
+            int entriesRead = properties.size();
+            if (entriesRead < (0.8 * numberOfEntries))
             {
-                // Flag if the number of entries has been significantly reduced
-                // - this shouldn't happen in normal operation.
-                int entriesRead = properties.size();
-                if (entriesRead < (0.8 * numberOfEntries))
-                {
-                    logger.warn("Number of entries read from config has " +
-                        "reduced substantially: " + entriesRead + " was: "
-                            + numberOfEntries);
-                }
-                numberOfEntries = entriesRead;
+                logger.warn("Number of entries read from config has " +
+                    "reduced substantially: " + entriesRead + " was: "
+                        + numberOfEntries);
             }
+            numberOfEntries = entriesRead;
         }
         catch (IOException ioex)
         {
@@ -136,19 +133,17 @@ public class PropertyConfigurationStore
     public void storeConfiguration(OutputStream out)
         throws IOException
     {
-        if (logger.isDebugEnabled())
+        // Flag if the number of entries has been significantly reduced - this
+        // shouldn't happen in normal operation.
+        int entriesToWrite = properties.size();
+        if (entriesToWrite < (0.8 * numberOfEntries))
         {
-            // Flag if the number of entries has been significantly reduced -
-            // this shouldn't happen in normal operation.
-            int entriesToWrite = properties.size();
-            if (entriesToWrite < (0.8 * numberOfEntries))
-            {
-                logger.warn("Number of entries being written to config has " +
-                    "reduced substantially: " + entriesToWrite + " was: " +
-                        numberOfEntries);
-            }
-            numberOfEntries = entriesToWrite;
+            logger.warn("Number of entries being written to config has " +
+                "reduced substantially: " + entriesToWrite + " was: " +
+                    numberOfEntries);
         }
+        numberOfEntries = entriesToWrite;
+
         properties.store(out, null);
     }
 }
