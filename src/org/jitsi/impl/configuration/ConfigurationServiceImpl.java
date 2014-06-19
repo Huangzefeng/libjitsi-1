@@ -844,13 +844,23 @@ public class ConfigurationServiceImpl
         {
             exception = ioex;
         }
+
         if (exception != null)
         {
             logger.error(
                     "can't write data in the configuration file",
                     exception);
             if (failSafeTransaction != null)
-                failSafeTransaction.rollback();
+            {
+                try
+                {
+                    failSafeTransaction.rollback();
+                }
+                catch (IllegalStateException isex)
+                {
+                    logger.error("Failed to roll back configuration file", isex);
+                }
+            }
         }
     }
 
