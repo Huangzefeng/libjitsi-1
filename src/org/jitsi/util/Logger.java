@@ -82,7 +82,6 @@ public class Logger
         return new Logger(java.util.logging.Logger.getLogger(name));
     }
 
-
     /**
      * Logs an entry in the calling method.
      */
@@ -91,6 +90,17 @@ public class Logger
         if (loggerDelegate.isLoggable(Level.FINEST)) {
             StackTraceElement caller = new Throwable().getStackTrace()[1];
             loggerDelegate.log(Level.FINEST, "[entry] " + caller.getMethodName());
+        }
+    }
+
+    /**
+     * Logs an entry in the calling method.
+     */
+    public void logEntry(Object msg)
+    {
+        if (loggerDelegate.isLoggable(Level.FINEST)) {
+            StackTraceElement caller = new Throwable().getStackTrace()[1];
+            loggerDelegate.log(Level.FINEST, "[entry] " + caller.getMethodName() + "(" + msg + ")");
         }
     }
 

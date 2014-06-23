@@ -133,13 +133,12 @@ public class FileAccessServiceImpl implements FileAccessService
     public File getPrivatePersistentFile(String fileName)
         throws Exception
     {
+        logger.logEntry(fileName);
 
         File file = null;
 
         try
         {
-            logger.logEntry();
-
             String fullPath = getFullPath(fileName);
             file = accessibleFile(fullPath, fileName);
 
@@ -331,12 +330,12 @@ public class FileAccessServiceImpl implements FileAccessService
     private static File accessibleFile(String homedir, String fileName)
             throws IOException
     {
+        logger.logEntry(homedir + "," + fileName);
+
         File file = null;
 
         try
         {
-            logger.logEntry();
-
             homedir = homedir.trim();
             if (!homedir.endsWith(File.separator))
             {
