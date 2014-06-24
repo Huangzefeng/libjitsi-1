@@ -120,6 +120,14 @@ public abstract class AudioSystem
      */
     protected static final String PNAME_ECHOCANCEL = "echocancel";
 
+    /**
+     * The name of the <tt>ConfigurationService</tt> property which indicates
+     * whether UI elements that relate to audio configuration should be
+     * disabled, i.e. not visible to the user.
+     */
+    private static final String PNAME_AUDIO_CONFIG_DISABLED =
+        "net.java.sip.communicator.impl.neomedia.AUDIO_CONFIG_DISABLED";
+
     public static AudioSystem getAudioSystem(String locatorProtocol)
     {
         AudioSystem[] audioSystems = getAudioSystems();
@@ -897,7 +905,14 @@ public abstract class AudioSystem
                             + ".diagnosticscontrolmonitor.MESSAGE",
                         new String[] { param.toString() });
             logger.warn("Reporting device as malfunctioning: " + message);
-            showWarningPopup(message);
+
+            // Only show a pop-up if audio config is enabled.
+            ConfigurationService cfg = LibJitsi.getConfigurationService();
+            if (!cfg.getBoolean(PNAME_AUDIO_CONFIG_DISABLED, false))
+            {
+                showWarningPopup(message);
+            }
+
             logger.dumpThreads();
 
             /*
@@ -957,7 +972,12 @@ public abstract class AudioSystem
                 return;
             }
 
-            showWarningPopup(message);
+            // Only show a pop-up if audio config is enabled.
+            ConfigurationService cfg = LibJitsi.getConfigurationService();
+            if (!cfg.getBoolean(PNAME_AUDIO_CONFIG_DISABLED, false))
+            {
+                showWarningPopup(message);
+            }
         }
 
         /**
