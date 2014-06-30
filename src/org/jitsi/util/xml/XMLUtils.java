@@ -89,7 +89,7 @@ public class XMLUtils
         if(data == null)
             return;
 
-        data = replaceInvalidCharacters(data);
+        data = sanitize(data);
 
         Text txt = getTextNode(parentNode);
 
@@ -112,7 +112,7 @@ public class XMLUtils
      * @return A copy of the string, with invalid characters replaced by
      * the unicode substitution character.
      */
-    public static String replaceInvalidCharacters(String data)
+    public static String sanitize(String data)
     {
         StringBuffer result = new StringBuffer();
         for (int offset = 0; offset < data.length(); )
