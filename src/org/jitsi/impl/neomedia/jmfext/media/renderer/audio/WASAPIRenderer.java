@@ -735,7 +735,7 @@ public class WASAPIRenderer
     public synchronized void open()
         throws ResourceUnavailableException
     {
-        logger.debug("WASAPIRenderer.open() on " + this.hashCode(), new RuntimeException());
+        logger.debug("WASAPIRenderer.open() on " + this.hashCode());
         if (this.iAudioClient != 0)
         {
             logger.debug("iAudioClient already exists: " + iAudioClient);

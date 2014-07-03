@@ -260,6 +260,7 @@ public class AudioSystemClipImpl
                              "\nResampler formats: " +
                              Arrays.toString(supportedResamplerFormats));
 
+                boolean isFormatSet = false;
                 for (Format supportedRendererFormat : supportedRendererFormats)
                 {
                     for (Format supportedResamplerFormat
@@ -274,6 +275,7 @@ public class AudioSystemClipImpl
                             {
                                 logger.debug("Set renderer and resampler formats" +
                                              " to " + rendererFormat);
+                                isFormatSet = true;
                                 break;
                             }
                             else
@@ -282,6 +284,13 @@ public class AudioSystemClipImpl
                                       "resampler formats to " + rendererFormat);
                             }
                         }
+                    }
+
+                    if (isFormatSet)
+                    {
+                        // If we have managed to set the formats on the renderer
+                        // and resampler then we should break out here.
+                        break;
                     }
                 }
             }
