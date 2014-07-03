@@ -432,7 +432,6 @@ public class WASAPIRenderer
     private AudioFormat[] getFormatsToInitializeIAudioClient()
     {
         AudioFormat inputFormat = this.inputFormat;
-        logger.error("@NJB getting formats to initialize client: " + inputFormat);
 
         if (inputFormat == null)
         {
