@@ -432,6 +432,7 @@ public class WASAPIRenderer
     private AudioFormat[] getFormatsToInitializeIAudioClient()
     {
         AudioFormat inputFormat = this.inputFormat;
+        logger.error("@NJB getting formats to initialize client: " + inputFormat);
 
         if (inputFormat == null)
         {
@@ -735,7 +736,7 @@ public class WASAPIRenderer
     public synchronized void open()
         throws ResourceUnavailableException
     {
-        logger.debug("WASAPIRenderer.open() on " + this.hashCode());
+        logger.debug("WASAPIRenderer.open() on " + this.hashCode(), new RuntimeException());
         if (this.iAudioClient != 0)
         {
             logger.debug("iAudioClient already exists: " + iAudioClient);
@@ -1525,6 +1526,7 @@ public class WASAPIRenderer
          */
         if ((iAudioClient != 0) || (iAudioRenderClient != 0))
         {
+            logger.warn("Attempted to set input format of renderer mid-stream");
             return null;
         }
         else

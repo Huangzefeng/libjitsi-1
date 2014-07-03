@@ -68,7 +68,10 @@ public abstract class AbstractRenderer<T extends Format>
             }
         }
         if (matchingFormat == null)
+        {
+            logger.warn("Failed to find a matching supported format for " + format);
             return null;
+        }
 
         @SuppressWarnings("unchecked")
         T t = (T) matchingFormat;

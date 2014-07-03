@@ -250,8 +250,17 @@ public class AudioSystemClipImpl
                 Format[] supportedResamplerFormats
                     = resampler.getSupportedOutputFormats(resamplerFormat);
 
-                for (Format supportedRendererFormat
-                        : renderer.getSupportedInputFormats())
+                Format[] supportedRendererFormats
+                    = renderer.getSupportedInputFormats();
+
+                logger.debug("Attempting to negotiate resampling of the audio " +
+                             "stream to match the renderer." +
+                             "\nRenderer formats: " +
+                             Arrays.toString(supportedRendererFormats) +
+                             "\nResampler formats: " +
+                             Arrays.toString(supportedResamplerFormats));
+
+                for (Format supportedRendererFormat : supportedRendererFormats)
                 {
                     for (Format supportedResamplerFormat
                             : supportedResamplerFormats)
@@ -260,9 +269,18 @@ public class AudioSystemClipImpl
                                 supportedResamplerFormat))
                         {
                             rendererFormat = supportedRendererFormat;
-                            resampler.setOutputFormat(rendererFormat);
-                            renderer.setInputFormat(rendererFormat);
-                            break;
+                            if (renderer.setInputFormat(rendererFormat) != null &&
+                                resampler.setOutputFormat(rendererFormat) != null)
+                            {
+                                logger.debug("Set renderer and resampler formats" +
+                                             " to " + rendererFormat);
+                                break;
+                            }
+                            else
+                            {
+                                logger.debug("Failed to set renderer and " +
+                                      "resampler formats to " + rendererFormat);
+                            }
                         }
                     }
                 }
