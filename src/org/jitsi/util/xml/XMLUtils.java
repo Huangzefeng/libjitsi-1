@@ -89,7 +89,7 @@ public class XMLUtils
         if(data == null)
             return;
 
-        data = replaceInvalidCharacters(data);
+        data = sanitize(data);
 
         Text txt = getTextNode(parentNode);
 
@@ -112,9 +112,9 @@ public class XMLUtils
      * @return A copy of the string, with invalid characters replaced by
      * the unicode substitution character.
      */
-    public static String replaceInvalidCharacters(String data)
+    public static String sanitize(String data)
     {
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
         for (int offset = 0; offset < data.length(); )
         {
             int codePoint = data.codePointAt(offset);
@@ -131,6 +131,19 @@ public class XMLUtils
         }
 
         return result.toString();
+    }
+
+    /**
+     * Sets an attribute on the given node, sanitizing the name and value of the
+     * attribute by removing invalid characters.
+     *
+     * @param node The note on which to set the attribute.
+     * @param name The attribute name.
+     * @param value The value to which to set the attribute.
+     */
+    public static void setAttribute(Element node, String name, String value)
+    {
+        node.setAttribute(sanitize(name), sanitize(value));
     }
 
     /**
