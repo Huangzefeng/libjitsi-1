@@ -127,9 +127,9 @@ public class WASAPISystem
         }
         finally
         {
-            monitor.finished = true;
             synchronized (monitor)
             {
+                monitor.finished = true;
                 monitor.notifyAll();
             }
             logger.debug("CoInitializeEx returned");
@@ -153,6 +153,7 @@ public class WASAPISystem
         private Thread parent;
         private long timeout;
         private long startTime;
+        private boolean haveDumpedThreads;
 
         MonitorThread(String name, Thread parent, long timeout)
         {
@@ -162,11 +163,13 @@ public class WASAPISystem
             this.parent = parent;
             this.timeout = timeout;
             startTime = System.currentTimeMillis();
+            haveDumpedThreads = false;
         }
 
         @Override
         public void run()
         {
+            logger.debug("Monitoring thread: " + parent.getId());
             // Wait for the parent task to finish, periodically raising an error
             // log if it doesn't complete in a timely fashion.
             while (!finished)
@@ -189,6 +192,12 @@ public class WASAPISystem
                                  " is still running after " +
                                  (System.currentTimeMillis() - startTime) +
                                  " millis: " + parent);
+
+                    if (!haveDumpedThreads)
+                    {
+                        logger.dumpThreads();
+                        haveDumpedThreads = true;
+                    }
                 }
             }
         }
