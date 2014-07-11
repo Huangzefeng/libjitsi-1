@@ -63,6 +63,12 @@ public class WASAPISystem
     private static final Logger logger = Logger.getLogger(WASAPISystem.class);
 
     /**
+     * How long to wait for a <tt>WASAPI.CoInitializeEx</tt> call before raising
+     * an error log.
+     */
+    private static final long COINITIALIZEEX_TIMEOUT_MILLIS = 1000;
+
+    /**
      * Invokes the Windows API function <tt>CoInitializeEx</tt> (by way of
      * {@link WASAPI#CoInitializeEx(long, int)}) with arguments suitable to the
      * operation of <tt>WASAPIRenderer</tt>, <tt>WASAPIStream</tt> and
@@ -83,6 +89,23 @@ public class WASAPISystem
     {
         int hr;
 
+        // The call to CoInitializeEx is watched by a MonitorThread.  This
+        // raises a log if the call to CoInitializeEx takes too long (since it
+        // should return pretty much straight away).  We suspect the function
+        // hangs sometimes - e.g. SFR 463140.
+        // Ideally we would abort the function if it does hang, but that's
+        // tricky.  We can't kill it from the monitoring thread without causing
+        // lots of problems here.  We can't run the function in its own thread,
+        // as the whole point of CoInitializeEx is to initialize WASAPI for this
+        // thread.
+        // At the very least, using a monitor thread will provide us with proof
+        // of whether it really is CoInitializeEx at fault.
+        logger.debug("Call CoInitializeEx");
+        MonitorThread monitor = new MonitorThread("CoInitializeEx monitor",
+                                                 Thread.currentThread(),
+                                                 COINITIALIZEEX_TIMEOUT_MILLIS);
+        monitor.start();
+
         try
         {
             hr = WASAPI.CoInitializeEx(0, COINIT_MULTITHREADED);
@@ -102,7 +125,73 @@ public class WASAPISystem
                 throw hre;
             }
         }
+        finally
+        {
+            monitor.finished = true;
+            synchronized (monitor)
+            {
+                monitor.notifyAll();
+            }
+            logger.debug("CoInitializeEx returned");
+        }
         return hr;
+    }
+
+    /**
+     * Thread whose sole purpose is to wait for a task in another thread to
+     * finish, and raise error logs periodically if this takes too long.</p>
+     * Usage:
+     * <li>Create and start this thread</li>
+     * <li>Run your task</li>
+     * <li>Set <tt>finished</tt> to <tt>true</tt> and then call <tt>notifyAll
+     * </tt></li>
+     */
+    private static class MonitorThread extends Thread
+    {
+        public boolean finished;
+
+        private Thread parent;
+        private long timeout;
+        private long startTime;
+
+        MonitorThread(String name, Thread parent, long timeout)
+        {
+            super(name);
+
+            finished = false;
+            this.parent = parent;
+            this.timeout = timeout;
+            startTime = System.currentTimeMillis();
+        }
+
+        @Override
+        public void run()
+        {
+            // Wait for the parent task to finish, periodically raising an error
+            // log if it doesn't complete in a timely fashion.
+            while (!finished)
+            {
+                try
+                {
+                    synchronized(this)
+                    {
+                        wait(timeout);
+                    }
+                }
+                catch (InterruptedException iex)
+                {
+                    logger.error("Unexpectedly interrupted", iex);
+                }
+
+                if (!finished)
+                {
+                    logger.error("Parent task on thread " + parent.getId() +
+                                 " is still running after " +
+                                 (System.currentTimeMillis() - startTime) +
+                                 " millis: " + parent);
+                }
+            }
+        }
     }
 
     /**
