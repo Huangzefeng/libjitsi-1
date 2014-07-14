@@ -64,11 +64,22 @@ public interface Version
     public boolean isNightly();
 
     /**
-     * If this is a nightly build, returns the build identifies (e.g.
-     * nightly-2007.12.07-06.45.17). If this is not a nightly build Jitsi
-     * version, the method returns null.
+     * If this is a nightly build, returns the release (e.g.
+     * 12 for 2.1.12.4). If this is not a nightly build version,
+     * the method returns null.
      *
-     * @return a String containing a nightly build identifier or null if
+     * @return a String containing a nightly build release or null if not a
+     * nightly build
+     */
+    public String getNightlyRelease();
+
+    /**
+     * If this is a nightly build, returns the build ID (e.g.
+     * 4 for 2.1.12.4). If this is not a nightly build version,
+     * the method returns null.
+     *
+     * @return a String containing a nightly build ID or null if not a
+     * nightly build
      */
     public String getNightlyBuildID();
 
