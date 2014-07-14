@@ -99,6 +99,7 @@ public class RTPPlayer
 
         EventQueue.invokeLater(new Runnable()
         {
+            @Override
             public void run()
             {
                 try
@@ -225,6 +226,7 @@ public class RTPPlayer
                 final PlayRTPThread player = this;
 
                 SwingUtilities.invokeLater(new Runnable(){
+                    @Override
                     public void run()
                     {
                         if (threads[row] == player)
@@ -260,7 +262,8 @@ public class RTPPlayer
 
         JButton btnChooseFile = new JButton("Choose File");
         btnChooseFile.setDropTarget(new DropTarget() {
-          public synchronized void drop(DropTargetDropEvent evt) {
+          @Override
+        public synchronized void drop(DropTargetDropEvent evt) {
             try {
               evt.acceptDrop(DnDConstants.ACTION_COPY);
               List<File> droppedFiles = (List<File>)
@@ -278,6 +281,7 @@ public class RTPPlayer
         });
         btnChooseFile.addActionListener(new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent arg0)
             {
                 Preferences prefs = Preferences.userNodeForPackage(getClass());
@@ -346,21 +350,25 @@ public class RTPPlayer
             String[] columnNames =
             { "SSRC", "SSRC", "SRC", "DST", "Packets", "PT", "Play" };
 
+            @Override
             public String getColumnName(int col)
             {
                 return columnNames[col].toString();
             }
 
+            @Override
             public int getRowCount()
             {
                 return streams.size();
             }
 
+            @Override
             public int getColumnCount()
             {
                 return columnNames.length;
             }
 
+            @Override
             public Object getValueAt(int row, int col)
             {
                 StreamIdentifier stream = streams.get(row);
@@ -369,7 +377,7 @@ public class RTPPlayer
                 case 0:
                     return String.format("0x%08x",stream.getSSRC());
                 case 1:
-                    return stream.getSSRC();
+                    return ((long) stream.getSSRC() & 0xFFFFFFFFl); // Cast to +ve
                 case 2:
                     return stream.getSource();
                 case 3:
@@ -392,11 +400,13 @@ public class RTPPlayer
                 return null;
             }
 
+            @Override
             public boolean isCellEditable(int row, int col)
             {
                 return false;
             }
 
+            @Override
             public void setValueAt(Object value, int row, int col)
             {
             }
