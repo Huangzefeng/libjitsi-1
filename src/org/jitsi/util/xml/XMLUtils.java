@@ -143,7 +143,9 @@ public class XMLUtils
      */
     public static void setAttribute(Element node, String name, String value)
     {
-        node.setAttribute(sanitize(name), sanitize(value));
+        String sanitizedName = sanitize(name);
+        String sanitizedValue = sanitize(value);
+        node.setAttribute(sanitizedName, sanitizedValue);
     }
 
     /**

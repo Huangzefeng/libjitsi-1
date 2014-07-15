@@ -1643,7 +1643,16 @@ public class WASAPIRenderer
                         if (eventHandleExecutor == null)
                         {
                             eventHandleExecutor
-                                = Executors.newSingleThreadExecutor();
+                                = Executors.newSingleThreadExecutor(new ThreadFactory()
+                            {
+                                int i = 0;
+                                
+                                @Override
+                                public Thread newThread(Runnable r)
+                                {
+                                    return new Thread(r, "WasapiRendererThread-" + ++i);
+                                }
+                            });
                         }
 
                         this.eventHandleCmd = eventHandleCmd;

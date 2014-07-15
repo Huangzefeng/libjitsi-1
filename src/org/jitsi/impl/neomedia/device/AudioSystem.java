@@ -813,7 +813,15 @@ public abstract class AudioSystem
 
                 if (executor == null)
                 {
-                    executor = Executors.newSingleThreadExecutor();
+                    executor = Executors.newSingleThreadExecutor(new ThreadFactory()
+                    {
+                        int i = 0;
+                        @Override
+                        public Thread newThread(Runnable r)
+                        {
+                            return new Thread(r, "AudioSystemThread-" + i++);
+                        }
+                    });
                 }
                 if (command == null)
                 {
