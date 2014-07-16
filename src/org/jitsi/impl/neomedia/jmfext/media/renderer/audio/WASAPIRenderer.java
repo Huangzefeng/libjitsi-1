@@ -12,6 +12,7 @@ import java.beans.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -1645,12 +1646,13 @@ public class WASAPIRenderer
                             eventHandleExecutor
                                 = Executors.newSingleThreadExecutor(new ThreadFactory()
                             {
-                                int i = 0;
+                                AtomicInteger i = new AtomicInteger(1);
                                 
                                 @Override
                                 public Thread newThread(Runnable r)
                                 {
-                                    return new Thread(r, "WasapiRendererThread-" + ++i);
+                                    return new Thread(r, "WasapiRendererPool-" +
+                                                           i.getAndIncrement());
                                 }
                             });
                         }
