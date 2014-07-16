@@ -12,6 +12,7 @@ import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 import javax.media.*;
 import javax.media.Renderer;
@@ -815,11 +816,12 @@ public abstract class AudioSystem
                 {
                     executor = Executors.newSingleThreadExecutor(new ThreadFactory()
                     {
-                        int i = 0;
+                        AtomicInteger i = new AtomicInteger(1);
                         @Override
                         public Thread newThread(Runnable r)
                         {
-                            return new Thread(r, "AudioSystemThread-" + i++);
+                            return new Thread(r, "AudioSystemPool-" + 
+                                                           i.getAndIncrement());
                         }
                     });
                 }
