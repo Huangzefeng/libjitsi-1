@@ -133,26 +133,27 @@ public class JNIEncoder
         {
             AudioFormat outputAudioFormat = (AudioFormat) outputFormat;
 
-            setOutputFormat(
-                new AudioFormat(
-                            outputAudioFormat.getEncoding(),
-                            outputAudioFormat.getSampleRate(),
-                            outputAudioFormat.getSampleSizeInBits(),
-                            outputAudioFormat.getChannels(),
-                            outputAudioFormat.getEndian(),
-                            outputAudioFormat.getSigned(),
-                            outputAudioFormat.getFrameSizeInBits(),
-                            outputAudioFormat.getFrameRate(),
-                            outputAudioFormat.getDataType())
-                        {
-                            private static final long serialVersionUID = 0L;
+            outputFormat = new AudioFormat(
+                    outputAudioFormat.getEncoding(),
+                    outputAudioFormat.getSampleRate(),
+                    outputAudioFormat.getSampleSizeInBits(),
+                    outputAudioFormat.getChannels(),
+                    outputAudioFormat.getEndian(),
+                    outputAudioFormat.getSigned(),
+                    outputAudioFormat.getFrameSizeInBits(),
+                    outputAudioFormat.getFrameRate(),
+                    outputAudioFormat.getDataType())
+                {
+                    private static final long serialVersionUID = 0L;
 
-                            @Override
-                            public long computeDuration(long length)
-                            {
-                                return JNIEncoder.this.computeDuration(length);
-                            }
-                        });
+                    @Override
+                    public long computeDuration(long length)
+                    {
+                        return JNIEncoder.this.computeDuration(length);
+                    }
+                };
+
+            setOutputFormat(outputFormat);
         }
         return outputFormat;
     }
