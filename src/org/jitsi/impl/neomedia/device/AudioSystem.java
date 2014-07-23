@@ -814,16 +814,8 @@ public abstract class AudioSystem
 
                 if (executor == null)
                 {
-                    executor = Executors.newSingleThreadExecutor(new ThreadFactory()
-                    {
-                        AtomicInteger i = new AtomicInteger(1);
-                        @Override
-                        public Thread newThread(Runnable r)
-                        {
-                            return new Thread(r, "AudioSystemPool-" + 
-                                                           i.getAndIncrement());
-                        }
-                    });
+                    executor = Executors.newSingleThreadExecutor(
+                                     new NamedThreadFactory("AudioSystemPool"));
                 }
                 if (command == null)
                 {

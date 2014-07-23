@@ -38,6 +38,7 @@ import org.jitsi.util.*;
 public class WASAPIRenderer
     extends AbstractAudioRenderer<WASAPISystem>
 {
+
     /**
      * The <tt>Logger</tt> used by the <tt>WASAPIRenderer</tt> class and its
      * instances to log debug information.
@@ -1643,18 +1644,10 @@ public class WASAPIRenderer
                     {
                         if (eventHandleExecutor == null)
                         {
-                            eventHandleExecutor
-                                = Executors.newSingleThreadExecutor(new ThreadFactory()
-                            {
-                                AtomicInteger i = new AtomicInteger(1);
-                                
-                                @Override
-                                public Thread newThread(Runnable r)
-                                {
-                                    return new Thread(r, "WasapiRendererPool-" +
-                                                           i.getAndIncrement());
-                                }
-                            });
+                            NamedThreadFactory factory = 
+                                   new NamedThreadFactory("WasapiRendererPool");
+                            eventHandleExecutor = 
+                                     Executors.newSingleThreadExecutor(factory);
                         }
 
                         this.eventHandleCmd = eventHandleCmd;
@@ -1692,6 +1685,9 @@ public class WASAPIRenderer
     @Override
     public synchronized void stop()
     {
+        System.out.println("XXX stop called");
+        eventHandleExecutor = null;
+
         Log.logMediaStackObjectStopped(this);
         setWriteIsMalfunctioning(false);
         if (iAudioClient == 0)
