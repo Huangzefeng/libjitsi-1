@@ -1685,7 +1685,6 @@ public class WASAPIRenderer
     @Override
     public synchronized void stop()
     {
-        System.out.println("XXX stop called");
         eventHandleExecutor = null;
 
         Log.logMediaStackObjectStopped(this);
