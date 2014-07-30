@@ -413,6 +413,18 @@ public abstract class Devices
                         {
                             selectedDevice = activeDevice;
                         }
+                        else
+                        {
+                            // New device - needs to be saved to config but 
+                            // shouldn't be selected as we've already got a
+                            // selected device
+                            logger.debug("Adding device to config: " + 
+                                                        activeDevice.getName());
+                            saveDevice(property, 
+                                       activeDevice, 
+                                       false, 
+                                       thisDeviceIndex);
+                        }
                         logger.debug("Is selected " + isSelected);
                     }
                     else
@@ -591,7 +603,14 @@ public abstract class Devices
                 		"device preferences to be " +
                         deviceIdentifiersString);
 
-                if (deviceIdentifiersString != null)
+                // Device identifier string should be of the form
+                // [<device>, <device>,...]
+                // where each <device> is of the form
+                // "name:<name> uid:<uid>"
+                // If not, then act as though the config is not present
+                if (deviceIdentifiersString != null && 
+                    deviceIdentifiersString.startsWith("[\"") &&
+                    deviceIdentifiersString.endsWith("\"]"))
                 {
                     devicePreferences.clear();
                     // We must parse the string in order to load the device
