@@ -2050,7 +2050,7 @@ public class MediaStreamImpl
              */
             if (receiveStreams.isEmpty())
             {
-                synchronized (this.activeRTPExtensions)
+                synchronized (this.receiveStreams)
                 {
                     if (this.receiveStreams != null)
                     {
