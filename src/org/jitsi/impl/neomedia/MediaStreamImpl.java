@@ -2048,15 +2048,12 @@ public class MediaStreamImpl
              * It turns out that the receiveStreams list of rtpManager can be
              * empty. As a workaround, use the receiveStreams of this instance.
              */
-            if (receiveStreams.isEmpty())
+            if (receiveStreams.isEmpty() && this.receiveStreams != null)
             {
                 synchronized (this.receiveStreams)
                 {
-                    if (this.receiveStreams != null)
-                    {
-                        receiveStreams = 
-                              new ArrayList<ReceiveStream>(this.receiveStreams);                        
-                    }
+                    receiveStreams = 
+                          new ArrayList<ReceiveStream>(this.receiveStreams);                        
                 }
             }
 
