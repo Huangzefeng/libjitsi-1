@@ -413,7 +413,7 @@ public abstract class Devices
                         {
                             selectedDevice = activeDevice;
                         }
-                        else
+                        else if (selectedDevice == null)
                         {
                             // New device - needs to be saved to config but 
                             // shouldn't be selected as we've already got a
