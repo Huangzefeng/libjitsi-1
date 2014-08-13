@@ -120,7 +120,7 @@ public class RawPacket
     /**
      * @param length the length to set
      */
-    public void setLength(int length) {
+    protected void setLength(int length) {
         this.length = length;
     }
 
@@ -547,16 +547,6 @@ public class RawPacket
     public long getRTCPSSRC()
     {
         return (int)(readUnsignedIntAsLong(4) & 0xffffffff);
-    }
-
-    /**
-     * Gets the packet type of this RTCP packet.
-     *
-     * @return the packet type of this RTCP packet.
-     */
-    public int getRTCPPacketType()
-    {
-        return 0xff & buffer[offset + 1];
     }
 
     /**

@@ -6,98 +6,34 @@
  */
 package org.jitsi.impl.neomedia;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.beans.*;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
-import javax.media.Format;
-import javax.media.MediaLocator;
-import javax.media.control.BufferControl;
-import javax.media.format.UnsupportedFormatException;
-import javax.media.protocol.DataSource;
-import javax.media.protocol.PullBufferDataSource;
-import javax.media.protocol.PullBufferStream;
-import javax.media.protocol.PullDataSource;
-import javax.media.protocol.PullSourceStream;
-import javax.media.protocol.PushBufferDataSource;
-import javax.media.protocol.PushBufferStream;
-import javax.media.protocol.PushDataSource;
-import javax.media.protocol.PushSourceStream;
-import javax.media.rtp.GlobalReceptionStats;
-import javax.media.rtp.GlobalTransmissionStats;
-import javax.media.rtp.RTPConnector;
-import javax.media.rtp.ReceiveStream;
-import javax.media.rtp.ReceiveStreamListener;
-import javax.media.rtp.RemoteListener;
-import javax.media.rtp.SendStream;
-import javax.media.rtp.SendStreamListener;
-import javax.media.rtp.SessionAddress;
-import javax.media.rtp.SessionListener;
-import javax.media.rtp.event.NewReceiveStreamEvent;
-import javax.media.rtp.event.NewSendStreamEvent;
-import javax.media.rtp.event.ReceiveStreamEvent;
-import javax.media.rtp.event.ReceiverReportEvent;
-import javax.media.rtp.event.RemoteEvent;
-import javax.media.rtp.event.RemotePayloadChangeEvent;
-import javax.media.rtp.event.SendStreamEvent;
-import javax.media.rtp.event.SenderReportEvent;
-import javax.media.rtp.event.SessionEvent;
-import javax.media.rtp.event.TimeoutEvent;
-import javax.media.rtp.rtcp.Feedback;
-import javax.media.rtp.rtcp.Report;
-import javax.media.rtp.rtcp.SenderReport;
+import javax.media.*;
+import javax.media.control.*;
+import javax.media.format.*;
+import javax.media.protocol.*;
+import javax.media.rtp.*;
+import javax.media.rtp.event.*;
+import javax.media.rtp.rtcp.*;
 
-import org.jitsi.impl.neomedia.device.AbstractMediaDevice;
-import org.jitsi.impl.neomedia.device.MediaDeviceSession;
-import org.jitsi.impl.neomedia.device.VideoMediaDeviceSession;
-import org.jitsi.impl.neomedia.format.MediaFormatImpl;
-import org.jitsi.impl.neomedia.protocol.TranscodingDataSource;
-import org.jitsi.impl.neomedia.transform.RTPTransformTCPConnector;
-import org.jitsi.impl.neomedia.transform.RTPTransformUDPConnector;
-import org.jitsi.impl.neomedia.transform.TransformEngine;
-import org.jitsi.impl.neomedia.transform.TransformEngineChain;
-import org.jitsi.impl.neomedia.transform.TransformTCPInputStream;
-import org.jitsi.impl.neomedia.transform.TransformTCPOutputStream;
-import org.jitsi.impl.neomedia.transform.TransformUDPInputStream;
-import org.jitsi.impl.neomedia.transform.TransformUDPOutputStream;
-import org.jitsi.impl.neomedia.transform.csrc.CsrcTransformEngine;
-import org.jitsi.impl.neomedia.transform.dtmf.DtmfTransformEngine;
-import org.jitsi.impl.neomedia.transform.pt.PayloadTypeTransformEngine;
-import org.jitsi.impl.neomedia.transform.rtcp.StatisticsEngine;
-import org.jitsi.impl.neomedia.transform.srtp.SrtpControlNullImpl;
-import org.jitsi.impl.neomedia.transform.zrtp.ZRTPTransformEngine;
-import org.jitsi.service.neomedia.AbstractMediaStream;
-import org.jitsi.service.neomedia.AudioMediaStream;
-import org.jitsi.service.neomedia.MediaDirection;
-import org.jitsi.service.neomedia.MediaStream;
-import org.jitsi.service.neomedia.MediaStreamStats;
-import org.jitsi.service.neomedia.MediaStreamTarget;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.RTPExtension;
-import org.jitsi.service.neomedia.RTPTranslator;
-import org.jitsi.service.neomedia.SrtpControl;
-import org.jitsi.service.neomedia.StreamConnector;
-import org.jitsi.service.neomedia.VideoMediaStream;
-import org.jitsi.service.neomedia.control.PacketLossAwareEncoder;
-import org.jitsi.service.neomedia.device.MediaDevice;
-import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jitsi.util.Logger;
+import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.impl.neomedia.format.*;
+import org.jitsi.impl.neomedia.protocol.*;
+import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.impl.neomedia.transform.csrc.*;
+import org.jitsi.impl.neomedia.transform.dtmf.*;
+import org.jitsi.impl.neomedia.transform.pt.*;
+import org.jitsi.impl.neomedia.transform.rtcp.*;
+import org.jitsi.impl.neomedia.transform.srtp.*;
+import org.jitsi.impl.neomedia.transform.zrtp.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.control.*;
+import org.jitsi.service.neomedia.device.*;
+import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.*;
 
 /**
  * Implements <tt>MediaStream</tt> using JMF.
@@ -169,18 +105,10 @@ public class MediaStreamImpl
 
     /**
      * The <tt>ReceiveStream</tt>s this instance plays back on its associated
-     * <tt>MediaDevice</tt>. The (read and write) accesses to the field are to
-     * be synchronized using {@link #receiveStreamsLock}.
+     * <tt>MediaDevice</tt>.
      */
     private final List<ReceiveStream> receiveStreams
         = new LinkedList<ReceiveStream>();
-
-    /**
-     * The <tt>ReadWriteLock</tt> which synchronizes the (read and write)
-     * accesses to {@link #receiveStreams}.
-     */
-    private final ReadWriteLock receiveStreamsLock
-        = new ReentrantReadWriteLock();
 
     /**
      * The <tt>RTPConnector</tt> through which this instance sends and receives
@@ -561,8 +489,6 @@ public class MediaStreamImpl
      * <tt>MediaDevice</tt> associated with <tt>deviceDirection</tt> set on this
      * instance
      */
-    // @@@ ENH hacking this out
-    /*
     private void assertDirection(
             MediaDirection direction,
             MediaDirection deviceDirection,
@@ -573,7 +499,6 @@ public class MediaStreamImpl
                 && !direction.and(deviceDirection).equals(direction))
             throw new IllegalArgumentException(illegalArgumentExceptionMessage);
     }
-    */
 
     /**
      * Returns a map containing all currently active <tt>RTPExtension</tt>s in
@@ -1455,19 +1380,6 @@ public class MediaStreamImpl
     public boolean isStarted()
     {
         return started;
-    }
-
-    /**
-     * Gets the <tt>RTPManager</tt> instance which sends and receives RTP and
-     * RTCP traffic on behalf of this <tt>MediaStream</tt>. If the
-     * <tt>RTPManager</tt> does not exist yet, it is not created.
-     *
-     * @return the <tt>RTPManager</tt> instance which sends and receives RTP and
-     * RTCP traffic on behalf of this <tt>MediaStream</tt>
-     */
-    public StreamRTPManager queryRTPManager()
-    {
-        return rtpManager;
     }
 
     /**
@@ -2449,71 +2361,6 @@ public class MediaStreamImpl
             }
         }
         return sendStreams;
-    }
-
-    /**
-     * Gets a <tt>ReceiveStream</tt> which this instance plays back on its
-     * associated <tt>MediaDevice</tt> and which has a specific synchronization
-     * source identifier (SSRC).
-     *
-     * @param ssrc the synchronization source identifier of the
-     * <tt>ReceiveStream</tt> to return
-     * @return a <tt>ReceiveStream</tt> which this instance plays back on its
-     * associated <tt>MediaDevice</tt> and which has the specified <tt>ssrc</tt>
-     */
-    public ReceiveStream getReceiveStream(int ssrc)
-    {
-        for (ReceiveStream receiveStream : getReceiveStreams())
-        {
-            int receiveStreamSSRC = (int) receiveStream.getSSRC();
-
-            if (receiveStreamSSRC == ssrc)
-                return receiveStream;
-        }
-        return null;
-    }
-
-    /**
-     * Gets a list of the <tt>ReceiveStream</tt>s this instance plays back on
-     * its associated <tt>MediaDevice</tt>.
-     *
-     * @return a list of the <tt>ReceiveStream</tt>s this instance plays back on
-     * its associated <tt>MediaDevice</tt>
-     */
-    public Collection<ReceiveStream> getReceiveStreams()
-    {
-        Set<ReceiveStream> receiveStreams = new HashSet<ReceiveStream>();
-
-        // This instance maintains a list of the ReceiveStreams.
-        Lock readLock = receiveStreamsLock.readLock();
-
-        readLock.lock();
-        try
-        {
-            receiveStreams.addAll(this.receiveStreams);
-        }
-        finally
-        {
-            readLock.unlock();
-        }
-
-        /*
-         * Unfortunately, it has been observed that sometimes there are valid
-         * ReceiveStreams in this instance which are not returned by the
-         * rtpManager.
-         */
-        StreamRTPManager rtpManager = queryRTPManager();
-
-        if (rtpManager != null)
-        {
-            @SuppressWarnings("unchecked")
-            Collection<ReceiveStream> rtpManagerReceiveStreams
-                = rtpManager.getReceiveStreams();
-
-            receiveStreams.addAll(rtpManagerReceiveStreams);
-        }
-
-        return receiveStreams;
     }
 
     /**
