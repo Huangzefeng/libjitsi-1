@@ -6,40 +6,24 @@
  */
 package org.jitsi.impl.neomedia.transform.rtcp;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
-import javax.media.control.JitterBufferControl;
-import javax.media.rtp.ReceiveStream;
-import javax.media.rtp.ReceptionStats;
+import javax.media.control.*;
+import javax.media.rtp.*;
 
-import net.sf.fmj.media.rtp.BurstMetrics;
-import net.sf.fmj.media.rtp.RTCPFeedback;
-import net.sf.fmj.media.rtp.RTCPHeader;
-import net.sf.fmj.media.rtp.RTCPPacket;
-import net.sf.fmj.media.rtp.RTCPReceiverReport;
-import net.sf.fmj.media.rtp.RTCPReport;
-import net.sf.fmj.media.rtp.RTCPSenderReport;
-import net.sf.fmj.media.rtp.RTPStats;
-import net.sf.fmj.media.rtp.RecvSSRCInfo;
-import net.sf.fmj.media.rtp.SSRCInfo;
-import net.sf.fmj.utility.ByteBufferOutputStream;
+import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.utility.*;
 
-import org.jitsi.impl.neomedia.MediaStreamImpl;
-import org.jitsi.impl.neomedia.RTPTranslatorImpl;
-import org.jitsi.impl.neomedia.RawPacket;
-import org.jitsi.impl.neomedia.device.MediaDeviceSession;
-import org.jitsi.impl.neomedia.transform.PacketTransformer;
-import org.jitsi.impl.neomedia.transform.TransformEngine;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.codec.Constants;
-import org.jitsi.service.neomedia.control.FECDecoderControl;
-import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jitsi.service.neomedia.rtp.RTCPExtendedReport;
-import org.jitsi.service.neomedia.rtp.RTCPReports;
-import org.jitsi.util.Logger;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.service.neomedia.control.*;
+import org.jitsi.service.neomedia.format.*;
+import org.jitsi.service.neomedia.rtp.*;
+import org.jitsi.util.*;
 
 /**
  * Implements a <tt>TransformEngine</tt> monitors the incoming and outgoing RTCP
@@ -393,7 +377,7 @@ public class StatisticsEngine
             RawPacket pkt,
             String sdpParams)
     {
-        logger.error("Adding RTCP Extended Report");
+        logger.debug("Adding RTCP Extended Report");
         /*
          * Create an RTCP XR packet for each RTCP SR or RR packet. Afterwards,
          * add the newly created RTCP XR packets into pkt.
@@ -513,7 +497,7 @@ public class StatisticsEngine
             int[] sourceSSRCs,
             String sdpParams)
     {
-        logger.error("Creating extended report");
+        logger.debug("Creating extended report");
 
         RTCPExtendedReport xr = null;
 
@@ -562,13 +546,13 @@ public class StatisticsEngine
     private RTCPExtendedReport.VoIPMetricsReportBlock
         createVoIPMetricsReportBlock(int senderSSRC, int sourceSSRC)
     {
-        logger.error("Trying to create VOIP Metrics block 2");
+        logger.debug("Trying to create VOIP Metrics block");
 
         RTCPExtendedReport.VoIPMetricsReportBlock voipMetrics = null;
 
         if (MediaType.AUDIO.equals(mediaType))
         {
-            logger.error("Would add VOIP Metrics block");
+            logger.debug("Would add VOIP Metrics block");
             ReceiveStream receiveStream = mediaStream.getReceiveStream(sourceSSRC);
 
             if (receiveStream != null)
@@ -595,7 +579,7 @@ public class StatisticsEngine
                 int senderSSRC,
                 ReceiveStream receiveStream)
     {
-        logger.error("Trying to create VOIP Metrics block 2");
+        logger.debug("Trying to create VOIP Metrics block 2");
 
         RTCPExtendedReport.VoIPMetricsReportBlock voipMetrics
             = new RTCPExtendedReport.VoIPMetricsReportBlock();
@@ -740,9 +724,8 @@ public class StatisticsEngine
         voipMetrics.setPacketLossConcealment(packetLossConcealment);
 
         // jitter buffer adaptive (JBA)
-        JitterBufferControl jbc = null;
-        // @@@ ENH hacking this out for now.
-        //    = MediaStreamStatsImpl.getJitterBufferControl(receiveStream);
+        JitterBufferControl jbc = 
+           MediaStreamStatsImpl.getJitterBufferControl(receiveStream);
         double discardRate;
 
         if (jbc == null)
@@ -967,8 +950,7 @@ public class StatisticsEngine
     @Override
     public RawPacket reverseTransform(RawPacket pkt)
     {
-   // @@@ ENH Hack
-      logger.error("Reverse transform, RTCP=" + isRTCP(pkt));
+        logger.debug("Reverse transform, RTCP=" + isRTCP(pkt));
         // SRTP may send non-RTCP packets.
         if (isRTCP(pkt))
         {
@@ -977,17 +959,17 @@ public class StatisticsEngine
              * because neither FMJ, nor RTCPSenderReport/RTCPReceiverReport
              * understands them.
              */
-            logger.error("Removing xrs");
+            logger.debug("Removing xrs");
             List<RTCPExtendedReport> xrs = removeRTCPExtendedReports(pkt);
 
-            logger.error("Remove xrs=" + xrs + ", newRTCP=" + isRTCP(pkt));
+            logger.debug("Remove xrs=" + xrs + ", newRTCP=" + isRTCP(pkt));
 
             // The pkt may have contained RTCP XR packets only.
             if (isRTCP(pkt))
             {
                 try
                 {
-                    logger.error("Updating received stats");
+                    logger.debug("Updating received stats");
                     updateReceivedMediaStreamStats(pkt);
                 }
                 catch(Throwable t)
@@ -1021,8 +1003,7 @@ public class StatisticsEngine
                 RTCPReports rtcpReports
                     = mediaStream.getMediaStreamStats().getRTCPReports();
 
-                // @@@ ENH Hack
-                logger.error("Adding Extended Received Report num=" + xrs.size());
+                logger.debug("Adding Extended Received Report num=" + xrs.size());
 
                 for (RTCPExtendedReport xr : xrs)
                     rtcpReports.rtcpExtendedReportReceived(xr);
@@ -1043,8 +1024,7 @@ public class StatisticsEngine
     @Override
     public RawPacket transform(RawPacket pkt)
     {
-      // @@@ ENH Hack
-      logger.error("transform, RTCP=" + isRTCP(pkt));
+        logger.debug("transform, RTCP=" + isRTCP(pkt));
 
         // SRTP may send non-RTCP packets.
         if (isRTCP(pkt))
@@ -1052,27 +1032,27 @@ public class StatisticsEngine
             try
             {
                 updateSentMediaStreamStats(pkt);
-        }
-        catch(Throwable t)
-        {
+            }
+            catch(Throwable t)
+            {
                 if (t instanceof InterruptedException)
                 {
                     Thread.currentThread().interrupt();
                 }
                 else if (t instanceof ThreadDeath)
                 {
-                throw (ThreadDeath) t;
+                    throw (ThreadDeath) t;
                 }
-            else
-            {
-                logger.error(
+                else
+                {
+                    logger.error(
                             "Failed to analyze an outgoing RTCP packet for the"
                                 + " purposes of statistics.",
-                        t);
+                            t);
+                }
             }
-        }
 
-            logger.error("Media? " + MediaType.AUDIO.equals(mediaType));
+            logger.debug("Media? " + MediaType.AUDIO.equals(mediaType));
 
             // RTCP XR
             /*
@@ -1091,20 +1071,20 @@ public class StatisticsEngine
                 Object o
                     = mediaStream.getProperty(RTCPExtendedReport.SDP_ATTRIBUTE);
 
-                logger.error("o=" + o);
+                logger.debug("o=" + o);
 
                 if (o != null)
                 {
                     String sdpParams = o.toString();
 
-                    logger.error("sdpParams=" + sdpParams);
+                    logger.debug("sdpParams=" + sdpParams);
 
                     if ((sdpParams != null) && (sdpParams.length() != 0))
                     {
                         List<RTCPExtendedReport> xrs
                             = addRTCPExtendedReports(pkt, sdpParams);
 
-                        logger.error("xrs=" + xrs);
+                        logger.debug("xrs=" + xrs);
                         if (xrs != null)
                         {
                             RTCPReports rtcpReports
@@ -1112,8 +1092,7 @@ public class StatisticsEngine
                                     .getMediaStreamStats()
                                         .getRTCPReports();
 
-                            // @@@ ENH Hack
-                            logger.error("Adding Extended Sent Report");
+                            logger.debug("Adding Extended Sent Report");
 
                             for (RTCPExtendedReport xr : xrs)
                                 rtcpReports.rtcpExtendedReportSent(xr);
@@ -1134,16 +1113,13 @@ public class StatisticsEngine
     private void updateReceivedMediaStreamStats(RawPacket pkt)
         throws Exception
     {
-
-      // @@@ ENH Hack
-      logger.error("Update stats");
+      logger.debug("Update stats");
 
         RTCPReport r = parseRTCPReport(pkt);
 
         if (r != null)
         {
-          // @@@ ENH Hack
-          logger.error("Adding Standard receive report");
+          logger.debug("Adding Standard receive report");
 
             mediaStream.getMediaStreamStats().getRTCPReports()
                 .rtcpReportReceived(r);
@@ -1159,15 +1135,13 @@ public class StatisticsEngine
     private void updateSentMediaStreamStats(RawPacket pkt)
         throws Exception
     {
-      // @@@ ENH Hack
-      logger.error("Update stats");
+        logger.debug("Update stats");
 
         RTCPReport r = parseRTCPReport(pkt);
 
         if (r != null)
         {
-          // @@@ ENH Hack
-          logger.error("Adding Standard sent report");
+            logger.debug("Adding Standard sent report");
 
             mediaStream.getMediaStreamStats().getRTCPReports().rtcpReportSent(
                     r);

@@ -19,7 +19,9 @@ import org.jitsi.service.neomedia.rtp.RTCPReports;
  */
 public interface MediaStreamStats
 {
-    // @@@ ENH Hack
+    /*
+     * Interface to get at the RCTP reports for this stream.
+     */
      RTCPReports getRTCPReports();
 
     /**

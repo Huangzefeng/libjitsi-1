@@ -13,10 +13,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 
-import javax.media.control.PacketQueueControl;
+import javax.media.control.*;
 import javax.media.format.VideoFormat;
-import javax.media.protocol.DataSource;
-import javax.media.protocol.PushBufferStream;
+import javax.media.protocol.*;
 import javax.media.rtp.GlobalReceptionStats;
 import javax.media.rtp.Participant;
 import javax.media.rtp.ReceiveStream;
@@ -50,15 +49,9 @@ public class MediaStreamStatsImpl
     implements MediaStreamStats
 {
     /*
-     * @@@ ENH Hack.
+     * A copy of the reports for this Media Stream.
      */
     RTCPReports mReports = new RTCPReports();
-    public RTCPReports getRTCPReports()
-    {
-      return mReports;
-    }
-
-
 
     /**
      * The <tt>Logger</tt> used by the <tt>MediaStreamImpl</tt> class and its
@@ -165,7 +158,10 @@ public class MediaStreamStatsImpl
         this.updateTimeMs = System.currentTimeMillis();
         this.mediaStreamImpl = mediaStreamImpl;
 
-        // @@@ ENH Hack
+        // Test code.  This needs to get moved when we decide where the real 
+        // code is going to go. But for now, here is good enough.
+        //
+        // Alsp logger.errors need to change, but are good enough for now.
         new Thread("Report outputer")
         {
             public void run()
@@ -221,24 +217,27 @@ public class MediaStreamStatsImpl
         String cName = report.getCName();
         textReport.append("  CName=" + cName + "\n");
 
-        Vector feedbacks = report.getFeedbackReports();
+        Vector<?> feedbacks = report.getFeedbackReports();
         for (int ii=0; ii<feedbacks.size(); ii++)
         {
             RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(ii);
             //!!! Do something with that
-            textReport.append("  Feedback[" + ii + "]=" + feedback + "\n");
+            textReport.append("  Feedback[" + ii + "]" + 
+                ": DLSR="+ feedback.getDLSR() + 
+                ", FracLost=" + feedback.getFractionLost() +
+                ", NumLost=" + feedback.getNumLost() + 
+                ", Jitter" + feedback.getJitter() + "\n");
         }
 
         Participant participant = report.getParticipant();
         textReport.append("  Participant=" + participant + "\n");
-        Vector descriptions  = report.getSourceDescription();
+        Vector<?> descriptions  = report.getSourceDescription();
         for (int ii=0; ii<descriptions.size(); ii++)
         {
             SourceDescription description = (SourceDescription) descriptions.get(ii);
-            textReport.append("  Description[" + ii + "]=" + description + "\n");
+            textReport.append("  Description[" + ii + "]=" + description.getDescription() + "\n");
         }
 
-        // Doesn't compile- huh?
         long timestamp = report.getSystemTimeStamp();
         textReport.append("  Timestamp=" + timestamp + "\n");
 
@@ -293,6 +292,7 @@ public class MediaStreamStatsImpl
                      textReport.append("      Discard Rate=" + discardRate + "\n");
                      textReport.append("      End System Delay=" + endSystemDelay + "\n");
                      textReport.append("      Next RFactor=" + nextRFactor + "\n");
+                     textReport.append("      Gap density=" + gapDensity + "\n");                     
                      textReport.append("      Gap Duration=" + gapDuration + "\n");
                      textReport.append("      GMin=" + gMin + "\n");
                      textReport.append("      Jitter Buffer Abs Maximum Delay=" + bufferAbsoluteMaximumDelay + "\n");
@@ -322,8 +322,16 @@ public class MediaStreamStatsImpl
             textReport.append("  No extended report\n");
         }
 
-
         logger.error(textReport);
+    }
+    
+    /*
+     * (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPReports()
+     */
+    public RTCPReports getRTCPReports()
+    {
+      return mReports;
     }
 
 
@@ -846,6 +854,35 @@ public class MediaStreamStatsImpl
         }
         return (nbByteRecv * 8.0 / 1000.0) / (callNbTimeMsSpent / 1000.0);
     }
+    
+    /**
+     * Gets the <tt>JitterBufferControl</tt> of a <tt>ReceiveStream</tt>.
+     *
+     * @param receiveStream the <tt>ReceiveStream</tt> to get the
+     * <tt>JitterBufferControl</tt> of
+     * @return the <tt>JitterBufferControl</tt> of <tt>receiveStream</tt>.
+     */
+    public static JitterBufferControl getJitterBufferControl(
+            ReceiveStream receiveStream)
+    {
+        DataSource ds = receiveStream.getDataSource();
+
+        if (ds instanceof PushBufferDataSource)
+        {
+            for (PushBufferStream pbs
+                    : ((PushBufferDataSource) ds).getStreams())
+            {
+                JitterBufferControl pqc
+                    = (JitterBufferControl)
+                        pbs.getControl(JitterBufferControl.class.getName());
+
+                if (pqc != null)
+                    return pqc;
+            }
+        }
+        return null;
+    }
+    
 
     /**
      * Computes an Exponentially Weighted Moving Average (EWMA). Thus, the most
