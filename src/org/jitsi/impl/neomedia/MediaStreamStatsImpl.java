@@ -6,23 +6,38 @@
  */
 package org.jitsi.impl.neomedia;
 
-import java.awt.*;
-import java.net.*;
-import java.util.*;
+import java.awt.Dimension;
+import java.net.InetSocketAddress;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Vector;
 
 import javax.media.control.*;
-import javax.media.format.*;
+import javax.media.format.VideoFormat;
 import javax.media.protocol.*;
-import javax.media.rtp.*;
+import javax.media.rtp.GlobalReceptionStats;
+import javax.media.rtp.Participant;
+import javax.media.rtp.ReceiveStream;
+import javax.media.rtp.rtcp.SourceDescription;
 
-import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.media.rtp.RTCPFeedback;
+import net.sf.fmj.media.rtp.RTCPReport;
 
-import org.apache.commons.math3.stat.descriptive.*;
-import org.jitsi.impl.neomedia.device.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.control.*;
-import org.jitsi.service.neomedia.format.*;
-import org.jitsi.util.*;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.SynchronizedSummaryStatistics;
+import org.jitsi.impl.neomedia.device.MediaDeviceSession;
+import org.jitsi.impl.neomedia.device.VideoMediaDeviceSession;
+import org.jitsi.service.neomedia.MediaStreamStats;
+import org.jitsi.service.neomedia.MediaStreamTarget;
+import org.jitsi.service.neomedia.MediaType;
+import org.jitsi.service.neomedia.control.FECDecoderControl;
+import org.jitsi.service.neomedia.format.MediaFormat;
+import org.jitsi.service.neomedia.rtp.RTCPExtendedReport;
+import org.jitsi.service.neomedia.rtp.RTCPExtendedReport.ReportBlock;
+import org.jitsi.service.neomedia.rtp.RTCPExtendedReport.VoIPMetricsReportBlock;
+import org.jitsi.service.neomedia.rtp.RTCPReports;
+import org.jitsi.util.Logger;
 
 /**
  * Class used to compute stats concerning a MediaStream.
@@ -33,6 +48,11 @@ import org.jitsi.util.*;
 public class MediaStreamStatsImpl
     implements MediaStreamStats
 {
+    /*
+     * A copy of the reports for this Media Stream.
+     */
+    RTCPReports mReports = new RTCPReports();
+
     /**
      * The <tt>Logger</tt> used by the <tt>MediaStreamImpl</tt> class and its
      * instances for logging output.
@@ -63,7 +83,7 @@ public class MediaStreamStatsImpl
      * The last number of received/sent packets.
      */
     private long[] nbPackets = {0, 0};
-    
+
     /**
      * Statistics (min/max/avg) about jitter in both directions.
      */
@@ -122,12 +142,12 @@ public class MediaStreamStatsImpl
      * -1 if the RTT has not been computed yet. Otherwise the RTT in ms.
      */
     private long rttMs = -1;
-    
+
     /**
      * RTT statistics.
      */
     private SummaryStatistics  rttMsSummary = new SynchronizedSummaryStatistics();
-    
+
     /**
      * Creates a new instance of stats concerning a MediaStream.
      *
@@ -137,7 +157,183 @@ public class MediaStreamStatsImpl
     {
         this.updateTimeMs = System.currentTimeMillis();
         this.mediaStreamImpl = mediaStreamImpl;
+
+        // Test code.  This needs to get moved when we decide where the real 
+        // code is going to go. But for now, here is good enough.
+        //
+        // Alsp logger.errors need to change, but are good enough for now.
+        new Thread("Report outputer")
+        {
+            public void run()
+            {
+                try
+                {
+                    while (true)
+                    {
+                        Thread.sleep(10000);
+
+                        logger.error("Getting reports");
+
+                        RTCPReport[] reports = mReports.getReceivedRTCPReports();
+                        logger.error("Got " + reports.length + " reports");
+                        for (RTCPReport report:reports)
+                        {
+                            dumpRTCPReport(report, "Received");
+                        }
+
+                        reports = mReports.getSentRTCPReports();
+                        for (RTCPReport report:reports)
+                        {
+                            dumpRTCPReport(report, "Sent");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.error("Outputter died");
+                }
+
+            }
+        }.start();
     }
+
+    private void dumpRTCPReport(RTCPReport report, String direction)
+    {
+        StringBuffer textReport = new StringBuffer();
+        textReport.append(direction + " report:\n");
+
+        long ssrc = report.getSSRC();
+        textReport.append("  SSRC=" + ssrc + "\n");
+
+        boolean isBye = report.isByePacket();
+        String byeReason = report.getByeReason();
+
+        textReport.append("  Bye?=" + isBye + "\n");
+        if (isBye)
+        {
+            textReport.append("    -> Bye Reason=" + byeReason + "\n");
+        }
+
+        String cName = report.getCName();
+        textReport.append("  CName=" + cName + "\n");
+
+        Vector<?> feedbacks = report.getFeedbackReports();
+        for (int ii=0; ii<feedbacks.size(); ii++)
+        {
+            RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(ii);
+            //!!! Do something with that
+            textReport.append("  Feedback[" + ii + "]" + 
+                ": DLSR="+ feedback.getDLSR() + 
+                ", FracLost=" + feedback.getFractionLost() +
+                ", NumLost=" + feedback.getNumLost() + 
+                ", Jitter" + feedback.getJitter() + "\n");
+        }
+
+        Participant participant = report.getParticipant();
+        textReport.append("  Participant=" + participant + "\n");
+        Vector<?> descriptions  = report.getSourceDescription();
+        for (int ii=0; ii<descriptions.size(); ii++)
+        {
+            SourceDescription description = (SourceDescription) descriptions.get(ii);
+            textReport.append("  Description[" + ii + "]=" + description.getDescription() + "\n");
+        }
+
+        long timestamp = report.getSystemTimeStamp();
+        textReport.append("  Timestamp=" + timestamp + "\n");
+
+        RTCPExtendedReport exReport;
+        if (direction.equals("Received"))
+        {
+            exReport = mReports.getReceivedRTCPExtendedReport((int) ssrc);
+        }
+        else
+        {
+            exReport = mReports.getSentRTCPExtendedReport((int) ssrc);
+        }
+
+        if (exReport != null)
+        {
+            List<ReportBlock> reportBlocks = exReport.getReportBlocks();
+
+            textReport.append("  Number of extended reports=" + reportBlocks.size() + ":\n");
+
+            for (ReportBlock reportBlock:reportBlocks)
+            {
+                 if (reportBlock instanceof VoIPMetricsReportBlock)
+                 {
+                     textReport.append("    VOIPMetricReportBlock:\n");
+                     VoIPMetricsReportBlock voipBlock = (VoIPMetricsReportBlock) reportBlock;
+
+                     short burstDensity = voipBlock.getBurstDensity();
+                     int burstDuration = voipBlock.getBurstDuration();
+                     short discardRate = voipBlock.getDiscardRate();
+                     int endSystemDelay = voipBlock.getEndSystemDelay();
+                     byte nextRFactor = voipBlock.getExtRFactor();
+                     short gapDensity = voipBlock.getGapDensity();
+                     int gapDuration = voipBlock.getGapDuration();
+                     short gMin = voipBlock.getGMin();
+                     int bufferAbsoluteMaximumDelay = voipBlock.getJitterBufferAbsoluteMaximumDelay();
+                     byte bufferAdaptive = voipBlock.getJitterBufferAdaptive();
+                     int bufferMaxDelay = voipBlock.getJitterBufferMaximumDelay();
+                     int buffernominalDelay = voipBlock.getJitterBufferNominalDelay();
+                     byte bufferrate = voipBlock.getJitterBufferRate();
+                     short lossRate = voipBlock.getLossRate();
+                     byte mosCq = voipBlock.getMosCq();
+                     byte mosLq = voipBlock.getMosLq();
+                     byte noiseLevel = voipBlock.getNoiseLevel();
+                     byte packetLossConcealment = voipBlock.getPacketLossConcealment();
+                     byte residualEchoLossReturn = voipBlock.getResidualEchoReturnLoss();
+                     byte rFactor = voipBlock.getRFactor();
+                     int roundTripDelay = voipBlock.getRoundTripDelay();
+                     byte signalLevel = voipBlock.getSignalLevel();
+
+                     textReport.append("      Burst Density=" + burstDensity + "\n");
+                     textReport.append("      Burst Duration=" + burstDuration + "\n");
+                     textReport.append("      Discard Rate=" + discardRate + "\n");
+                     textReport.append("      End System Delay=" + endSystemDelay + "\n");
+                     textReport.append("      Next RFactor=" + nextRFactor + "\n");
+                     textReport.append("      Gap density=" + gapDensity + "\n");                     
+                     textReport.append("      Gap Duration=" + gapDuration + "\n");
+                     textReport.append("      GMin=" + gMin + "\n");
+                     textReport.append("      Jitter Buffer Abs Maximum Delay=" + bufferAbsoluteMaximumDelay + "\n");
+                     textReport.append("      Jitter Buffer Adaptive=" + bufferAdaptive + "\n");
+                     textReport.append("      Jitter Buffer Maximum Delay=" + bufferMaxDelay + "\n");
+                     textReport.append("      Jitter Buffer Nominal Delay=" + buffernominalDelay + "\n");
+                     textReport.append("      Jitter Buffer Rate=" + bufferrate + "\n");
+                     textReport.append("      Loss Rate=" + lossRate + "\n");
+                     textReport.append("      MOS Cq=" + mosCq + "\n");
+                     textReport.append("      MOS Lq=" + mosLq + "\n");
+                     textReport.append("      Noise Level=" + noiseLevel + "\n");
+                     textReport.append("      Packet Loss Concealment=" + packetLossConcealment + "\n");
+                     textReport.append("      Residual Echo Loss Return=" + residualEchoLossReturn + "\n");
+                     textReport.append("      rFactor=" + rFactor + "\n");
+                     textReport.append("      Round Trip Delay=" + roundTripDelay + "\n");
+                     textReport.append("      Signal Level=" + signalLevel + "\n");
+                 }
+                 else
+                 {
+                     textReport.append("    Other ReportBlock:\n");
+                     // Some other block type we aren't expecting.
+                 }
+            }
+        }
+        else
+        {
+            textReport.append("  No extended report\n");
+        }
+
+        logger.error(textReport);
+    }
+    
+    /*
+     * (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPReports()
+     */
+    public RTCPReports getRTCPReports()
+    {
+      return mReports;
+    }
+
 
     /**
      * Computes and updates information for a specific stream.
@@ -391,7 +587,7 @@ public class MediaStreamStatsImpl
     {
         return this.percentLoss[StreamDirection.DOWNLOAD.ordinal()];
     }
-    
+
     /**
      * @return the total percentage packet loss in the download direction
      */
@@ -401,16 +597,16 @@ public class MediaStreamStatsImpl
         downloadedPackets = Math.max(downloadedPackets, 1);
         return (nbLost[StreamDirection.DOWNLOAD.ordinal()] / downloadedPackets) * 100;
     }
-    
+
     /**
      * @return the total percentage packet loss in the upload direction
      */
     public float getUploadTotalPercentLost() {
         long uploadedPackets = getUploadTotalPackets();
         uploadedPackets = Math.max(uploadedPackets, 1);
-        return (nbLost[StreamDirection.UPLOAD.ordinal()] / uploadedPackets) * 100; 
+        return (nbLost[StreamDirection.UPLOAD.ordinal()] / uploadedPackets) * 100;
     }
-    
+
     /**
      * @return the total number of packets downloaded
      */
@@ -418,7 +614,7 @@ public class MediaStreamStatsImpl
     {
         return this.nbPackets[StreamDirection.DOWNLOAD.ordinal()];
     }
-    
+
     /**
      * @return the total number of packets
      */
@@ -542,7 +738,7 @@ public class MediaStreamStatsImpl
         // contains a mean deviation of the jitter.
         this.jitterRTPTimestampUnits[streamDirection.ordinal()] =
             feedback.getJitter();
-        
+
         jitterStats[streamDirection.ordinal()].addValue(getJitterMs(streamDirection));
     }
 
@@ -585,7 +781,7 @@ public class MediaStreamStatsImpl
 
         // Computes RTT.
         rttMs = computeRTTInMs(feedback);
-        
+
         // Assume RTT information arrives at regular intervals.
         if (rttMs != -1)
         {
@@ -658,6 +854,35 @@ public class MediaStreamStatsImpl
         }
         return (nbByteRecv * 8.0 / 1000.0) / (callNbTimeMsSpent / 1000.0);
     }
+    
+    /**
+     * Gets the <tt>JitterBufferControl</tt> of a <tt>ReceiveStream</tt>.
+     *
+     * @param receiveStream the <tt>ReceiveStream</tt> to get the
+     * <tt>JitterBufferControl</tt> of
+     * @return the <tt>JitterBufferControl</tt> of <tt>receiveStream</tt>.
+     */
+    public static JitterBufferControl getJitterBufferControl(
+            ReceiveStream receiveStream)
+    {
+        DataSource ds = receiveStream.getDataSource();
+
+        if (ds instanceof PushBufferDataSource)
+        {
+            for (PushBufferStream pbs
+                    : ((PushBufferDataSource) ds).getStreams())
+            {
+                JitterBufferControl pqc
+                    = (JitterBufferControl)
+                        pbs.getControl(JitterBufferControl.class.getName());
+
+                if (pqc != null)
+                    return pqc;
+            }
+        }
+        return null;
+    }
+    
 
     /**
      * Computes an Exponentially Weighted Moving Average (EWMA). Thus, the most
@@ -934,7 +1159,7 @@ public class MediaStreamStatsImpl
     {
         return this.rttMs;
     }
-    
+
     /**
      * @return The average of the RTT computed from RTCP. Returns -1 if the RTT
      * has not been computed yet.
@@ -1075,18 +1300,6 @@ public class MediaStreamStatsImpl
         for(PacketQueueControl pqc : getPacketQueueControls())
             return pqc.getCurrentPacketCount();
         return 0;
-    }
-    
-    /**
-     * @return the first <tt>PacketQueueControl</tt> found via <tt>getPacketQueueControls</tt>.
-     */
-    @Override
-    public PacketQueueControl getAPacketQueueControl()
-    {
-        for(PacketQueueControl pqc : getPacketQueueControls())
-            return pqc;
-        
-        return new JitterBufferStats(null);
     }
 
     /**

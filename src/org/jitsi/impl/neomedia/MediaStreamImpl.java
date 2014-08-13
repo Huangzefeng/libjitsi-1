@@ -10,6 +10,7 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.locks.*;
 
 import javax.media.*;
 import javax.media.control.*;
@@ -105,10 +106,18 @@ public class MediaStreamImpl
 
     /**
      * The <tt>ReceiveStream</tt>s this instance plays back on its associated
-     * <tt>MediaDevice</tt>.
+     * <tt>MediaDevice</tt>. The (read and write) accesses to the field are to
+     * be synchronized using {@link #receiveStreamsLock}.
      */
     private final List<ReceiveStream> receiveStreams
         = new LinkedList<ReceiveStream>();
+
+    /**
+     * The <tt>ReadWriteLock</tt> which synchronizes the (read and write)
+     * accesses to {@link #receiveStreams}.
+     */
+    private final ReadWriteLock receiveStreamsLock
+        = new ReentrantReadWriteLock();
 
     /**
      * The <tt>RTPConnector</tt> through which this instance sends and receives
@@ -489,7 +498,7 @@ public class MediaStreamImpl
      * <tt>MediaDevice</tt> associated with <tt>deviceDirection</tt> set on this
      * instance
      */
-    private void assertDirection(
+    public void assertDirection(
             MediaDirection direction,
             MediaDirection deviceDirection,
             String illegalArgumentExceptionMessage)
@@ -1380,6 +1389,19 @@ public class MediaStreamImpl
     public boolean isStarted()
     {
         return started;
+    }
+
+    /**
+     * Gets the <tt>RTPManager</tt> instance which sends and receives RTP and
+     * RTCP traffic on behalf of this <tt>MediaStream</tt>. If the
+     * <tt>RTPManager</tt> does not exist yet, it is not created.
+     *
+     * @return the <tt>RTPManager</tt> instance which sends and receives RTP and
+     * RTCP traffic on behalf of this <tt>MediaStream</tt>
+     */
+    public StreamRTPManager queryRTPManager()
+    {
+        return rtpManager;
     }
 
     /**
@@ -2361,6 +2383,71 @@ public class MediaStreamImpl
             }
         }
         return sendStreams;
+    }
+
+    /**
+     * Gets a <tt>ReceiveStream</tt> which this instance plays back on its
+     * associated <tt>MediaDevice</tt> and which has a specific synchronization
+     * source identifier (SSRC).
+     *
+     * @param ssrc the synchronization source identifier of the
+     * <tt>ReceiveStream</tt> to return
+     * @return a <tt>ReceiveStream</tt> which this instance plays back on its
+     * associated <tt>MediaDevice</tt> and which has the specified <tt>ssrc</tt>
+     */
+    public ReceiveStream getReceiveStream(int ssrc)
+    {
+        for (ReceiveStream receiveStream : getReceiveStreams())
+        {
+            int receiveStreamSSRC = (int) receiveStream.getSSRC();
+
+            if (receiveStreamSSRC == ssrc)
+                return receiveStream;
+        }
+        return null;
+    }
+
+    /**
+     * Gets a list of the <tt>ReceiveStream</tt>s this instance plays back on
+     * its associated <tt>MediaDevice</tt>.
+     *
+     * @return a list of the <tt>ReceiveStream</tt>s this instance plays back on
+     * its associated <tt>MediaDevice</tt>
+     */
+    public Collection<ReceiveStream> getReceiveStreams()
+    {
+        Set<ReceiveStream> receiveStreams = new HashSet<ReceiveStream>();
+
+        // This instance maintains a list of the ReceiveStreams.
+        Lock readLock = receiveStreamsLock.readLock();
+
+        readLock.lock();
+        try
+        {
+            receiveStreams.addAll(this.receiveStreams);
+        }
+        finally
+        {
+            readLock.unlock();
+        }
+
+        /*
+         * Unfortunately, it has been observed that sometimes there are valid
+         * ReceiveStreams in this instance which are not returned by the
+         * rtpManager.
+         */
+        StreamRTPManager rtpManager = queryRTPManager();
+
+        if (rtpManager != null)
+        {
+            @SuppressWarnings("unchecked")
+            Collection<ReceiveStream> rtpManagerReceiveStreams
+                = rtpManager.getReceiveStreams();
+
+            receiveStreams.addAll(rtpManagerReceiveStreams);
+        }
+
+        return receiveStreams;
     }
 
     /**
