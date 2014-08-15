@@ -485,7 +485,7 @@ public class AudioSystemClipImpl
             catch (MalformedURLException e)
             {
                 logger.error("Could not log audio data: uri " + uri +
-                             " was invalid.");
+                             " was invalid.", e);
                 return;
             }
         }
@@ -523,7 +523,7 @@ public class AudioSystemClipImpl
             catch (IOException e)
             {
                 logger.error("Tried to log audio data, but failed to read " +
-                        " from stream.");
+                        " from stream.", e);
                 return;
             }
         }

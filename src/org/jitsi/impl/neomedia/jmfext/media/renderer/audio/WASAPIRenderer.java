@@ -1057,13 +1057,17 @@ public class WASAPIRenderer
                  * and/or notify device to none mid-stream in order to disable
                  * the playback.
                  */
-                return
-                    locatorIsNull
-                        ? BUFFER_PROCESSED_OK
-                        : BUFFER_PROCESSED_FAILED;
+                 
+                int ret = locatorIsNull ? BUFFER_PROCESSED_OK : BUFFER_PROCESSED_FAILED;
+                
+                if (ret == BUFFER_PROCESSED_FAILED)
+                    logger.debug("Process failed, locator is not null");
+                
+                return ret;
             }
             else if (!started)
             {
+                logger.debug("Process failed, not started");
                 return BUFFER_PROCESSED_FAILED;
             }
             else
@@ -1134,6 +1138,7 @@ public class WASAPIRenderer
                 if (writeIsMalfunctioningDuration
                         > writeIsMalfunctioningTimeout)
                 {
+                    logger.debug("Process failed, device has malfunctioned");
                     ret = BUFFER_PROCESSED_FAILED;
                 }
             }
