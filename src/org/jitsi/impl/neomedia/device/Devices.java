@@ -380,7 +380,7 @@ public abstract class Devices
                     if (!devicePreferences.contains(activeDevice.getName()))
                     {
                         logger.debug(getDataflowType() +
-                                     "device preferences do not contain: " +
+                                     " device preferences do not contain: " +
                                      activeDevice.getName());
 
                         // By default, select automatically the USB devices.
