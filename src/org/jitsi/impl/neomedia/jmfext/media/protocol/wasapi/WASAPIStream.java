@@ -600,7 +600,7 @@ public class WASAPIStream
             {
                 try
                 {
-                    WASAPIStream.this.propertyChange(ev);
+                    WASAPIStream.this.propertyChange(ev.getPropertyName());
                 }
                 catch (Exception e)
                 {
@@ -2433,9 +2433,21 @@ public class WASAPIStream
                         {
                             WASAPIStream.this.resetStream();
                         }
-                        catch (IOException e)
+                        catch (IOException ioe)
                         {
-                            logger.error("Failed to reset WASAPIStream", e);
+                            // Often this indicates that the device being used 
+                            // has been removed.  In which case we need to try
+                            // to change the device
+                            logger.error("Failed to reset WASAPIStream", ioe);
+                            
+                            try
+                            {
+                                propertyChange(PlaybackDevices.PROP_DEVICE);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.error("Exception changing device", ex);
+                            }
                         }
                     }
                 };
@@ -2452,16 +2464,15 @@ public class WASAPIStream
      * <tt>WASAPIStream</tt> listens to changes in the values of the properties
      * of the associated <tt>AudioSystem</tt>.
      *
-     * @param ev the <tt>PropertyChangeEvent</tt> to notify this instance about
+     * @param propertyName The name of the property that has changed
      */
-    private synchronized void propertyChange(PropertyChangeEvent ev)
+    private synchronized void propertyChange(String propertyName)
         throws Exception
     {
         /*
          * The propertyChangeListener this invokes the method will be added only
          * when acoustic echo cancellation (AEC) is enabled.
          */
-        String propertyName = ev.getPropertyName();
         boolean renderDeviceDidChange;
 
         if (DeviceSystem.PROP_DEVICES.equals(propertyName))
