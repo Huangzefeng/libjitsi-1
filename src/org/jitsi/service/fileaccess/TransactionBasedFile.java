@@ -35,7 +35,7 @@ public class TransactionBasedFile
 
     private File mTempFile;
     private File mFile;
-    private Boolean transactionInProgress;
+    private boolean transactionInProgress;
 
     /**
      * Create a new TransactionBasedFile
@@ -53,69 +53,59 @@ public class TransactionBasedFile
      * <tt>abortTransaction</tt> before the next transaction can begin.  User
      * can now call <tt>getOutputStream</tt> and write data.
      */
-    public void beginTransaction()
+    public synchronized void beginTransaction()
     {
-        synchronized(transactionInProgress)
+        if (transactionInProgress)
         {
-            if (transactionInProgress)
-            {
-                logger.error("Transaction already in progress");
-                throw new IllegalStateException("Transaction already in progress");
-            }
-
-            transactionInProgress = true;
-            mTempFile = new File(mFile.getAbsolutePath() + TEMP_SUFFIX);
+            logger.error("Transaction already in progress");
+            throw new IllegalStateException("Transaction already in progress");
         }
+
+        transactionInProgress = true;
+        mTempFile = new File(mFile.getAbsolutePath() + TEMP_SUFFIX);
     }
 
     /**
      * Save all writes to the underlying file and end the transaction.
      */
-    public void commitTransaction()
+    public synchronized void commitTransaction()
     {
-        synchronized(transactionInProgress)
+        if (!transactionInProgress)
         {
-            if (!transactionInProgress)
-            {
-                logger.error("No transaction to commit");
-                throw new IllegalStateException("No transaction to commit");
-            }
+            logger.error("No transaction to commit");
+            throw new IllegalStateException("No transaction to commit");
+        }
 
-            try
-            {
-                Files.move(mTempFile.toPath(),
-                           mFile.toPath(),
-                           StandardCopyOption.ATOMIC_MOVE);
-            }
-            catch (IOException ioex)
-            {
-                logger.error("Couldn't commit transaction", ioex);
-            }
-
-            transactionInProgress = false;
+        try
+        {
+            Files.move(mTempFile.toPath(),
+                       mFile.toPath(),
+                       StandardCopyOption.ATOMIC_MOVE);
+        }
+        catch (IOException ioex)
+        {
+            logger.error("Couldn't commit transaction", ioex);
         }
 
         mTempFile = null;
+        transactionInProgress = false;
     }
 
     /**
      * Abandon all writes in this transaction, and end the transaction.
      */
-    public void abortTransaction()
+    public synchronized void abortTransaction()
     {
-        synchronized(transactionInProgress)
+        if (!transactionInProgress)
         {
-            if (!transactionInProgress)
-            {
-                logger.error("No transaction to abort");
-                throw new IllegalStateException("No transaction to abort");
-            }
-
-            mTempFile.delete();
-            mTempFile = null;
-
-            transactionInProgress = false;
+            logger.error("No transaction to abort");
+            throw new IllegalStateException("No transaction to abort");
         }
+
+        mTempFile.delete();
+        mTempFile = null;
+
+        transactionInProgress = false;
     }
 
     /**
@@ -123,25 +113,23 @@ public class TransactionBasedFile
      * called while a transaction is active.
      * @return The OutputStream.  <b>Caller is responsible for closing this.</b>
      */
-    public OutputStream getOutputStream()
+    public synchronized OutputStream getOutputStream()
     {
-        synchronized(transactionInProgress)
+        if (!transactionInProgress)
         {
-            if (!transactionInProgress)
-            {
-                logger.error("No transaction - not possible to get output stream");
-                throw new IllegalStateException("No transaction - not possible to get output stream");
-            }
+            logger.error("No transaction - not possible to get output stream");
+            throw new IllegalStateException("No transaction - not possible to get output stream");
+        }
 
-            try
-            {
-                return new FileOutputStream(mTempFile);
-            }
-            catch (FileNotFoundException e)
-            {
-                logger.error("Couldn't get file output stream for temp file");
-                throw new IllegalStateException(e);
-            }
+        try
+        {
+            return new FileOutputStream(mTempFile);
+        }
+        catch (FileNotFoundException e)
+        {
+            logger.error("Couldn't get file output stream for temp file: " +  mTempFile);
+            throw new IllegalStateException(
+                    "Couldn't get file output stream for temp file", e);
         }
     }
 }

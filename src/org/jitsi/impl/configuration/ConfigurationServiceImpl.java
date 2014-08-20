@@ -13,7 +13,6 @@ import java.util.*;
 import org.jitsi.impl.configuration.xml.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.fileaccess.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
 import org.jitsi.util.xml.*;
 
@@ -89,7 +88,7 @@ public class ConfigurationServiceImpl
      * <tt>true</tt> if a write has been scheduled, and will be made when the
      * <tt>configDelayTimer</tt> pops.
      */
-    private Boolean configWritePending;
+    private boolean configWritePending;
 
     /**
      * Last time (<tt>System.currentTimeMillis</tt>) that config was written
@@ -101,6 +100,26 @@ public class ConfigurationServiceImpl
      * A reference to the currently used configuration file.
      */
     private File configurationFile = null;
+
+    /**
+     * Shutdown hook to ensure any pending config writes are made prior to
+     * shutdown.
+     */
+    private Thread shutdownHook = new Thread("ConfigurationServiceImpl shutdown hook")
+    {
+        @Override
+        public void run()
+        {
+            // This should be synchronized - without synchronization there's a
+            // window where we may end up writing twice in quick succession.
+            // That's not the end of the world, and better than risking a
+            // deadlock.
+            if (configWritePending)
+            {
+                storeConfigurationInternal();
+            }
+        }
+    };
 
     /**
      * A set of immutable properties deployed with the application during
@@ -128,11 +147,6 @@ public class ConfigurationServiceImpl
         new ChangeEventDispatcher(this);
 
     /**
-     * a reference to the FileAccessService
-     */
-    private final FileAccessService faService;
-
-    /**
      * The transaction object used to ensure that updates to configuration are
      * made atomically, and can be rolled back if errors occur.
      */
@@ -148,16 +162,11 @@ public class ConfigurationServiceImpl
 
     public ConfigurationServiceImpl()
     {
-        // retrieve a reference to the FileAccessService
-        this.faService = LibJitsi.getFileAccessService();
-        if (faService == null)
-        {
-            logger.error("Couldn't get access to FileAccessService");
-        }
-
         configDelayTimer = new Timer("Config writer delay timer");
         configWritePending = false;
         lastConfigWriteTime = 0;
+
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
 
         try
         {
@@ -848,43 +857,40 @@ public class ConfigurationServiceImpl
     public synchronized void storeConfiguration()
         throws IOException
     {
-        synchronized(configWritePending)
+        if (configWritePending)
         {
-            if (configWritePending)
+            logger.debug("Config write already pending - do nothing");
+        }
+        else
+        {
+            // Write to config if we haven't for a while; otherwise,
+            // schedule the write for later.
+            long msSinceLastWrite = System.currentTimeMillis() - lastConfigWriteTime;
+
+            if (msSinceLastWrite > CONFIG_WRITE_DELAY_MS)
             {
-                logger.debug("Config write already pending - wait");
+                storeConfigurationInternal();
             }
             else
             {
-                // Write to config if we haven't for a while; otherwise,
-                // schedule the write for later.
-                long msSinceLastWrite = System.currentTimeMillis() - lastConfigWriteTime;
-
-                if (msSinceLastWrite > CONFIG_WRITE_DELAY_MS)
-                {
-                    storeConfigurationInternal();
-                }
-                else
-                {
-                    // Last write was too recent - wait until at least
-                    // CONFIG_WRITE_DELAY_MS has passed since the last write
-                    long delay = CONFIG_WRITE_DELAY_MS - msSinceLastWrite;
-                    logger.debug("Schedule config write in " + delay + "ms");
-                    configWritePending = true;
-                    configDelayTimer.schedule(new TimerTask(){
-                            @Override
-                            public void run()
+                // Last write was too recent - wait until at least
+                // CONFIG_WRITE_DELAY_MS has passed since the last write
+                long delay = CONFIG_WRITE_DELAY_MS - msSinceLastWrite;
+                logger.debug("Schedule config write in " + delay + "ms");
+                configWritePending = true;
+                configDelayTimer.schedule(new TimerTask(){
+                        @Override
+                        public void run()
+                        {
+                            logger.debug("Config write timer popped");
+                            synchronized (ConfigurationServiceImpl.this)
                             {
-                                logger.debug("Config write timer popped");
-                                synchronized (configWritePending)
-                                {
-                                    storeConfigurationInternal();
-                                    configWritePending = false;
-                                }
-                            };
-                        },
-                        delay);
-                }
+                                storeConfigurationInternal();
+                                configWritePending = false;
+                            }
+                        };
+                    },
+                    delay);
             }
         }
     }
@@ -904,9 +910,6 @@ public class ConfigurationServiceImpl
         if ((readOnly != null) && Boolean.parseBoolean(readOnly))
             return;
 
-        if (faService == null)
-            return;
-
         Throwable exception = null;
 
         try
@@ -923,8 +926,6 @@ public class ConfigurationServiceImpl
                 if (stream != null)
                     stream.close();
             }
-
-            transactionBasedFile.commitTransaction();
         }
         catch (IllegalStateException isex)
         {
@@ -952,6 +953,7 @@ public class ConfigurationServiceImpl
         {
             // Only set this if the write was successful - otherwise we should
             // retry sooner.
+            transactionBasedFile.commitTransaction();
             lastConfigWriteTime = System.currentTimeMillis();
         }
     }
@@ -1005,8 +1007,7 @@ public class ConfigurationServiceImpl
             getScHomeDirName();
         }
 
-        if ((transactionBasedFile == null) &&
-            (faService != null))
+        if (transactionBasedFile == null)
         {
             transactionBasedFile = new TransactionBasedFile(configurationFile);
         }
