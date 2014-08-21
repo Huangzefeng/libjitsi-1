@@ -1171,23 +1171,32 @@ int MacCoreaudio_getDeviceUIDList(char *** deviceUIDList)
  */
 void MacCoreaudio_initializeHotplug(void* callbackFunction)
 {
+    MacCoreaudio_log("MacCoreaudio_initializeHotplug: initializing device hotplug");
+    
     AudioObjectPropertyAddress address =
     {
         kAudioHardwarePropertyDevices,
         kAudioObjectPropertyScopeGlobal,
         kAudioObjectPropertyElementMaster
     };
-
-    if(AudioObjectAddPropertyListener(
-                kAudioObjectSystemObject,
-                &address,
-                MacCoreaudio_devicesChangedCallback,
-                callbackFunction)
-            != noErr)
+    
+    // AudioObjectAddPropertyListener is the newer API and should be used instead of
+    // AudioHardwareServiceAddPropertyListener. However, the new API doesn't appear to
+    // work on Accession Desktop (but it does on core Jitsi), hence we use the old API.
+    // SFR457570
+    OSStatus res = AudioHardwareServiceAddPropertyListener(
+                                            kAudioObjectSystemObject,
+                                            &address,
+                                            MacCoreaudio_devicesChangedCallback,
+                                            callbackFunction);
+    
+    if (res == noErr)
     {
-        MacCoreaudio_log(
-                "MacCoreaudio_initializeHotplug (coreaudio/device.c): \
-                    \n\tAudioObjectAddPropertyListener");
+        MacCoreaudio_log("MacCoreaudio_initializeHotplug: Added Hardware Service listener for device hotplug");
+    }
+    else
+    {
+        MacCoreaudio_log("MacCoreaudio_initializeHotplug: Failed to add Hardware Service listener for device hotplug");
     }
 }
 
@@ -1196,6 +1205,7 @@ void MacCoreaudio_initializeHotplug(void* callbackFunction)
  */
 void MacCoreaudio_uninitializeHotplug()
 {
+    MacCoreaudio_log("MacCoreaudio_uninitializeHotplug: Uninitializing device hotplug");
     AudioObjectPropertyAddress address =
     {
         kAudioHardwarePropertyDevices,
@@ -1203,16 +1213,14 @@ void MacCoreaudio_uninitializeHotplug()
         kAudioObjectPropertyElementMaster
     };
 
-    if(AudioObjectRemovePropertyListener(
+    if(AudioHardwareServiceRemovePropertyListener(
                 kAudioObjectSystemObject,
                 &address,
                 MacCoreaudio_devicesChangedCallback,
                 NULL)
             != noErr)
     {
-        MacCoreaudio_log(
-                "MacCoreaudio_uninitializeHotplug (coreaudio/device.c): \
-                    \n\tAudioObjectRemovePropertyListener");
+        MacCoreaudio_log("MacCoreaudio_uninitializeHotplug: Failed to remove Hardware Service listener for device hotplug");
     }
 }
 
@@ -1234,6 +1242,8 @@ static OSStatus MacCoreaudio_devicesChangedCallback(
         const AudioObjectPropertyAddress inAddresses[],
         void *inClientData)
 {
+    MacCoreaudio_log("MacCoreaudio_devicesChangedCallback: notified that devices have changed");
+    
     void (*callbackFunction) (void) = inClientData;
     callbackFunction();
 

@@ -8,6 +8,7 @@
 #define device_h
 
 #include <AudioToolbox/AudioConverter.h>
+#include <AudioToolbox/AudioServices.h>
 #include <CoreAudio/CoreAudio.h>
 #include <CoreFoundation/CFString.h>
 

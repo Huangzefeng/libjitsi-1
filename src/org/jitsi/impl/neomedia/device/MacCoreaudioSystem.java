@@ -442,6 +442,7 @@ public class MacCoreaudioSystem
         // Initializes the library only at the first run.
         if(devicesChangedCallback == null)
         {
+            logger.info("Initializing devices");
             CoreAudioDevice.initDevices();
         }
 
