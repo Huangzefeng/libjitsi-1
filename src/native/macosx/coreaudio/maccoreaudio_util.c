@@ -195,19 +195,22 @@ void MacCoreaudio_initHotplug(
                 NULL)
             == 0)
     {
+
         if(MacCoreaudio_devicesChangedCallbackClass == NULL
                 && MacCoreaudio_devicesChangedCallbackMethodID == NULL)
         {
             jclass devicesChangedCallbackClass = (*env)->FindClass(
                     env,
                     "org/jitsi/impl/neomedia/device/CoreAudioDevice");
+
             if (devicesChangedCallbackClass)
             {
                 devicesChangedCallbackClass
                     = (*env)->NewGlobalRef(env, devicesChangedCallbackClass);
+
                 if (devicesChangedCallbackClass)
                 {
-                                     jmethodID devicesChangedCallbackMethodID
+                    jmethodID devicesChangedCallbackMethodID
                         = (*env)->GetStaticMethodID(
                                 env,
                                 devicesChangedCallbackClass,
@@ -215,8 +218,7 @@ void MacCoreaudio_initHotplug(
                                 "()V");
 
                     if (devicesChangedCallbackMethodID)
-                    {
-          
+                    { 
                         MacCoreaudio_devicesChangedCallbackClass
                             = devicesChangedCallbackClass;
                         MacCoreaudio_devicesChangedCallbackMethodID
@@ -228,7 +230,6 @@ void MacCoreaudio_initHotplug(
                 }
             }
         }
-        fflush(stdout);
         (*MacCoreaudio_VM)->DetachCurrentThread(MacCoreaudio_VM);
     }
 }
@@ -268,7 +269,6 @@ void MacCoreaudio_log(
         const char * error_format,
         ...)
 {
-    
     JNIEnv *env = NULL;
 
     if((*MacCoreaudio_VM)->AttachCurrentThreadAsDaemon(
