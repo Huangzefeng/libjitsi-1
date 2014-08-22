@@ -13,6 +13,7 @@ import java.util.*;
 import org.jitsi.impl.configuration.xml.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.fileaccess.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
 import org.jitsi.util.xml.*;
 
@@ -73,53 +74,9 @@ public class ConfigurationServiceImpl
                                              = "jitsi-default-overrides.properties";
 
     /**
-     * Delay between successive writes to the config file.  Having a delay helps
-     * prevent us spamming the disk.
-     */
-    private static final long CONFIG_WRITE_DELAY_MS = 250;
-
-    /**
-     * Timer that schedules writes to the config file, ensuring they happen no
-     * more often than <tt>CONFIG_WRITE_DELAY_MS</tt>.
-     */
-    private Timer configDelayTimer;
-
-    /**
-     * <tt>true</tt> if a write has been scheduled, and will be made when the
-     * <tt>configDelayTimer</tt> pops.
-     */
-    private boolean configWritePending;
-
-    /**
-     * Last time (<tt>System.currentTimeMillis</tt>) that config was written
-     * to the config file.  Used to ensure writes are not made too often.
-     */
-    private long lastConfigWriteTime;
-
-    /**
      * A reference to the currently used configuration file.
      */
     private File configurationFile = null;
-
-    /**
-     * Shutdown hook to ensure any pending config writes are made prior to
-     * shutdown.
-     */
-    private Thread shutdownHook = new Thread("ConfigurationServiceImpl shutdown hook")
-    {
-        @Override
-        public void run()
-        {
-            // This should be synchronized - without synchronization there's a
-            // window where we may end up writing twice in quick succession.
-            // That's not the end of the world, and better than risking a
-            // deadlock.
-            if (configWritePending)
-            {
-                storeConfigurationInternal();
-            }
-        }
-    };
 
     /**
      * A set of immutable properties deployed with the application during
@@ -147,6 +104,11 @@ public class ConfigurationServiceImpl
         new ChangeEventDispatcher(this);
 
     /**
+     * a reference to the FileAccessService
+     */
+    private final FileAccessService faService;
+
+    /**
      * The transaction object used to ensure that updates to configuration are
      * made atomically, and can be rolled back if errors occur.
      */
@@ -162,11 +124,12 @@ public class ConfigurationServiceImpl
 
     public ConfigurationServiceImpl()
     {
-        configDelayTimer = new Timer("Config writer delay timer");
-        configWritePending = false;
-        lastConfigWriteTime = 0;
-
-        Runtime.getRuntime().addShutdownHook(shutdownHook);
+        // retrieve a reference to the FileAccessService
+        this.faService = LibJitsi.getFileAccessService();
+        if (faService == null)
+        {
+            logger.error("Couldn't get access to FileAccessService");
+        }
 
         try
         {
@@ -835,67 +798,10 @@ public class ConfigurationServiceImpl
 
     /*
      * Implements ConfigurationService#storeConfiguration().
-     *
-     * Includes a delay to ensure we don't write too often to the config file -
-     * we'll make at most 1 write per CONFIG_WRITE_DELAY ms.  This prevents us
-     * making hundreds of writes per second, for example when refreshing config.
-     *
-     * The expected behavior of this function is:
-     * - call 1 : no recent write, so config (1) is written to file
-     * - call 2 : written recently, so a write is scheduled after a delay
-     * - calls 3-N : a write is already scheduled, so do nothing
-     * - timer pops, and config is written to file (2-N)
-     * - next call behaves as for (1)
-     *
-     * This means that if a single call is made we normally write the change
-     * immediately.  However if multiple calls are made at once, we'll write the
-     * first property, wait for the delay, and only then write the rest (rather
-     * than waiting and then writing all in one go).  But that's ok; we still
-     * won't be writing to file too rapidly.
      */
     @Override
     public synchronized void storeConfiguration()
         throws IOException
-    {
-        if (configWritePending)
-        {
-            logger.debug("Config write already pending - do nothing");
-        }
-        else
-        {
-            // Write to config if we haven't for a while; otherwise,
-            // schedule the write for later.
-            long msSinceLastWrite = System.currentTimeMillis() - lastConfigWriteTime;
-
-            if (msSinceLastWrite > CONFIG_WRITE_DELAY_MS)
-            {
-                storeConfigurationInternal();
-            }
-            else
-            {
-                // Last write was too recent - wait until at least
-                // CONFIG_WRITE_DELAY_MS has passed since the last write
-                long delay = CONFIG_WRITE_DELAY_MS - msSinceLastWrite;
-                logger.debug("Schedule config write in " + delay + "ms");
-                configWritePending = true;
-                configDelayTimer.schedule(new TimerTask(){
-                        @Override
-                        public void run()
-                        {
-                            logger.debug("Config write timer popped");
-                            synchronized (ConfigurationServiceImpl.this)
-                            {
-                                storeConfigurationInternal();
-                                configWritePending = false;
-                            }
-                        };
-                    },
-                    delay);
-            }
-        }
-    }
-
-    private synchronized void storeConfigurationInternal()
     {
         if (logger.isDebugEnabled())
             logger.debug("Storing configuration to: " + configurationFile);
@@ -910,11 +816,16 @@ public class ConfigurationServiceImpl
         if ((readOnly != null) && Boolean.parseBoolean(readOnly))
             return;
 
+        if (faService == null)
+            return;
+
         Throwable exception = null;
 
         try
         {
-            transactionBasedFile.beginTransaction();
+            if (transactionBasedFile != null)
+                transactionBasedFile.beginTransaction();
+
             OutputStream stream = transactionBasedFile.getOutputStream();
 
             try
@@ -926,6 +837,9 @@ public class ConfigurationServiceImpl
                 if (stream != null)
                     stream.close();
             }
+
+            if (transactionBasedFile != null)
+                transactionBasedFile.commitTransaction();
         }
         catch (IllegalStateException isex)
         {
@@ -938,23 +852,20 @@ public class ConfigurationServiceImpl
 
         if (exception != null)
         {
-            logger.error("Can't write data in the configuration file",
-                         exception);
-            try
+            logger.error(
+                    "can't write data in the configuration file",
+                    exception);
+            if (transactionBasedFile != null)
             {
-                transactionBasedFile.abortTransaction();
+                try
+                {
+                    transactionBasedFile.abortTransaction();
+                }
+                catch (IllegalStateException isex)
+                {
+                    logger.error("Failed to roll back configuration file", isex);
+                }
             }
-            catch (IllegalStateException isex)
-            {
-                logger.error("Failed to roll back configuration file", isex);
-            }
-        }
-        else
-        {
-            // Only set this if the write was successful - otherwise we should
-            // retry sooner.
-            transactionBasedFile.commitTransaction();
-            lastConfigWriteTime = System.currentTimeMillis();
         }
     }
 
@@ -1007,7 +918,8 @@ public class ConfigurationServiceImpl
             getScHomeDirName();
         }
 
-        if (transactionBasedFile == null)
+        if ((transactionBasedFile == null) &&
+            (faService != null))
         {
             transactionBasedFile = new TransactionBasedFile(configurationFile);
         }
