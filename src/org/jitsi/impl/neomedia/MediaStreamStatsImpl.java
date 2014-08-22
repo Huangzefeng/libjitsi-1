@@ -6,38 +6,28 @@
  */
 package org.jitsi.impl.neomedia;
 
-import java.awt.Dimension;
-import java.net.InetSocketAddress;
-import java.util.HashSet;
+import java.awt.*;
+import java.net.*;
+import java.util.*;
 import java.util.List;
-import java.util.Set;
-import java.util.Vector;
 
 import javax.media.control.*;
-import javax.media.format.VideoFormat;
+import javax.media.format.*;
 import javax.media.protocol.*;
-import javax.media.rtp.GlobalReceptionStats;
-import javax.media.rtp.Participant;
-import javax.media.rtp.ReceiveStream;
-import javax.media.rtp.rtcp.SourceDescription;
+import javax.media.rtp.*;
+import javax.media.rtp.rtcp.*;
 
-import net.sf.fmj.media.rtp.RTCPFeedback;
-import net.sf.fmj.media.rtp.RTCPReport;
+import net.sf.fmj.media.rtp.*;
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.apache.commons.math3.stat.descriptive.SynchronizedSummaryStatistics;
-import org.jitsi.impl.neomedia.device.MediaDeviceSession;
-import org.jitsi.impl.neomedia.device.VideoMediaDeviceSession;
-import org.jitsi.service.neomedia.MediaStreamStats;
-import org.jitsi.service.neomedia.MediaStreamTarget;
-import org.jitsi.service.neomedia.MediaType;
-import org.jitsi.service.neomedia.control.FECDecoderControl;
-import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jitsi.service.neomedia.rtp.RTCPExtendedReport;
+import org.apache.commons.math3.stat.descriptive.*;
+import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.control.*;
+import org.jitsi.service.neomedia.format.*;
+import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.service.neomedia.rtp.RTCPExtendedReport.ReportBlock;
 import org.jitsi.service.neomedia.rtp.RTCPExtendedReport.VoIPMetricsReportBlock;
-import org.jitsi.service.neomedia.rtp.RTCPReports;
-import org.jitsi.util.Logger;
+import org.jitsi.util.*;
 
 /**
  * Class used to compute stats concerning a MediaStream.
@@ -158,171 +148,9 @@ public class MediaStreamStatsImpl
         this.updateTimeMs = System.currentTimeMillis();
         this.mediaStreamImpl = mediaStreamImpl;
 
-        // Test code.  This needs to get moved when we decide where the real 
-        // code is going to go. But for now, here is good enough.
-        //
-        // Alsp logger.errors need to change, but are good enough for now.
-        new Thread("Report outputer")
-        {
-            public void run()
-            {
-                try
-                {
-                    while (true)
-                    {
-                        Thread.sleep(10000);
-
-                        logger.error("Getting reports");
-
-                        RTCPReport[] reports = mReports.getReceivedRTCPReports();
-                        logger.error("Got " + reports.length + " reports");
-                        for (RTCPReport report:reports)
-                        {
-                            dumpRTCPReport(report, "Received");
-                        }
-
-                        reports = mReports.getSentRTCPReports();
-                        for (RTCPReport report:reports)
-                        {
-                            dumpRTCPReport(report, "Sent");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.error("Outputter died");
-                }
-
-            }
-        }.start();
-    }
-
-    private void dumpRTCPReport(RTCPReport report, String direction)
-    {
-        StringBuffer textReport = new StringBuffer();
-        textReport.append(direction + " report:\n");
-
-        long ssrc = report.getSSRC();
-        textReport.append("  SSRC=" + ssrc + "\n");
-
-        boolean isBye = report.isByePacket();
-        String byeReason = report.getByeReason();
-
-        textReport.append("  Bye?=" + isBye + "\n");
-        if (isBye)
-        {
-            textReport.append("    -> Bye Reason=" + byeReason + "\n");
-        }
-
-        String cName = report.getCName();
-        textReport.append("  CName=" + cName + "\n");
-
-        Vector<?> feedbacks = report.getFeedbackReports();
-        for (int ii=0; ii<feedbacks.size(); ii++)
-        {
-            RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(ii);
-            //!!! Do something with that
-            textReport.append("  Feedback[" + ii + "]" + 
-                ": DLSR="+ feedback.getDLSR() + 
-                ", FracLost=" + feedback.getFractionLost() +
-                ", NumLost=" + feedback.getNumLost() + 
-                ", Jitter" + feedback.getJitter() + "\n");
-        }
-
-        Participant participant = report.getParticipant();
-        textReport.append("  Participant=" + participant + "\n");
-        Vector<?> descriptions  = report.getSourceDescription();
-        for (int ii=0; ii<descriptions.size(); ii++)
-        {
-            SourceDescription description = (SourceDescription) descriptions.get(ii);
-            textReport.append("  Description[" + ii + "]=" + description.getDescription() + "\n");
-        }
-
-        long timestamp = report.getSystemTimeStamp();
-        textReport.append("  Timestamp=" + timestamp + "\n");
-
-        RTCPExtendedReport exReport;
-        if (direction.equals("Received"))
-        {
-            exReport = mReports.getReceivedRTCPExtendedReport((int) ssrc);
-        }
-        else
-        {
-            exReport = mReports.getSentRTCPExtendedReport((int) ssrc);
-        }
-
-        if (exReport != null)
-        {
-            List<ReportBlock> reportBlocks = exReport.getReportBlocks();
-
-            textReport.append("  Number of extended reports=" + reportBlocks.size() + ":\n");
-
-            for (ReportBlock reportBlock:reportBlocks)
-            {
-                 if (reportBlock instanceof VoIPMetricsReportBlock)
-                 {
-                     textReport.append("    VOIPMetricReportBlock:\n");
-                     VoIPMetricsReportBlock voipBlock = (VoIPMetricsReportBlock) reportBlock;
-
-                     short burstDensity = voipBlock.getBurstDensity();
-                     int burstDuration = voipBlock.getBurstDuration();
-                     short discardRate = voipBlock.getDiscardRate();
-                     int endSystemDelay = voipBlock.getEndSystemDelay();
-                     byte nextRFactor = voipBlock.getExtRFactor();
-                     short gapDensity = voipBlock.getGapDensity();
-                     int gapDuration = voipBlock.getGapDuration();
-                     short gMin = voipBlock.getGMin();
-                     int bufferAbsoluteMaximumDelay = voipBlock.getJitterBufferAbsoluteMaximumDelay();
-                     byte bufferAdaptive = voipBlock.getJitterBufferAdaptive();
-                     int bufferMaxDelay = voipBlock.getJitterBufferMaximumDelay();
-                     int buffernominalDelay = voipBlock.getJitterBufferNominalDelay();
-                     byte bufferrate = voipBlock.getJitterBufferRate();
-                     short lossRate = voipBlock.getLossRate();
-                     byte mosCq = voipBlock.getMosCq();
-                     byte mosLq = voipBlock.getMosLq();
-                     byte noiseLevel = voipBlock.getNoiseLevel();
-                     byte packetLossConcealment = voipBlock.getPacketLossConcealment();
-                     byte residualEchoLossReturn = voipBlock.getResidualEchoReturnLoss();
-                     byte rFactor = voipBlock.getRFactor();
-                     int roundTripDelay = voipBlock.getRoundTripDelay();
-                     byte signalLevel = voipBlock.getSignalLevel();
-
-                     textReport.append("      Burst Density=" + burstDensity + "\n");
-                     textReport.append("      Burst Duration=" + burstDuration + "\n");
-                     textReport.append("      Discard Rate=" + discardRate + "\n");
-                     textReport.append("      End System Delay=" + endSystemDelay + "\n");
-                     textReport.append("      Next RFactor=" + nextRFactor + "\n");
-                     textReport.append("      Gap density=" + gapDensity + "\n");                     
-                     textReport.append("      Gap Duration=" + gapDuration + "\n");
-                     textReport.append("      GMin=" + gMin + "\n");
-                     textReport.append("      Jitter Buffer Abs Maximum Delay=" + bufferAbsoluteMaximumDelay + "\n");
-                     textReport.append("      Jitter Buffer Adaptive=" + bufferAdaptive + "\n");
-                     textReport.append("      Jitter Buffer Maximum Delay=" + bufferMaxDelay + "\n");
-                     textReport.append("      Jitter Buffer Nominal Delay=" + buffernominalDelay + "\n");
-                     textReport.append("      Jitter Buffer Rate=" + bufferrate + "\n");
-                     textReport.append("      Loss Rate=" + lossRate + "\n");
-                     textReport.append("      MOS Cq=" + mosCq + "\n");
-                     textReport.append("      MOS Lq=" + mosLq + "\n");
-                     textReport.append("      Noise Level=" + noiseLevel + "\n");
-                     textReport.append("      Packet Loss Concealment=" + packetLossConcealment + "\n");
-                     textReport.append("      Residual Echo Loss Return=" + residualEchoLossReturn + "\n");
-                     textReport.append("      rFactor=" + rFactor + "\n");
-                     textReport.append("      Round Trip Delay=" + roundTripDelay + "\n");
-                     textReport.append("      Signal Level=" + signalLevel + "\n");
-                 }
-                 else
-                 {
-                     textReport.append("    Other ReportBlock:\n");
-                     // Some other block type we aren't expecting.
-                 }
-            }
-        }
-        else
-        {
-            textReport.append("  No extended report\n");
-        }
-
-        logger.error(textReport);
+        // This turns on test code that outputs the RTCP reports
+        // for this stream to error logging.
+        //startRTCPTestCode();
     }
     
     /*
@@ -333,8 +161,100 @@ public class MediaStreamStatsImpl
     {
       return mReports;
     }
+    
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForRX()
+     */
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForRX()
+     */
+    public RTCPReport getReceivedRTCPRR()
+    {
+    	RTCPReport rrForXR = null;
+    			
+        RTCPReport[] reports = mReports.getReceivedRTCPReports();
+        
+        // After the call has ended, sometimes we see an extra report
+        // creep in.  We've never actually seen it at the point we
+        // generate the analytics report, but here's a line of trace 
+        // that will trigger us to be a bit more careful if it can happen
+        // (in which case we need to carefully choose the report).
+        if (reports.length > 1)
+        {
+            logger.error("Got " + reports.length + " reports");
+        }
+        
+        if (reports.length > 0)
+        {
+        	rrForXR = reports[0];
+        }
+        
+        return rrForXR;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForTX()
+     */
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForTX()
+     */
+    public RTCPReport getSentRTCPRR()
+    {
+       RTCPReport rrForTX = null;
+       
+       RTCPReport[] reports = mReports.getSentRTCPReports();
+       
+       // After the call has ended, sometimes we see an extra report
+       // creep in.  We've never actually seen it at the point we
+       // generate the analytics report, but here's a line of trace 
+       // that will trigger us to be a bit more careful if it can happen
+       // (in which case we need to carefully choose the report).    
+       if (reports.length > 1)
+       {
+           logger.error("Got " + reports.length + " reports");
+       }
+    
+       if (reports.length > 0)
+       {
+    	   rrForTX = reports[0];
+       }
+       
+       return rrForTX;
+    }    
+     
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getReceivedExtendedReport(long)
+     */
+    public RTCPExtendedReport getReceivedExtendedReport(long ssrc)
+    {
+   	
+        return mReports.getReceivedRTCPExtendedReport((int) ssrc);
+    }
 
-
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getSentExtendedReport(long)
+     */
+    public RTCPExtendedReport getSentExtendedReport(long ssrc)
+    {   	
+        return mReports.getSentRTCPExtendedReport((int) ssrc);
+    }    
+    
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getReceivedFeedback(long)
+     */
+    public RTCPFeedback getReceivedFeedback(long ssrc)
+    {
+        return mReports.getReceivedRTCPFeedback((int)ssrc);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getSentFeedback(long)
+     */
+    public RTCPFeedback getSentFeedback(long ssrc)
+    {
+        return mReports.getSentRTCPFeedback((int)ssrc);
+    } 
+    
     /**
      * Computes and updates information for a specific stream.
      */
@@ -1423,4 +1343,177 @@ public class MediaStreamStatsImpl
     {
         return jitterStats[StreamDirection.DOWNLOAD.ordinal()].getMean();
     }
+    
+    /**
+     * Start test code to track RTCP Reports for this stream. Not
+     * called by default.
+     */
+    private void startRTCPTestCode()
+    {
+    	// Test code.  This needs to get moved when we decide where the real 
+        // code is going to go. But for now, here is good enough.
+        //
+        // Also logger.errors need to change, but are good enough for now.
+        new Thread("Report outputer")
+        {
+            public void run()
+            {
+                try
+                {
+                    while (true)
+                    {
+                        Thread.sleep(10000);
+
+                        logger.error("Getting reports");
+
+                        RTCPReport[] reports = mReports.getReceivedRTCPReports();
+                        logger.error("Got " + reports.length + " reports");
+                        for (RTCPReport report:reports)
+                        {
+                            dumpRTCPReport(report, "Received");
+                        }
+
+                        reports = mReports.getSentRTCPReports();
+                        for (RTCPReport report:reports)
+                        {
+                            dumpRTCPReport(report, "Sent");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.error("Outputter died");
+                }
+
+            }
+        }.start();    	
+    }
+    
+    private void dumpRTCPReport(RTCPReport report, String direction)
+    {
+        StringBuffer textReport = new StringBuffer();
+        textReport.append(direction + " report:\n");
+
+        long ssrc = report.getSSRC();
+        textReport.append("  SSRC=" + ssrc + "\n");
+
+        boolean isBye = report.isByePacket();
+        String byeReason = report.getByeReason();
+
+        textReport.append("  Bye?=" + isBye + "\n");
+        if (isBye)
+        {
+            textReport.append("    -> Bye Reason=" + byeReason + "\n");
+        }
+
+        String cName = report.getCName();
+        textReport.append("  CName=" + cName + "\n");
+
+        Vector<?> feedbacks = report.getFeedbackReports();
+        for (int ii=0; ii<feedbacks.size(); ii++)
+        {
+            RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(ii);
+            //!!! Do something with that
+            textReport.append("  Feedback[" + ii + "]" + 
+                ": DLSR="+ feedback.getDLSR() + 
+                ", FracLost=" + feedback.getFractionLost() +
+                ", NumLost=" + feedback.getNumLost() + 
+                ", Jitter" + feedback.getJitter() + "\n");
+        }
+
+        Participant participant = report.getParticipant();
+        textReport.append("  Participant=" + participant + "\n");
+        Vector<?> descriptions  = report.getSourceDescription();
+        for (int ii=0; ii<descriptions.size(); ii++)
+        {
+            SourceDescription description = (SourceDescription) descriptions.get(ii);
+            textReport.append("  Description[" + ii + "]=" + description.getDescription() + "\n");
+        }
+
+        long timestamp = report.getSystemTimeStamp();
+        textReport.append("  Timestamp=" + timestamp + "\n");
+
+        RTCPExtendedReport exReport;
+        if (direction.equals("Received"))
+        {
+            exReport = mReports.getReceivedRTCPExtendedReport((int) ssrc);
+        }
+        else
+        {
+            exReport = mReports.getSentRTCPExtendedReport((int) ssrc);
+        }
+
+        if (exReport != null)
+        {
+            List<ReportBlock> reportBlocks = exReport.getReportBlocks();
+
+            textReport.append("  Number of extended reports=" + reportBlocks.size() + ":\n");
+
+            for (ReportBlock reportBlock:reportBlocks)
+            {
+                 if (reportBlock instanceof VoIPMetricsReportBlock)
+                 {
+                     textReport.append("    VOIPMetricReportBlock:\n");
+                     VoIPMetricsReportBlock voipBlock = (VoIPMetricsReportBlock) reportBlock;
+
+                     short burstDensity = voipBlock.getBurstDensity();
+                     int burstDuration = voipBlock.getBurstDuration();
+                     short discardRate = voipBlock.getDiscardRate();
+                     int endSystemDelay = voipBlock.getEndSystemDelay();
+                     byte nextRFactor = voipBlock.getExtRFactor();
+                     short gapDensity = voipBlock.getGapDensity();
+                     int gapDuration = voipBlock.getGapDuration();
+                     short gMin = voipBlock.getGMin();
+                     int bufferAbsoluteMaximumDelay = voipBlock.getJitterBufferAbsoluteMaximumDelay();
+                     byte bufferAdaptive = voipBlock.getJitterBufferAdaptive();
+                     int bufferMaxDelay = voipBlock.getJitterBufferMaximumDelay();
+                     int buffernominalDelay = voipBlock.getJitterBufferNominalDelay();
+                     byte bufferrate = voipBlock.getJitterBufferRate();
+                     short lossRate = voipBlock.getLossRate();
+                     byte mosCq = voipBlock.getMosCq();
+                     byte mosLq = voipBlock.getMosLq();
+                     byte noiseLevel = voipBlock.getNoiseLevel();
+                     byte packetLossConcealment = voipBlock.getPacketLossConcealment();
+                     byte residualEchoLossReturn = voipBlock.getResidualEchoReturnLoss();
+                     byte rFactor = voipBlock.getRFactor();
+                     int roundTripDelay = voipBlock.getRoundTripDelay();
+                     byte signalLevel = voipBlock.getSignalLevel();
+
+                     textReport.append("      Burst Density=" + burstDensity + "\n");
+                     textReport.append("      Burst Duration=" + burstDuration + "\n");
+                     textReport.append("      Discard Rate=" + discardRate + "\n");
+                     textReport.append("      End System Delay=" + endSystemDelay + "\n");
+                     textReport.append("      Next RFactor=" + nextRFactor + "\n");
+                     textReport.append("      Gap density=" + gapDensity + "\n");                     
+                     textReport.append("      Gap Duration=" + gapDuration + "\n");
+                     textReport.append("      GMin=" + gMin + "\n");
+                     textReport.append("      Jitter Buffer Abs Maximum Delay=" + bufferAbsoluteMaximumDelay + "\n");
+                     textReport.append("      Jitter Buffer Adaptive=" + bufferAdaptive + "\n");
+                     textReport.append("      Jitter Buffer Maximum Delay=" + bufferMaxDelay + "\n");
+                     textReport.append("      Jitter Buffer Nominal Delay=" + buffernominalDelay + "\n");
+                     textReport.append("      Jitter Buffer Rate=" + bufferrate + "\n");
+                     textReport.append("      Loss Rate=" + lossRate + "\n");
+                     textReport.append("      MOS Cq=" + mosCq + "\n");
+                     textReport.append("      MOS Lq=" + mosLq + "\n");
+                     textReport.append("      Noise Level=" + noiseLevel + "\n");
+                     textReport.append("      Packet Loss Concealment=" + packetLossConcealment + "\n");
+                     textReport.append("      Residual Echo Loss Return=" + residualEchoLossReturn + "\n");
+                     textReport.append("      rFactor=" + rFactor + "\n");
+                     textReport.append("      Round Trip Delay=" + roundTripDelay + "\n");
+                     textReport.append("      Signal Level=" + signalLevel + "\n");
+                 }
+                 else
+                 {
+                     textReport.append("    Other ReportBlock:\n");
+                     // Some other block type we aren't expecting.
+                 }
+            }
+        }
+        else
+        {
+            textReport.append("  No extended report\n");
+        }
+
+        logger.error(textReport);
+    }    
 }

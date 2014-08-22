@@ -8,9 +8,9 @@ package org.jitsi.service.neomedia;
 
 import java.awt.Dimension;
 
-import net.sf.fmj.media.rtp.RTCPFeedback;
+import net.sf.fmj.media.rtp.*;
 
-import org.jitsi.service.neomedia.rtp.RTCPReports;
+import org.jitsi.service.neomedia.rtp.*;
 
 /**
  * Class used to compute stats concerning a MediaStream.
@@ -20,9 +20,15 @@ import org.jitsi.service.neomedia.rtp.RTCPReports;
 public interface MediaStreamStats
 {
     /*
-     * Interface to get at the RCTP reports for this stream.
+     * Interfaces to get at the RCTP reports for this stream.
      */
      RTCPReports getRTCPReports();
+     RTCPReport getReceivedRTCPRR();
+     RTCPReport getSentRTCPRR();          
+     RTCPExtendedReport getReceivedExtendedReport(long ssrc); 
+     RTCPExtendedReport getSentExtendedReport(long ssrc);
+     RTCPFeedback getReceivedFeedback(long ssrc);
+     RTCPFeedback getSentFeedback(long ssrc);     
 
     /**
      * Computes and updates information for a specific stream.

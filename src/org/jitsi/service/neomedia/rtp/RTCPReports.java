@@ -480,7 +480,7 @@ public class RTCPReports
      */
     public void rtcpExtendedReportReceived(RTCPExtendedReport extendedReport)
     {
-        logger.error("Adding extended report " + extendedReport);
+        logger.debug("Adding extended report " + extendedReport);
 
         if (extendedReport == null)
             throw new NullPointerException("extendedReport");
@@ -496,29 +496,29 @@ public class RTCPReports
 
             if (extendedReport.equals(oldValue))
             {
-                logger.error("Value unchanged");
+                logger.debug("Value unchanged");
                 fire = false;
             }
             else
             {
-                logger.error("Value changed");
+                logger.debug("Value changed");
                 if (extendedReport.getSystemTimeStamp() == 0)
                 {
                     extendedReport.setSystemTimeStamp(
                             System.currentTimeMillis());
                 }
 
-                logger.error("Report blocks length=" + extendedReport.getReportBlocks().size());
+                logger.debug("Report blocks length=" + extendedReport.getReportBlocks().size());
                 // VoIP Metrics Report Block
                 for (RTCPExtendedReport.ReportBlock reportBlock
                         : extendedReport.getReportBlocks())
                 {
-                    logger.error("Next report block " + reportBlock);
+                    logger.debug("Next report block " + reportBlock);
                     if (reportBlock
                             instanceof
                                 RTCPExtendedReport.VoIPMetricsReportBlock)
                     {
-                        logger.error("Adding block");
+                        logger.debug("Adding block");
                         RTCPExtendedReport.VoIPMetricsReportBlock voipMetrics
                             = (RTCPExtendedReport.VoIPMetricsReportBlock)
                                 reportBlock;
@@ -554,7 +554,7 @@ public class RTCPReports
      */
     public void rtcpExtendedReportSent(RTCPExtendedReport extendedReport)
     {
-        logger.error("Adding sent report");
+        logger.debug("Adding sent report");
         if (extendedReport == null)
             throw new NullPointerException("extendedReport");
 
@@ -629,7 +629,7 @@ public class RTCPReports
 
         synchronized (receivedReports)
         {
-            logger.error("Adding received report");
+            logger.debug("Adding received report");
             Object oldValue
                 = receivedReports.put(
                         Integer.valueOf((int) report.getSSRC()),
