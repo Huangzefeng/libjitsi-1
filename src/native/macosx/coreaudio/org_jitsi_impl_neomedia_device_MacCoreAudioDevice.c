@@ -22,6 +22,7 @@ JNIEXPORT jobjectArray JNICALL
 Java_org_jitsi_impl_neomedia_device_MacCoreAudioDevice_getDeviceUIDList
   (JNIEnv *env, jclass clazz)
 {
+    MacCoreaudio_log("MacCoreAudioDevice_getDeviceUIDList");
     jobjectArray javaDeviceUIDList = NULL;
 
     char ** deviceUIDList;
@@ -204,6 +205,7 @@ Java_org_jitsi_impl_neomedia_device_MacCoreAudioDevice_startStream
         jboolean isEchoCancel)
 {
     const char * deviceUIDPtr = (*env)->GetStringUTFChars(env, deviceUID, 0);
+    MacCoreaudio_log("MacCoreAudioDevice_startStream: Starting stream on device %s", deviceUIDPtr);
     jobject callbackObject = (*env)->NewGlobalRef(env, callback);
     MacCoreaudio_Stream* stream = NULL;
 
@@ -257,6 +259,7 @@ Java_org_jitsi_impl_neomedia_device_MacCoreAudioDevice_stopStream
   (JNIEnv *env, jclass clazz, jstring deviceUID, jlong streamPtr)
 {
     const char * deviceUIDPtr = (*env)->GetStringUTFChars(env, deviceUID, 0);
+    MacCoreaudio_log("MacCoreAudioDevice_stopStream: Stopping stream on device %s", deviceUIDPtr);
     MacCoreaudio_Stream * stream = (MacCoreaudio_Stream*) (long) streamPtr;
     jobject callbackObject = stream->callbackObject;
 

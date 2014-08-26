@@ -36,6 +36,7 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *pvt)
 {
     MacCoreaudio_VM = vm;
+    MacCoreaudio_log("MacCoreAudio_util: JNI loaded");
     MacCoreaudio_initHotplug();
     return JNI_VERSION_1_6;
 }
@@ -43,6 +44,7 @@ JNI_OnLoad(JavaVM *vm, void *pvt)
 JNIEXPORT void JNICALL
 JNI_OnUnload(JavaVM *vm, void *pvt)
 {
+    MacCoreaudio_log("MacCoreAudio_util: JNI unloading");
     MacCoreaudio_freeHotplug();
     MacCoreaudio_VM = NULL;
 }
@@ -157,8 +159,11 @@ void MacCoreaudio_callbackMethod(
  */
 void MacCoreaudio_devicesChangedCallbackMethod(void)
 {
+
     JNIEnv *env = NULL;
 
+    MacCoreaudio_log("MacCoreAudio_util_devicesChangedCallbackMethod: Notified that devices have changed");
+    
     if((*MacCoreaudio_VM)->AttachCurrentThreadAsDaemon(
                 MacCoreaudio_VM,
                 (void**) &env,
@@ -183,13 +188,14 @@ void MacCoreaudio_initHotplug(
         void)
 {
     JNIEnv *env = NULL;
-
+    MacCoreaudio_log("MacCoreAudio_util_initHotplug: Initializing device hotplug");
     if((*MacCoreaudio_VM)->AttachCurrentThreadAsDaemon(
                 MacCoreaudio_VM,
                 (void**) &env,
                 NULL)
             == 0)
     {
+
         if(MacCoreaudio_devicesChangedCallbackClass == NULL
                 && MacCoreaudio_devicesChangedCallbackMethodID == NULL)
         {
@@ -201,6 +207,7 @@ void MacCoreaudio_initHotplug(
             {
                 devicesChangedCallbackClass
                     = (*env)->NewGlobalRef(env, devicesChangedCallbackClass);
+
                 if (devicesChangedCallbackClass)
                 {
                     jmethodID devicesChangedCallbackMethodID
@@ -211,7 +218,7 @@ void MacCoreaudio_initHotplug(
                                 "()V");
 
                     if (devicesChangedCallbackMethodID)
-                    {
+                    { 
                         MacCoreaudio_devicesChangedCallbackClass
                             = devicesChangedCallbackClass;
                         MacCoreaudio_devicesChangedCallbackMethodID
@@ -233,6 +240,7 @@ void MacCoreaudio_initHotplug(
 void MacCoreaudio_freeHotplug(
         void)
 {
+    MacCoreaudio_log("MacCoreAudio_util_freeHotplug: Freeing device hotplug callback process");
     MacCoreaudio_uninitializeHotplug();
     JNIEnv *env = NULL;
 

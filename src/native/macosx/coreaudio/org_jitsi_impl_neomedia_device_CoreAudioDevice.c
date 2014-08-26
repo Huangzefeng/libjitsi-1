@@ -22,6 +22,7 @@ JNIEXPORT jint JNICALL
 Java_org_jitsi_impl_neomedia_device_CoreAudioDevice_initDevices
     (JNIEnv *env, jclass clazz)
 {
+    MacCoreaudio_log("CoreAudioDevice_initDevices: initDevices");
     // TODO Auto-generated method stub
     return 0;
 }
@@ -30,6 +31,7 @@ JNIEXPORT void JNICALL
 Java_org_jitsi_impl_neomedia_device_CoreAudioDevice_freeDevices
     (JNIEnv *env, jclass clazz)
 {
+    MacCoreaudio_log("CoreAudioDevice_freeDevices: freeDevices");
     // TODO Auto-generated method stub
 }
 

@@ -50,7 +50,7 @@ public interface FailSafeTransaction {
         throws IllegalStateException, IOException;
 
     /**
-     * Closes the transation and cancel the changes. Everything written in the
+     * Closes the transaction and cancel the changes. Everything written in the
      * file during the transaction is NOT saved.
      * @throws IllegalStateException if the file doesn't exists anymore
      * @throws IOException if an IOException occurs during the operation

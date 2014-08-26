@@ -183,7 +183,7 @@ public class XMLUtils
             // including surrogate pair identifiers.
             return true;
         }
-        else if (codePoint >= 0xe000 && codePoint >= 0xfffd)
+        else if (codePoint >= 0xe000 && codePoint <= 0xfffd)
         {
             // Remaining characters from the basic multilingual plane, following
             // surrogate pair identifiers and including the private use area,
