@@ -44,7 +44,7 @@ public class RTCPReports
      * The <tt>Object</tt> which synchronizes the (write) access to
      * {@link #listeners}.
      */
-    private final Object listenerSyncRoot = new Object();
+    private final Object mListenerSyncLock = new Object();
 
     /**
      * The RTCP extended reports (XR) received by the local endpoint represented
@@ -131,7 +131,7 @@ public class RTCPReports
         if (listener == null)
             throw new NullPointerException("listener");
 
-        synchronized (listenerSyncRoot)
+        synchronized (mListenerSyncLock)
         {
             if (!listeners.contains(listener))
             {
@@ -285,17 +285,6 @@ public class RTCPReports
         }
     }
 
-    /**
-     * Gets a list of the <tt>RTCPReportListener</tt>s to be notified by this
-     * instance about the receiving and sending of RTCP RR, SR, and XR.
-     *
-     * @return a list of the <tt>RTCPReportListener</tt>s to be notified by this
-     * instance about the receiving and sending of RTCP RR, SR, and XR
-     */
-    public List<RTCPReportListener> getRTCPReportListeners()
-    {
-        return listeners;
-    }
 
     /**
      * Gets the latest RTCP XR sent from a specific SSRC (of local originator).
@@ -445,7 +434,7 @@ public class RTCPReports
         if (listener == null)
             return;
 
-        synchronized (listenerSyncRoot)
+        synchronized (mListenerSyncLock)
         {
             int index = listeners.indexOf(listener);
 
@@ -535,7 +524,7 @@ public class RTCPReports
 
         if (fire)
         {
-            for (RTCPReportListener listener : getRTCPReportListeners())
+            for (RTCPReportListener listener :listeners)
                 listener.rtcpExtendedReportReceived(extendedReport);
         }
 
@@ -603,7 +592,7 @@ public class RTCPReports
 
         if (fire)
         {
-            for (RTCPReportListener listener : getRTCPReportListeners())
+            for (RTCPReportListener listener :listeners)
                 listener.rtcpExtendedReportSent(extendedReport);
         }
 
@@ -664,7 +653,7 @@ public class RTCPReports
 
         if (fire)
         {
-            for (RTCPReportListener listener : getRTCPReportListeners())
+            for (RTCPReportListener listener :listeners)
                 listener.rtcpReportReceived(report);
         }
     }
@@ -721,7 +710,7 @@ public class RTCPReports
 
         if (fire)
         {
-            for (RTCPReportListener listener : getRTCPReportListeners())
+            for (RTCPReportListener listener :listeners)
                 listener.rtcpReportSent(report);
         }
     }

@@ -41,7 +41,7 @@ public class MediaStreamStatsImpl
     /*
      * A copy of the reports for this Media Stream.
      */
-    RTCPReports mReports = new RTCPReports();
+    private RTCPReports mReports = new RTCPReports();
 
     /**
      * The <tt>Logger</tt> used by the <tt>MediaStreamImpl</tt> class and its
@@ -159,12 +159,9 @@ public class MediaStreamStatsImpl
      */
     public RTCPReports getRTCPReports()
     {
-      return mReports;
+        return mReports;
     }
     
-    /* (non-Javadoc)
-     * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForRX()
-     */
     /* (non-Javadoc)
      * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForRX()
      */
@@ -181,7 +178,8 @@ public class MediaStreamStatsImpl
         // (in which case we need to carefully choose the report).
         if (reports.length > 1)
         {
-            logger.error("Got " + reports.length + " reports");
+            logger.error("Got " + reports.length + " reports");            
+            dumpReports(reports, "Received");
         }
         
         if (reports.length > 0)
@@ -212,6 +210,7 @@ public class MediaStreamStatsImpl
        if (reports.length > 1)
        {
            logger.error("Got " + reports.length + " reports");
+           dumpReports(reports, "Sent");           
        }
     
        if (reports.length > 0)
@@ -1345,6 +1344,18 @@ public class MediaStreamStatsImpl
     }
     
     /**
+     * @param reports Reports to dump
+     * @param direction Must be "Sent" or "Received"
+     */
+    private void dumpReports(RTCPReport[] reports, String direction)
+    {
+        for (RTCPReport report:reports)
+        {
+            dumpRTCPReport(report, direction);
+        }
+    }
+    
+    /**
      * Start test code to track RTCP Reports for this stream. Not
      * called by default.
      */
@@ -1389,6 +1400,10 @@ public class MediaStreamStatsImpl
         }.start();    	
     }
     
+    /**
+     * @param report    A report to dump     
+     * @param direction Must be "Sent" or "Received"
+     */
     private void dumpRTCPReport(RTCPReport report, String direction)
     {
         StringBuffer textReport = new StringBuffer();
@@ -1413,12 +1428,12 @@ public class MediaStreamStatsImpl
         for (int ii=0; ii<feedbacks.size(); ii++)
         {
             RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(ii);
-            //!!! Do something with that
             textReport.append("  Feedback[" + ii + "]" + 
                 ": DLSR="+ feedback.getDLSR() + 
                 ", FracLost=" + feedback.getFractionLost() +
                 ", NumLost=" + feedback.getNumLost() + 
                 ", Jitter" + feedback.getJitter() + "\n");
+
         }
 
         Participant participant = report.getParticipant();

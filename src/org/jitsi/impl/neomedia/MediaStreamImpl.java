@@ -109,7 +109,7 @@ public class MediaStreamImpl
      * <tt>MediaDevice</tt>. The (read and write) accesses to the field are to
      * be synchronized using {@link #receiveStreamsLock}.
      */
-    private final List<ReceiveStream> receiveStreams
+    private final List<ReceiveStream> mReceiveStreams
         = new LinkedList<ReceiveStream>();
 
     /**
@@ -1729,9 +1729,9 @@ public class MediaStreamImpl
             if (deviceSession != null)
             {
                 deviceSession.start(startedDirection);
-                synchronized (receiveStreams)
+                synchronized (mReceiveStreams)
                 {
-                    for (ReceiveStream receiveStream : receiveStreams)
+                    for (ReceiveStream receiveStream : mReceiveStreams)
                         deviceSession.addReceiveStream(receiveStream);
                 }
             }
@@ -2070,30 +2070,33 @@ public class MediaStreamImpl
              * It turns out that the receiveStreams list of rtpManager can be
              * empty. As a workaround, use the receiveStreams of this instance.
              */
-            if (receiveStreams.isEmpty() && (this.receiveStreams != null))
-                receiveStreams = this.receiveStreams;
+            synchronized (mReceiveStreams)
+            {        	
+                if (receiveStreams.isEmpty() && (this.mReceiveStreams != null))
+                    receiveStreams = this.mReceiveStreams;
 
-            for (ReceiveStream receiveStream : receiveStreams)
-            {
-                try
+                for (ReceiveStream receiveStream : receiveStreams)
                 {
-                    DataSource receiveStreamDataSource
-                        = receiveStream.getDataSource();
+                    try
+                    {
+                        DataSource receiveStreamDataSource
+                            = receiveStream.getDataSource();
 
-                    /*
-                     * For an unknown reason, the stream DataSource can be null
-                     * at the end of the Call after re-INVITEs have been
-                     * handled.
-                     */
-                    if (receiveStreamDataSource != null)
-                        receiveStreamDataSource.start();
-                }
-                catch (IOException ioex)
-                {
-                    logger.warn(
+                        /*
+                         * For an unknown reason, the stream DataSource can be null
+                         * at the end of the Call after re-INVITEs have been
+                         * handled.
+                         */
+                        if (receiveStreamDataSource != null)
+                            receiveStreamDataSource.start();
+                    }
+                    catch (IOException ioex)
+                    {
+                       logger.warn(
                             "Failed to start receive stream " + receiveStream,
                             ioex);
-                }
+                    }
+                }    
             }
         }
     }
@@ -2262,38 +2265,41 @@ public class MediaStreamImpl
              * It turns out that the receiveStreams list of rtpManager can be
              * empty. As a workaround, use the receiveStreams of this instance.
              */
-            if (receiveStreams.isEmpty() && (this.receiveStreams != null))
-                receiveStreams = this.receiveStreams;
+        	synchronized (mReceiveStreams)
+        	{
+                if (receiveStreams.isEmpty() && (this.mReceiveStreams != null))
+                    receiveStreams = this.mReceiveStreams;
 
-            for (ReceiveStream receiveStream : receiveStreams)
-            {
-                try
+                for (ReceiveStream receiveStream : mReceiveStreams)
                 {
-                    if (logger.isTraceEnabled())
+                    try
                     {
-                        logger.trace(
+                        if (logger.isTraceEnabled())
+                        {
+                            logger.trace(
                                 "Stopping receive stream with hashcode "
                                     + receiveStream.hashCode());
+                        }
+
+                        DataSource receiveStreamDataSource
+                           = receiveStream.getDataSource();
+
+                        /*
+                         * For an unknown reason, the stream DataSource can be null
+                         * at the end of the Call after re-INVITEs have been
+                         * handled.
+                         */
+                        if (receiveStreamDataSource != null)
+                            receiveStreamDataSource.stop();
                     }
-
-                    DataSource receiveStreamDataSource
-                        = receiveStream.getDataSource();
-
-                    /*
-                     * For an unknown reason, the stream DataSource can be null
-                     * at the end of the Call after re-INVITEs have been
-                     * handled.
-                     */
-                    if (receiveStreamDataSource != null)
-                        receiveStreamDataSource.stop();
-                }
-                catch (IOException ioex)
-                {
-                    logger.warn(
+                    catch (IOException ioex)
+                    {
+                        logger.warn(
                             "Failed to stop receive stream " + receiveStream,
                             ioex);
+                    }
                 }
-            }
+        	}
         }
     }
 
@@ -2419,16 +2425,10 @@ public class MediaStreamImpl
         Set<ReceiveStream> receiveStreams = new HashSet<ReceiveStream>();
 
         // This instance maintains a list of the ReceiveStreams.
-        Lock readLock = receiveStreamsLock.readLock();
 
-        readLock.lock();
-        try
+        synchronized(mReceiveStreams)
         {
-            receiveStreams.addAll(this.receiveStreams);
-        }
-        finally
-        {
-            readLock.unlock();
+            receiveStreams.addAll(this.mReceiveStreams);
         }
 
         /*
@@ -2506,11 +2506,11 @@ public class MediaStreamImpl
 
                 addRemoteSourceID(receiveStreamSSRC);
 
-                synchronized (receiveStreams)
+                synchronized (mReceiveStreams)
                 {
-                    if (!receiveStreams.contains(receiveStream))
+                    if (!mReceiveStreams.contains(receiveStream))
                     {
-                        receiveStreams.add(receiveStream);
+                        mReceiveStreams.add(receiveStream);
 
                         MediaDeviceSession deviceSession = getDeviceSession();
 
@@ -2545,11 +2545,11 @@ public class MediaStreamImpl
                         receiveStream.hashCode());
                 }
 
-                synchronized (receiveStreams)
+                synchronized (mReceiveStreams)
                 {
-                    if (receiveStreams.contains(receiveStream))
+                    if (mReceiveStreams.contains(receiveStream))
                     {
-                        receiveStreams.remove(receiveStream);
+                        mReceiveStreams.remove(receiveStream);
 
                         MediaDeviceSession deviceSession = getDeviceSession();
 

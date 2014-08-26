@@ -9,6 +9,8 @@ package org.jitsi.service.neomedia.rtp;
 import java.io.*;
 import java.util.*;
 
+import org.jitsi.util.*;
+
 import net.sf.fmj.media.rtp.*;
 
 /**
@@ -20,6 +22,12 @@ import net.sf.fmj.media.rtp.*;
 public class RTCPExtendedReport
     extends RTCPPacket
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>RTCPExtendedReport</tt> class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(RTCPExtendedReport.class);
+
     /**
      * Represents an abstract, base extended report block.
      *
@@ -831,7 +839,7 @@ public class RTCPExtendedReport
             s.append(", burst duration ").append(getBurstDuration());
             s.append(", gap duration ").append(getGapDuration());
             s.append(", round trip delay ").append(getRoundTripDelay());
-            // TODO Auto-generated method stub
+
             return s.toString();
         }
     }

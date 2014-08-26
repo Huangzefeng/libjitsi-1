@@ -6,14 +6,11 @@
  */
 package org.jitsi.service.neomedia;
 
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeSupport;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.beans.*;
+import java.util.*;
 
-import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jitsi.util.Logger;
+import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.*;
 
 /**
  * Abstract base implementation of <tt>MediaStream</tt> to ease the
@@ -137,7 +134,7 @@ public abstract class AbstractMediaStream
 
     public Object getProperty(String propertyName)
     {
-        logger.error("Getting " + propertyName + " as " + properties.get(propertyName) + " from " + properties);
+        logger.debug("Getting " + propertyName + " as " + properties.get(propertyName) + " from " + properties);
         return properties.get(propertyName);
     }
 
@@ -185,7 +182,7 @@ public abstract class AbstractMediaStream
 
     public void setProperty(String propertyName, Object value)
     {
-        logger.error("Setting " + propertyName + " to " + value + " on " + properties);
+        logger.debug("Setting " + propertyName + " to " + value + " on " + properties);
         if (value == null)
             properties.remove(propertyName);
         else

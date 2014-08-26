@@ -12,6 +12,7 @@ import java.util.*;
 import javax.media.control.*;
 import javax.media.rtp.*;
 
+import net.sf.fmj.media.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.utility.*;
 
@@ -227,6 +228,14 @@ public class StatisticsEngine
      */
     private long numberOfRTCPReports = 0;
 
+    /*
+     * Difference between the last error report seq num and
+     * our last sent seq number.  Used to calculate RTT.
+     */
+    private int mLastSentSeqNum = 0;
+    private int mLastSentSize = 0;
+    private int mRTTViaSeq = 0;
+
     /**
      * Creates Statistic engine.
      * @param stream the stream creating us.
@@ -344,6 +353,7 @@ public class StatisticsEngine
             }
             catch (IOException e)
             {
+            	logger.warn("IOException", e);
             }
             if (added)
             {
@@ -415,6 +425,7 @@ public class StatisticsEngine
                     }
                     if (rtcpPktLen < minRTCPPktLen)
                     {
+                    	logger.error("RTCP packet not the right legnth");
                         rtcpXRs = null; // Abort, not an RTCP RR or SR packet.
                         break;
                     }
@@ -552,7 +563,7 @@ public class StatisticsEngine
 
         if (MediaType.AUDIO.equals(mediaType))
         {
-            logger.debug("Would add VOIP Metrics block");
+            logger.debug("Add VOIP Metrics block");
             ReceiveStream receiveStream = mediaStream.getReceiveStream(sourceSSRC);
 
             if (receiveStream != null)
@@ -580,6 +591,10 @@ public class StatisticsEngine
                 ReceiveStream receiveStream)
     {
         logger.debug("Trying to create VOIP Metrics block 2");
+        boolean outputMosCQ = true;
+        boolean isSilk = true;
+        int jbDiscardedPacketCount = 0;
+        int jbNominalDelay = 0;
 
         RTCPExtendedReport.VoIPMetricsReportBlock voipMetrics
             = new RTCPExtendedReport.VoIPMetricsReportBlock();
@@ -588,6 +603,10 @@ public class StatisticsEngine
 
         // loss rate
         long expectedPacketCount = 0;
+        int lostPacketCount = 0;
+        int processedPacketCount = 0;
+        int invalidPacketCount = 0;
+        long fecDecodedPacketCount = 0;
         ReceptionStats receptionStats = receiveStream.getSourceReceptionStats();
         double lossRate;
 
@@ -596,21 +615,34 @@ public class StatisticsEngine
             SSRCInfo ssrcInfo = (SSRCInfo) receiveStream;
 
             expectedPacketCount = ssrcInfo.getExpectedPacketCount();
+            lostPacketCount = receptionStats.getPDUlost();
+            processedPacketCount = receptionStats.getPDUProcessed();
+            invalidPacketCount = receptionStats.getPDUInvalid();
+            fecDecodedPacketCount = getFECDecodedPacketCount(receiveStream);
+
             if (expectedPacketCount > 0)
             {
-                long lostPacketCount = receptionStats.getPDUlost();
-
-                if ((lostPacketCount > 0)
-                        && (lostPacketCount <= expectedPacketCount))
+                if (lostPacketCount > 0)
                 {
+                	  if (lostPacketCount <= expectedPacketCount)
+                	  {
+                		    logger.error("More lost packets than expected"
+                			  	  + ": lost=" + lostPacketCount
+                				    + ", expected=" + expectedPacketCount);
+                	  }
+                	
                     /*
                      * RFC 3611 mentions that the total number of packets lost
                      * takes into account "the effects of applying any error
                      * protection such as FEC".
                      */
-                    long fecDecodedPacketCount
-                        = getFECDecodedPacketCount(receiveStream);
-
+                    if (fecDecodedPacketCount <= lostPacketCount)
+                    {
+                    	logger.error("More FEC decoded than lost"
+                             + ": FEC=" + fecDecodedPacketCount
+                             + ", lost=" + lostPacketCount);
+                    }
+                    		
                     if ((fecDecodedPacketCount > 0)
                             && (fecDecodedPacketCount <= lostPacketCount))
                     {
@@ -626,24 +658,28 @@ public class StatisticsEngine
                 }
             }
         }
+        else
+        {
+        	logger.error("Could not get SSRC Info");
+        	outputMosCQ = false;
+        }
 
         // round trip delay
+        int rttDelay = 0;
         if (receiveStream instanceof RecvSSRCInfo)
         {
-            voipMetrics.setRoundTripDelay(
-                    ((RecvSSRCInfo) receiveStream).getRoundTripDelay(
-                            senderSSRC));
+        	rttDelay = ((RecvSSRCInfo) receiveStream).getRoundTripDelay(
+                    senderSSRC);
+            voipMetrics.setRoundTripDelay(rttDelay);
+
+            // End system delay
+            voipMetrics.setEndSystemDelay(mRTTViaSeq - (rttDelay / 2) + 100);
         }
-        // end system delay
-        /*
-         * Defined as the sum of the total sample accumulation and encoding
-         * delay associated with the sending direction and the jitter buffer,
-         * decoding, and playout buffer delay associated with the receiving
-         * direction. Collectively, these cover the whole path from the network
-         * to the very playback of the audio. We cannot guarantee latency pretty
-         * much anywhere along the path and, consequently, the metric will be
-         * "extremely variable".
-         */
+        else
+        {
+        	logger.error("Could not get RTT");
+        	outputMosCQ = false;
+        }
 
         // signal level
         // noise level
@@ -686,13 +722,6 @@ public class StatisticsEngine
          * TODO It is unclear at the time of this writing from RFC 3611 how
          * MOS-LQ is to be calculated.
          */
-        // MOS-CQ
-        /*
-         * The metric may be calculated by converting an R factor determined
-         * according to ITU-T G.107 or ETSI TS 101 329-5 into an estimated MOS
-         * using the equation specified in G.107. However, we do not have R
-         * factor.
-         */
 
         // receiver configuration byte (RX config)
         // packet loss concealment (PLC)
@@ -719,47 +748,67 @@ public class StatisticsEngine
                         = RTCPExtendedReport.VoIPMetricsReportBlock
                             .STANDARD_PACKET_LOSS_CONCEALMENT;
                 }
+
+                isSilk = Constants.SILK_RTP.toLowerCase().contains(encoding);
             }
+            else
+            {
+            	logger.error("Not enough info for MOSCQ");
+            	outputMosCQ = false;
+            }
+        }
+        else
+        {
+        	logger.error("Not enough info for MOSCQ");
+        	outputMosCQ = false;
         }
         voipMetrics.setPacketLossConcealment(packetLossConcealment);
 
         // jitter buffer adaptive (JBA)
-        JitterBufferControl jbc = 
+        JitterBufferControl jbc =
            MediaStreamStatsImpl.getJitterBufferControl(receiveStream);
         double discardRate;
 
         if (jbc == null)
         {
+        	  logger.error("Jitter buffer control is null");
             voipMetrics.setJitterBufferAdaptive(
                     RTCPExtendedReport.VoIPMetricsReportBlock
                         .UNKNOWN_JITTER_BUFFER_ADAPTIVE);
+            outputMosCQ = false;
         }
         else
         {
             // discard rate
             if (expectedPacketCount > 0)
             {
-                int discardedPacketCount = jbc.getDiscarded();
+                jbDiscardedPacketCount = jbc.getDiscarded();
 
-                if ((discardedPacketCount > 0)
-                        && (discardedPacketCount <= expectedPacketCount))
+                if ((jbDiscardedPacketCount > 0)
+                        && (jbDiscardedPacketCount <= expectedPacketCount))
                 {
                     discardRate
-                        = (discardedPacketCount / (double) expectedPacketCount)
+                        = (jbDiscardedPacketCount / (double) expectedPacketCount)
                             * 256;
                     if (discardRate > 255)
                         discardRate = 255;
                     voipMetrics.setDiscardRate((short) discardRate);
                 }
             }
+            else
+            {
+            	  logger.error("No expected packets");
+                outputMosCQ = false;
+            }
 
             // jitter buffer nominal delay (JB nominal)
             // jitter buffer maximum delay (JB maximum)
             // jitter buffer absolute maximum delay (JB abs max)
             int maximumDelay = jbc.getMaximumDelay();
+            jbNominalDelay = jbc.getNominalDelay();
 
             voipMetrics.setJitterBufferMaximumDelay(maximumDelay);
-            voipMetrics.setJitterBufferNominalDelay(jbc.getNominalDelay());
+            voipMetrics.setJitterBufferNominalDelay(jbNominalDelay);
             if (jbc.isAdaptiveBufferEnabled())
             {
                 voipMetrics.setJitterBufferAdaptive(
@@ -822,6 +871,25 @@ public class StatisticsEngine
             // Gmin
             voipMetrics.setGMin(burstMetrics.getGMin());
         }
+
+        // MOS-CQ
+        /*
+         * The metric may be calculated by converting an R factor determined
+         * according to ITU-T G.107 or ETSI TS 101 329-5 into an estimated MOS
+         * using the equation specified in G.107. However, we do not have R
+         * factor.
+         */
+        int mosCQ = getMosCQ(isSilk,
+        		                 rttDelay,
+                             mRTTViaSeq,
+                             jbNominalDelay,
+                             jbDiscardedPacketCount,
+                             processedPacketCount,
+                             lostPacketCount,
+                             invalidPacketCount,
+                             fecDecodedPacketCount);
+
+        voipMetrics.setMosCq((byte) mosCQ);
 
         return voipMetrics;
     }
@@ -903,12 +971,12 @@ public class StatisticsEngine
     @Override
     public PacketTransformer getRTPTransformer()
     {
-        return null;
+        return this;
     }
 
     /**
      * Initializes a new SR or RR <tt>RTCPReport</tt> instance from a specific
-     * <tt>RawPacket</tt>.
+     * <tt>RawPacket</tt>
      *
      * @param pkt the <tt>RawPacket</tt> to parse into a new SR or RR
      * <tt>RTCPReport</tt> instance
@@ -920,23 +988,29 @@ public class StatisticsEngine
     private RTCPReport parseRTCPReport(RawPacket pkt)
         throws IOException
     {
+        RTCPReport report = null;
+        String dir = "";
         switch (pkt.getRTCPPacketType())
         {
-        case RTCPPacket.RR:
-            return
-                new RTCPReceiverReport(
-                        pkt.getBuffer(),
-                        pkt.getOffset(),
-                        pkt.getLength());
-        case RTCPPacket.SR:
-            return
-                new RTCPSenderReport(
-                        pkt.getBuffer(),
-                        pkt.getOffset(),
-                        pkt.getLength());
-        default:
-            return null;
+            case RTCPPacket.RR:
+                report =
+                    new RTCPReceiverReport(
+                            pkt.getBuffer(),
+                            pkt.getOffset(),
+                            pkt.getLength());
+                dir = "Recieve report";
+            case RTCPPacket.SR:
+                report =
+                    new RTCPSenderReport(
+                            pkt.getBuffer(),
+                            pkt.getOffset(),
+                            pkt.getLength());
+                dir = "Sender report";
+            default:
+                ;
         }
+
+        return report;
     }
 
     /**
@@ -999,7 +1073,7 @@ public class StatisticsEngine
 
             // RTCP XR
             if (xrs != null)
-                    {
+            {
                 RTCPReports rtcpReports
                     = mediaStream.getMediaStreamStats().getRTCPReports();
 
@@ -1007,10 +1081,11 @@ public class StatisticsEngine
 
                 for (RTCPExtendedReport xr : xrs)
                     rtcpReports.rtcpExtendedReportReceived(xr);
-                    }
-                }
-        return pkt;
-            }
+             }
+         }
+
+         return pkt;
+     }
 
     /**
      * Transfers RTCP sender report feedback as new information about the
@@ -1101,6 +1176,13 @@ public class StatisticsEngine
                 }
             }
         }
+        else
+        {
+            // Update last sent Seq number
+            mLastSentSeqNum = pkt.getSequenceNumber();
+            mLastSentSize = pkt.getLength();
+        }
+
         return pkt;
     }
 
@@ -1109,20 +1191,55 @@ public class StatisticsEngine
      * the upload stream for the <tt>MediaStreamStats</tt>.
      *
      * @param pkt the received RTCP packet
+     * @throws IOException
      */
     private void updateReceivedMediaStreamStats(RawPacket pkt)
-        throws Exception
+    		throws IOException
     {
-      logger.debug("Update stats");
+        logger.debug("Update stats");
 
         RTCPReport r = parseRTCPReport(pkt);
 
         if (r != null)
         {
-          logger.debug("Adding Standard receive report");
+            logger.debug("Adding Standard receive report");
 
             mediaStream.getMediaStreamStats().getRTCPReports()
                 .rtcpReportReceived(r);
+
+            // Now we have received a report, we need to calculated the RTT.
+            if (r instanceof RTCPSenderReport)
+            {
+                Vector<?> feedbacks = r.getFeedbackReports();
+                if (feedbacks.size() > 0)
+                {
+                    // First get the SSRC and their seq number.
+                    RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(0);
+                    long seqNum = feedback.getXtndSeqNum() << 32 >> 32;
+
+                    int seqNumDiff = mLastSentSeqNum - (int) seqNum;
+
+                    // So now we have the difference is seq numbers, now
+                    // find out what that means in ms.
+                    MediaFormat format = mediaStream.getFormat();
+                    String clockRate =
+                        (format == null) ? null : format.getRealUsedClockRateString();
+
+                    if (clockRate != null)
+                    {
+                    	try
+                    	{
+                    		int rate = Integer.parseInt(clockRate);                    		
+                    		int pTime = (mLastSentSize * 1000) / (rate);                    		
+                    		mRTTViaSeq = seqNumDiff * pTime;
+                    	}
+                    	catch (NumberFormatException e)
+                    	{
+                    		logger.error("Expected clock rate " + clockRate);
+                    	}
+                    }
+                }
+            }
         }
     }
 
@@ -1133,7 +1250,7 @@ public class StatisticsEngine
      * @param pkt the sent RTCP packet
      */
     private void updateSentMediaStreamStats(RawPacket pkt)
-        throws Exception
+        throws IOException
     {
         logger.debug("Update stats");
 
@@ -1145,62 +1262,280 @@ public class StatisticsEngine
 
             mediaStream.getMediaStreamStats().getRTCPReports().rtcpReportSent(
                     r);
-
-            // What follows is used for logging purposes only. Thus, it is
-            // useless to continue unless the logger is at least at INFO level.
-            if(logger.isInfoEnabled())
-            {
-                numberOfRTCPReports++;
-
-                List<?> feedbackReports = r.getFeedbackReports();
-
-                if(!feedbackReports.isEmpty())
-                {
-                    RTCPFeedback feedback
-                        = (RTCPFeedback) feedbackReports.get(0);
-                    long jitter = feedback.getJitter();
-
-                    if((jitter < getMinInterArrivalJitter())
-                            || (getMinInterArrivalJitter() == -1))
-                        minInterArrivalJitter = jitter;
-                    if(getMaxInterArrivalJitter() < jitter)
-                        maxInterArrivalJitter = jitter;
-
-                    lost = feedback.getNumLost();
-
-                    // As sender reports are sent on every 5 seconds, print
-                    // every 4th packet, on every 20 seconds.
-                    if(numberOfRTCPReports % 4 == 1)
-                    {
-                    StringBuilder buff = new StringBuilder(RTP_STAT_PREFIX);
-                    String mediaTypeStr
-                        = (mediaType == null) ? "" : mediaType.toString();
-
-                    buff.append("Sending a report for ")
-                        .append(mediaTypeStr)
-                            .append(" stream SSRC:").append(feedback.getSSRC())
-                            .append(" [");
-                        // SR includes sender info, RR does not.
-                        if (r instanceof RTCPSenderReport)
-                        {
-                            RTCPSenderReport sr = (RTCPSenderReport) r;
-
-                            buff.append("packet count:")
-                                    .append(sr.getSenderPacketCount())
-                        .append(", bytes:")
-                                    .append(sr.getSenderByteCount())
-                                .append(", ");
-                        }
-                        buff.append("interarrival jitter:").append(jitter)
-                            .append(", lost packets:")
-                                .append(feedback.getNumLost())
-                        .append(", time since previous report:")
-                        .append((int) (feedback.getDLSR() / 65.536))
-                        .append("ms ]");
-                    logger.info(buff);
-                }
-            }
-        }
-            }
         }
     }
+
+    /**
+     *
+     * A copy of C code in Accession Mobile.  Style left the same for easy of
+     * copying updates in future.
+     *
+     * @param isSilk Whether the call is SILK or not
+     * @param rttDelay       - round trip time
+     * @param rttViaSeq      - rtt calculated via sequence numbers
+     * @param jbLatency      - jitter buffer latency
+     * @param jbDiscards     - jitter buffer discards
+     * @param rxPkt          - number pkts received
+     * @param rxLoss         - number pkts lost
+     * @param rxDiscard      - number pkts discarded.
+     * @param rxFECCorrected - number pkts forward error corrected
+     * @return The MosCQ
+     */
+    private int getMosCQ(boolean isSilk,
+                         int rttDelay,
+                         int rttViaSeq,
+                         int jbLatency,
+                         int jbDiscards,
+                         int rxPkt,
+                         int rxLoss,
+                         int rxDiscard,
+                         long rxFECCorrected)
+    {
+        // Default to unknown.
+        int mosCQ = 127;
+
+        // Ensure RTT via seq is at least as large as RTT.  The reverse can
+        // occur  when the two sets of stats are updated at different times.
+        if (rttViaSeq < rttDelay)
+            rttViaSeq = rttDelay;
+
+        // First we need to calculate R.
+        //
+        // R = Ro - Is - Id - (Ie - eff) + A
+
+        // We need some definitions for the parameters involved.
+        //
+        //        Unit   Default   Range
+        //
+        // SLR    dB     8         0 - 18         Send loudness rating
+        // RLR    dB     2         -5 - 14        Receive loudness rating
+        // OLR    dB     10        -5 - 36        Overall loudness rating (OLR = SLR + RLR)
+        // Nc     dBm0p  -70       -80 - -40      Circuit noise referred to 0dBr-point
+        // Ps     bA     35        35 - 85        Room noise at sender
+        // Ds     -      3         -3 - 3         D-Value of telephone at sender
+        // Pr     bA     35        35 - 85        Room noise at receiver
+        // LSTR   dB     18        13 - 23        Listener sidetone rating
+        // Nfor   dBm0p  -64                      Noise floor at receive side
+        // STMR   dB     15        10 - 20        Sidetone masking rating
+        // T      ms     0         0 - 500        Delay from talking receiver to echo src  This is approximated by RTT_from_seq (which includes Perimeta JB) - RTT/2 + 100 (to account for audio rendering delays)
+        // TELR   dB     65        0 - 65         Talker loudness echo rating
+        // qdu    -      1         1 - 14         Number of quantisation distortion units
+        // WEPL   dB     110       5 - 110        Weighted echo path loss
+        // Tr     ms     0         0 - 1000       Round-trip delay in 4-wire loop          This is RTT_from_seq (which includes Perimeta JB)
+        // Ta     ms     0         0 - 500        One-way delay from sender to receiver    This is approximated by RTT / 2 + JB latency; incoming packets are not queued in Perimeta, so incoming delay should be RTT / 2
+        // Ie     -      0         0 - 40         Equipment impairment factor              Codec-specifc; ITU-T G.113
+        // Ppl    %      0         0 - 100        Random packet-loss probability           This is calculated from RTCP packets, loss, discards & FEC and JB discards
+        // BurstR -      1         1 - 8          Burst ratio                              Assume 1 - random packet loss
+        // Bpl    -      4.3       4.3 - 40       Packet-loss robustness factor            Codec-specifc; ITU-T G.113
+        double SLR    = 8;
+        double RLR    = 2;
+        double OLR    = SLR + RLR;
+        double Nc     = -70;
+        double Ps     = 35;
+        double Ds     = 3;
+        double Pr     = 35;
+        double LSTR   = 18;
+        double Nfor   = -64;
+        double STMR   = 15;
+        double T      = rttViaSeq - (rttDelay / 2) + 100;
+        double TELR   = 65;
+        double qdu    = 1;
+        double WEPL   = 110;
+        double Tr     = rttViaSeq;
+        double Ta     = rttDelay / 2 + jbLatency;
+        double Ie     = 0;     // From ITU-T G.113 for G.711 PCM
+
+        double Ppl    = (rxPkt == 0) ?
+            ((rxLoss + rxDiscard + jbDiscards - rxFECCorrected) * 100) / (rxPkt + rxLoss)
+            : 0;
+
+        double BurstR = 1;
+        double Bpl    = 25.1;    // From UTI-T G.113 for G.711 PCM
+
+        // Clamp Ppl to cover the of sheared info from the JB, codec and RTCP stats resulting in a negative value.
+        if (Ppl < 0) Ppl = 0;
+
+        // Ro - Basic signal-to-noise-ratio
+        //
+        // Ro = 15 - 1.5 * (SLR + No)
+        //   SLR        = see params
+        //   No [dBm0p] = 10 log (10^(Nc/10) + 10^(Nos/10) + 10^(Nor/10) + 10^(Nfo/10))          Power addition of various noise sources
+        //     Nc          = see params
+        //     Nos [dBm0p] = Ps - SLR - Ds - 100 + 0.004 * ((Ps - OLR - Ds - 14)^2)              Circuit noise caused by room noise at sender
+        //       Ps  = see params
+        //       SLR = see params
+        //       Ds  = see params
+        //       OLR = see params
+        //     Nor [dBm0p] = RLR - 121 + Pre + 0.008 * (Pre - 35)^2                              Circuit noise caused by room noise at receiver
+        //       RLR = see params
+        //       Pre = Pr + 10 log (1 + 10^(10 - LSTR / 10))                                     Effective room noise caused by receive sidetone path
+        //         Pr   = see params
+        //         LSTR = see params
+        //     Nfo [dBm0p] = Nfor + RLR                                                          Noise floor at receive side
+        //         Nfor = see params
+        //         RLR  = see params
+        //
+        // The client doesn't track any of this information, so we could pre-calculate Ro using defaults.
+        double Nos = Ps - SLR - Ds - 100 + 0.004 * pow(Ps - OLR - Ds - 14, 2);
+        double Pre = Pr + 10 * log10(1 + pow(10, (10 - LSTR) / 10)) / log10(10); // Note: last /log10(10) term is in standard code, but not defn
+        double Nor = RLR - 121 + Pre + 0.008 * pow(Pre - 35, 2);
+        double Nfo = Nfor + RLR;
+        double No = 10 * log10(pow(10, Nc / 10) + pow(10, Nos / 10) + pow(10, Nor / 10) + pow(10, Nfo / 10));
+        double Ro = 15 - 1.5 * (SLR + No);
+
+        // Is - Simultaneous impairment factor
+        //
+        // Is = Iolr + Ist + Iq
+        //   Iolr = 20 * ((1 + (Xolr / 8)^8)^(1/8) - Xolr / 8)                                   Too-low values of (SLR + RLR)
+        //     Xolr = OLR + 0.2 * (64 + No - RLR)
+        //       OLR = see params
+        //       RLR = see params
+        //       No  = calculated above
+        //   Ist = 12 * (1 + ((STMRo - 13) / 6)^8)^(1/8) -
+        //         28 * (1 + ((STMRo + 1) / 19.4)^35)^(1/35) -                                   Non-optimum sidetone
+        //         13 * (1 + ((STMRo - 3) / 33)^13)^(1/13) + 29
+        //     STMRo = -10 log (10^(-STMR/10) + e^(-T/4) * 10^(-TELR/10))
+        //       STMR = see params
+        //       T    = see params
+        //       TELR = see params
+        //   Iq = 15 log (1 + 10^Y + 10^Z)                                                       Quantizing distortion
+        //     Y = ((Ro - 100) / 15) + (46 / 8.4) - (G / 9)
+        //       Ro = calculated above
+        //       G = 1.07 + (0.258 * Q) + (0.0602 * Q^2)
+        //         Q = 37 - 15 log (qdu)
+        //           qdu = see params
+        //     Z = (46 / 30) - (G / 40)
+        //
+        // The client doesn't track any of this information (except T, and that's currently hardcoded), so we could
+        // pre-calculate Is using defaults.
+        double Q = 37 - 15 * log10(qdu) / log10(10); // Note: last /log10(10) term is in standard code, but not defn
+        double G = 1.07 + (0.258 * Q) + (0.0602 * pow(Q, 2));
+        double Y = ((Ro - 100) / 15) + (46 / 8.4) - (G / 9);
+        double Z = (46.0 / 30) - (G / 40);
+        double Iq = 15 * log10(1 + pow(10, Y) + pow(10, Z));
+        double STMRo = -10 * log10(pow(10, -STMR / 10) + exp(-T / 4) * pow(10, -TELR / 10));
+        double Ist = 12 * pow(1 + pow((STMRo - 13) / 6, 8), 1.0 / 8) -
+              28 * pow(1 + pow((STMRo + 1) / 19.4, 35), 1.0 / 35) -
+                  13 * pow(1 + pow((STMRo - 3) / 33, 13), 1.0 / 13) +
+                  29;
+        double Xolr = OLR + 0.2 * (64 + No - RLR);
+        double Iolr = 20 * (pow(1 + pow(Xolr / 8, 8), 1.0 / 8) - (Xolr / 8));
+        double Is = Iolr + Ist + Iq;
+
+        // Id - Delay impairment factor
+        //
+        // Id = Idte + Idle + Idd
+        //  Idte = ((Roe - Re)/2 + sqrt(((Roe - Re)^2)/4 + 100) - 1) * (1 - e^(-T))						  Talker echo, we assume 9bD < STMR < 20 dB (default is 15)
+        //    Roe = -1.5 * (No - RLR)
+        //      No  = calculated above
+        //      RLR = see params
+        //      T   = see params
+        //    Re = 80 + 2.5 * (TERV - 14)
+        //      TERV = TELR - 40 log ((1 + T/10) / (1 + T/150)) + 6 * e^(-0.3 * T^2)
+        //        T    = see params
+        //        TELR = see params
+        //  Idle = (Ro - Rle) / 2 + sqrt(((Ro - Rle)^2)/4 + 169)                                          Listener echo
+        //    Ro  = calculated above
+        //    Rle = 10.5 * (WEPL + 7) * (Tr + 1)^-0.25
+        //      WEPL = see params
+        //      Tr   = see params
+        //  Idd = (Ta <= 100ms) => Idd = 0;                                                               Too-long absolute delay
+        //        (Ta  > 100ms) => 25 * ((1 + X^6)^(1/6) - 3 * (1 + (X/3)^6)^(1/6) + 2)
+        //    Ta = see params
+        //    X  = (Ta == 0) => 0
+          //         (Ta  > 0) => log (Ta / 100) / log 2
+        //
+        // We could pre-calculate Idte.
+        // However, we need to calculate Idle (based on Tr) and Idd (based on Ta).
+        double Roe = -1.5 * (No - RLR);
+        double TERV = TELR - 40 * log10((1 + T / 10) / (1 + T / 150)) + 6 * exp(-0.3 * pow(T, 2));
+        double Re = 80 + 2.5 * (TERV - 14);
+        double Idte = ((Roe - Re) / 2 + sqrt(pow(Roe - Re, 2) / 4 + 100) - 1) * (1 - exp(-T));
+        double Rle = 10.5 * (WEPL + 7) * pow(Tr + 1, -0.25);
+        double Idle = (Ro - Rle) / 2 + sqrt(pow(Ro - Rle, 2) / 4 + 169);
+        double X = (Ta == 0) ? 0 : log10(Ta / 100) / log10(2);
+        double Idd = (Ta < 100) ? 0 : 25 * (pow(1 + pow(X, 6), 1.0 / 6) - 3 * pow(1 + pow(X / 3, 6), 1.0 / 6) + 2);
+        double Id = Idte + Idle + Idd;
+
+        // (Ie - eff) - Packet loss equipment impairment factor
+        //
+        // We calculate this in different ways depending on the codec in use.
+        double Ie_minus_eff;
+
+        if (!isSilk)
+        {
+            // The codec is G711 - either alaw or ulaw.  Either way, G.107 defines the calculation as follows.
+            //
+            // (Ie - eff) = Ie + (95 - Ie) * (Ppl / ((Ppl / BurstR) + Bpl))
+            //   Ie     = see params
+            //   Ppl    = see params
+            //   BurstR = see params
+            //   Bpl    = see params
+            //
+            // We need to calculate based on Ie (codec-dependent), Ppl, and Bpl (codec-dependent).  BurstR is defaulted.
+            Ie_minus_eff = Ie + (95 - Ie) * (Ppl / (Ppl / BurstR + Bpl));
+        }
+        else
+        {
+            // An alternate calculation for SILK (http://www.maths.tcd.ie/~dwmalone/p/qcman2013.pdf) is as follows.
+            // A drawback of G.113 is that it doesn't define Ie and Bpl constants for SILK - it didn't exist yet.
+            // The constants below come from empirical testing using PESQ.  They are not tuned for our specific implementation.
+            Ie_minus_eff = 18.3442 * log10(1 + 1.54894 * Ppl) + 1.31953;
+        }
+
+        // A - Advantage factor
+        //
+        // A = value of 0-20 based on misc. parameters.  Defined in ITU-T G.113.  We need to decide which value to use.
+        double A = 1;  // This is based on "advantage of access".  Well, it's
+                      // VoIP, so bit of an advantage... right?
+
+        // Add that all up to calculate the R value.
+        //
+        // R = Ro - Is - Id - (Ie - eff) + A
+        double R = Ro - Is - Id - Ie_minus_eff + A;
+
+        // Now, convert the R value into a MOS CQ value.
+        //
+        // MOS CQ = (R < 0)       1
+        //          (0 < R < 100) 1 + 0.035 * R + R * (R - 60) * (100 - R) * 7 * 10^(-6)
+        //          (R > 100)     4.5
+        //
+        // We multiply this by ten (as RTCP-XR represents the info as a value
+        // from 10-50).
+        mosCQ = (int) ((R < 0)   ? 10 :
+          (R < 100) ? 10 * (1 + 0.035 * R + R * (R - 60) * (100 - R) * 7 * pow(10, -6)) :
+          45);
+
+        //PJ_LOG(4,(rtcp_xr_session->name, "MOS %% loss is %g (l %d + d %d + jbd %d - fec %d / n %d + l %d)",        Ppl, rtcp_session->stat.rx.loss, rtcp_session->stat.rx.discard, jb_discards, rtcp_session->stat.rx.fec_corrected, rtcp_session->stat.rx.pkt, rtcp_session->stat.rx.loss));
+        //PJ_LOG(4,(rtcp_xr_session->name, "MOS RTT (seq) %d, RTT %d, JB %d", rtcp_session->stat.rtt_calculated_via_RR_lastseqno, rtcp_xr_session->stat.rx.voip_mtc.rnd_trip_delay, jb_latency));
+        //PJ_LOG(4,(rtcp_xr_session->name, "  T = %g, Tr = %g, Ta = %g", T, Tr, Ta));
+        //PJ_LOG(4,(rtcp_xr_session->name, "  Ro = %g, Is = %g, Id = %g, Ie-eff = %g, A = %g", Ro, Is, Id, Ie_minus_eff, A));
+        // PJ_LOG(4,(rtcp_xr_session->name, "Local CQ MOS is %d, R is %g",
+        // mos_cq, R));
+        logger.info("MosCQ=" + mosCQ);
+
+        return mosCQ;
+    }
+
+    // Dull wrappers, so the code above matches the C equivalent, so
+    // we can diff them against each other.
+    private double sqrt(double d)
+    {
+        return pow(d, 0.5);
+    }
+
+    private double exp(double d)
+    {
+       return Math.exp(d);
+    }
+
+    private double pow(double a, double b)
+    {
+       return Math.pow(a, b);
+    }
+
+    private double log10(double a)
+    {
+      return Math.log10(a);
+    }
+}
