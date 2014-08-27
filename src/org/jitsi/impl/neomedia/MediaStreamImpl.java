@@ -2621,7 +2621,9 @@ public class MediaStreamImpl
      */
     @Override
     public void update(SendStreamEvent event)
-    {
+    {    	
+    	// @@@ ENH hack.
+    	/*
         if (event instanceof NewSendStreamEvent)
         {
             long localSourceID = event.getSendStream().getSSRC();
@@ -2629,6 +2631,7 @@ public class MediaStreamImpl
             if (getLocalSourceID() != localSourceID)
                 setLocalSourceID(localSourceID);
         }
+        */
     }
 
     /**

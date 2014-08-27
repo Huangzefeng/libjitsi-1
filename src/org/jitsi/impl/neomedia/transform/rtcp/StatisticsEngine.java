@@ -672,8 +672,10 @@ public class StatisticsEngine
                     senderSSRC);
             voipMetrics.setRoundTripDelay(rttDelay);
 
-            // End system delay
-            voipMetrics.setEndSystemDelay(mRTTViaSeq - (rttDelay / 2) + 100);
+            // End system delay.  If it's <0, put 0.
+            int esd = mRTTViaSeq - (rttDelay / 2) + 100;
+            if (esd < 0) esd = 0;
+            voipMetrics.setEndSystemDelay(esd);
         }
         else
         {
@@ -1180,7 +1182,7 @@ public class StatisticsEngine
         {
             // Update last sent Seq number
             mLastSentSeqNum = pkt.getSequenceNumber();
-            mLastSentSize = pkt.getLength();
+            mLastSentSize = pkt.getLength();            
         }
 
         return pkt;
