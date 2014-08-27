@@ -23,8 +23,8 @@ public interface MediaStreamStats
      * Interfaces to get at the RCTP reports for this stream.
      */
      RTCPReports getRTCPReports();
-     RTCPReport getReceivedRTCPRR();
-     RTCPReport getSentRTCPRR();          
+     RTCPReport getReceivedRTCPRR(long ssrc);
+     RTCPReport getSentRTCPRR(long src);          
      RTCPExtendedReport getReceivedExtendedReport(long ssrc); 
      RTCPExtendedReport getSentExtendedReport(long ssrc);
      RTCPFeedback getReceivedFeedback(long ssrc);

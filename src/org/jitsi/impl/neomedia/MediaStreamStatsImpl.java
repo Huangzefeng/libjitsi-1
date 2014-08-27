@@ -170,27 +170,9 @@ public class MediaStreamStatsImpl
     /* (non-Javadoc)
      * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForRX()
      */
-    public RTCPReport getReceivedRTCPRR()
+    public RTCPReport getReceivedRTCPRR(long ssrc)
     {
-    	RTCPReport rrForXR = null;
-    			
-        RTCPReport[] reports = mReports.getReceivedRTCPReports();
-        
-        // After the call has ended, sometimes we see an extra report
-        // creep in.  We've never actually seen it at the point we
-        // generate the analytics report, but here's a line of trace 
-        // that will trigger us to be a bit more careful if it can happen
-        // (in which case we need to carefully choose the report).
-        if (reports.length > 1)
-        {
-            logger.error("Got " + reports.length + " reports");            
-            dumpReports(reports, "Received");
-        }
-        
-        if (reports.length > 0)
-        {
-        	rrForXR = reports[0];
-        }
+    	RTCPReport rrForXR = mReports.getReceivedRTCPReport((int) ssrc);
         
         return rrForXR;
     }
@@ -201,27 +183,9 @@ public class MediaStreamStatsImpl
     /* (non-Javadoc)
      * @see org.jitsi.service.neomedia.MediaStreamStats#getRTCPRRForTX()
      */
-    public RTCPReport getSentRTCPRR()
+    public RTCPReport getSentRTCPRR(long ssrc)
     {
-       RTCPReport rrForTX = null;
-       
-       RTCPReport[] reports = mReports.getSentRTCPReports();
-       
-       // After the call has ended, sometimes we see an extra report
-       // creep in.  We've never actually seen it at the point we
-       // generate the analytics report, but here's a line of trace 
-       // that will trigger us to be a bit more careful if it can happen
-       // (in which case we need to carefully choose the report).    
-       if (reports.length > 1)
-       {
-           logger.error("Got " + reports.length + " reports");
-           dumpReports(reports, "Sent");           
-       }
-    
-       if (reports.length > 0)
-       {
-    	   rrForTX = reports[0];
-       }
+       RTCPReport rrForTX = mReports.getSentRTCPReport((int) ssrc);
        
        return rrForTX;
     }    
@@ -231,7 +195,6 @@ public class MediaStreamStatsImpl
      */
     public RTCPExtendedReport getReceivedExtendedReport(long ssrc)
     {
-   	
         return mReports.getReceivedRTCPExtendedReport((int) ssrc);
     }
 
