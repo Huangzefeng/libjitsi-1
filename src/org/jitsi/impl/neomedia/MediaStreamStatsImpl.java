@@ -94,6 +94,11 @@ public class MediaStreamStatsImpl
      * The total number of discarded packets
      */
     private long nbDiscarded = 0;
+    
+    /*
+     * The RRT calculatd via Seq Numbers.
+     */
+    private long mRttViaSeq = 0;
 
     /**
      * The number of packets for which FEC data was decoded. This is only
@@ -1077,6 +1082,20 @@ public class MediaStreamStatsImpl
     public long getRttMs()
     {
         return this.rttMs;
+    }
+    
+ 
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getRttViaSeqMs()
+     */
+    public long getRttViaSeqMs()
+    {
+        return mRttViaSeq;
+    }  
+    
+    public void updateRttViaSeqMs(long rttViaSeq)
+    {
+    	mRttViaSeq = rttViaSeq;
     }
 
     /**

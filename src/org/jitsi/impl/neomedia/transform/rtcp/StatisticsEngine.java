@@ -797,7 +797,7 @@ public class StatisticsEngine
             }
             else
             {
-            	  logger.error("No expected packets");
+                logger.error("No expected packets");
                 outputMosCQ = false;
             }
 
@@ -1232,6 +1232,7 @@ public class StatisticsEngine
                     		int rate = Integer.parseInt(clockRate);                    		
                     		int pTime = (mLastSentSize * 1000) / (rate);                    		
                     		mRTTViaSeq = seqNumDiff * pTime;
+                    		mediaStream.getMediaStreamStats().updateRttViaSeqMs(mRTTViaSeq);
                     	}
                     	catch (NumberFormatException e)
                     	{
