@@ -624,7 +624,7 @@ public class StatisticsEngine
             {
                 if (lostPacketCount > 0)
                 {
-                	  if (lostPacketCount <= expectedPacketCount)
+                	  if (lostPacketCount > expectedPacketCount)
                 	  {
                 		    logger.error("More lost packets than expected"
                 			  	  + ": lost=" + lostPacketCount
@@ -636,7 +636,7 @@ public class StatisticsEngine
                      * takes into account "the effects of applying any error
                      * protection such as FEC".
                      */
-                    if (fecDecodedPacketCount <= lostPacketCount)
+                    if (fecDecodedPacketCount > lostPacketCount)
                     {
                     	logger.error("More FEC decoded than lost"
                              + ": FEC=" + fecDecodedPacketCount
@@ -771,7 +771,7 @@ public class StatisticsEngine
 
         if (jbc == null)
         {
-        	  logger.error("Jitter buffer control is null");
+            logger.error("Jitter buffer control is null");
             voipMetrics.setJitterBufferAdaptive(
                     RTCPExtendedReport.VoIPMetricsReportBlock
                         .UNKNOWN_JITTER_BUFFER_ADAPTIVE);
