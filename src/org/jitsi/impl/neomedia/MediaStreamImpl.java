@@ -9,6 +9,7 @@ package org.jitsi.impl.neomedia;
 import java.beans.*;
 import java.io.*;
 import java.net.*;
+import java.nio.*;
 import java.util.*;
 
 import javax.media.*;
@@ -29,6 +30,7 @@ import org.jitsi.impl.neomedia.transform.pt.*;
 import org.jitsi.impl.neomedia.transform.rtcp.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.control.*;
 import org.jitsi.service.neomedia.device.*;
@@ -62,6 +64,17 @@ public class MediaStreamImpl
      */
     protected static final String PROPERTY_NAME_RECEIVE_BUFFER_LENGTH
         = "net.java.sip.communicator.impl.neomedia.RECEIVE_BUFFER_LENGTH";
+
+    /**
+     * Number of empty UDP packets to send for NAT hole punching.
+     */
+    private static final String HOLE_PUNCH_PKT_COUNT_PROPERTY =
+        "net.java.sip.communicator.impl.protocol.HOLE_PUNCH_PKT_COUNT";
+
+    /**
+     * Number of empty UDP packets to send for NAT hole punching.
+     */
+    private static final int DEFAULT_HOLE_PUNCH_PKT_COUNT = 3;
 
     /**
      * The session with the <tt>MediaDevice</tt> this instance uses for both
@@ -2052,8 +2065,8 @@ public class MediaStreamImpl
             {
                 synchronized (this.receiveStreams)
                 {
-                    receiveStreams = 
-                          new ArrayList<ReceiveStream>(this.receiveStreams);                        
+                    receiveStreams =
+                          new ArrayList<ReceiveStream>(this.receiveStreams);
                 }
             }
 
@@ -2973,6 +2986,72 @@ public class MediaStreamImpl
         if (ptTransformEngine != null)
         {
             ptTransformEngine.clearPTMappingOverrides();
+        }
+    }
+
+    @Override
+    public void sendHolePunchPackets(MediaStreamTarget target)
+    {
+        // Check how many hole punch packets we would be supposed to send:
+        int packetCount = LibJitsi.getConfigurationService()
+                                    .getInt(HOLE_PUNCH_PKT_COUNT_PROPERTY,
+                                            DEFAULT_HOLE_PUNCH_PKT_COUNT);
+
+        if (packetCount < 0)
+            packetCount = DEFAULT_HOLE_PUNCH_PKT_COUNT;
+
+        InetSocketAddress remoteDataAddress = target.getDataAddress();
+        InetSocketAddress remoteControlAddress = target.getControlAddress();
+
+        // The packet data. This is just the UDP header as the data is 0 length.
+        ByteBuffer dataByteBuffer = ByteBuffer.allocate(16);
+        ByteBuffer controlByteBuffer = ByteBuffer.allocate(16);
+
+        // Construct the UDP header
+        // The source port
+        dataByteBuffer.putInt(getLocalDataAddress().getPort());
+        controlByteBuffer.putInt(getLocalControlAddress().getPort());
+        // The remote port
+        dataByteBuffer.putInt(remoteDataAddress.getPort());
+        controlByteBuffer.putInt(remoteControlAddress.getPort());
+        // The length of the header (always 16)
+        dataByteBuffer.putInt(16);
+        controlByteBuffer.putInt(16);
+        // The checksum. Not used so just use 0.
+        dataByteBuffer.putInt(0);
+        controlByteBuffer.putInt(0);
+
+        // Create a RawPacket from the byte array we just constructed
+        RawPacket dataPacket = new RawPacket(dataByteBuffer.array(), 0, 16);
+        RawPacket controlPacket = new RawPacket(controlByteBuffer.array(), 0, 16);
+
+        // If we are using SRTP then the packet must be encrypted for the SBC to
+        // latch this media stream.
+        if (getSrtpControl().getSecureCommunicationStatus())
+        {
+            dataPacket = srtpControl.getTransformEngine().
+                                      getRTPTransformer().transform(dataPacket);
+
+            controlPacket = srtpControl.getTransformEngine().
+                                   getRTPTransformer().transform(controlPacket);
+        }
+
+        for (int i = 0; i < packetCount; i++)
+        {
+            try
+            {
+                logger.debug("Sending data hole punch packet to " + remoteDataAddress);
+                rtpConnector.getDataOutputStream().
+                                    sendToTarget(dataPacket, remoteDataAddress);
+
+                logger.debug("Sending control hole punch packet to " + remoteControlAddress);
+                rtpConnector.getControlOutputStream().
+                              sendToTarget(controlPacket, remoteControlAddress);
+            }
+            catch (IOException ex)
+            {
+                logger.error("Failed to send hole punch packets", ex);
+            }
         }
     }
 }

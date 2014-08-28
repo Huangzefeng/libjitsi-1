@@ -383,4 +383,12 @@ public interface MediaStream
      * this MediaStream.
      */
     public MediaStreamStats getMediaStreamStats();
+
+    /**
+     * Sends empty UDP packets in order to open NAT pinholes for the incoming
+     * media stream
+     *
+     * @param target the media stream target for these packets
+     */
+    public void sendHolePunchPackets(MediaStreamTarget target);
 }
