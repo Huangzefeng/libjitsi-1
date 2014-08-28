@@ -161,16 +161,6 @@ public interface MediaStreamStats
     public long getRttMs();
     
     /**
-     * Returns the RTT computed via Seq numbers.
-     */
-    public long getRttViaSeqMs();    
-    
-    /*
-     * Updates the RTT computed via Seq Numbers
-     */
-    public void updateRttViaSeqMs(long rttViaSeq);
-
-    /**
      * Returns the number of packets for which FEC data was decoded.
      */
     public long getNbFec();

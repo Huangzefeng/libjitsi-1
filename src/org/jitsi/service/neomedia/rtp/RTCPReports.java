@@ -13,8 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.sf.fmj.media.rtp.RTCPFeedback;
-import net.sf.fmj.media.rtp.RTCPReport;
+import net.sf.fmj.media.rtp.*;
 
 import org.jitsi.util.Logger;
 
@@ -117,6 +116,11 @@ public class RTCPReports
     private final Map<Integer,RTCPExtendedReport.VoIPMetricsReportBlock>
         sentVoIPMetrics
             = new HashMap<Integer,RTCPExtendedReport.VoIPMetricsReportBlock>();
+    
+    /*
+     * The RTT calculated via sequence numbers, stored per SSRC.
+     */
+    private HashMap<Integer, Integer> mRTTViaSeq = new HashMap<Integer, Integer>(); 
 
     /**
      * Adds a new <tt>RTCPReportListener</tt> to be notified by this instance
@@ -225,7 +229,7 @@ public class RTCPReports
         {
             return receivedReports.get(Integer.valueOf(senderSSRC));
         }
-    }
+    }   
 
     /**
      * Gets the RTCP sender reports (SR) and/or receiver reports (RR) received
@@ -251,8 +255,7 @@ public class RTCPReports
      * @return the RTCP extended report (XR) VoIP Metrics blocks received by the
      * local endpoint
      */
-    public
-        RTCPExtendedReport.VoIPMetricsReportBlock[]
+    public RTCPExtendedReport.VoIPMetricsReportBlock[]
             getReceivedRTCPVoIPMetrics()
     {
         synchronized (receivedExtendedReports)
@@ -275,8 +278,7 @@ public class RTCPReports
      * @return the RTCP extended report (XR) VoIP Metrics block received from a
      * remote originator for the specified <tt>sourceSSRC</tt>
      */
-    public
-        RTCPExtendedReport.VoIPMetricsReportBlock
+    public RTCPExtendedReport.VoIPMetricsReportBlock
             getReceivedRTCPVoIPMetrics(int sourceSSRC)
     {
         synchronized (receivedExtendedReports)
@@ -389,8 +391,7 @@ public class RTCPReports
      * @return the RTCP extended report (XR) VoIP Metrics blocks sent by the
      * local endpoint
      */
-    public
-        RTCPExtendedReport.VoIPMetricsReportBlock[]
+    public RTCPExtendedReport.VoIPMetricsReportBlock[]
             getSentRTCPVoIPMetrics()
     {
         synchronized (sentExtendedReports)
@@ -413,8 +414,7 @@ public class RTCPReports
      * @return the RTCP extended report (XR) VoIP Metrics block sent from a
      * local originator for the specified <tt>sourceSSRC</tt>
      */
-    public
-        RTCPExtendedReport.VoIPMetricsReportBlock
+    public RTCPExtendedReport.VoIPMetricsReportBlock
             getSentRTCPVoIPMetrics(int sourceSSRC)
     {
         synchronized (sentExtendedReports)
@@ -619,10 +619,8 @@ public class RTCPReports
         synchronized (receivedReports)
         {
             logger.debug("Adding received report");
-            Object oldValue
-                = receivedReports.put(
-                        Integer.valueOf((int) report.getSSRC()),
-                        report);
+            Integer ssrc = Integer.valueOf((int) report.getSSRC()); 
+            Object oldValue = receivedReports.put(ssrc, report);
 
             if (report.equals(oldValue))
             {
@@ -648,6 +646,11 @@ public class RTCPReports
                 }
 
                 fire = true;
+              
+                if (report instanceof RTCPSenderReport)
+                {
+                	RTCPSenderReport senderReport = (RTCPSenderReport) report;
+                }                
             }
         }
 
@@ -676,10 +679,8 @@ public class RTCPReports
 
         synchronized (sentReports)
         {
-            Object oldValue
-                = sentReports.put(
-                        Integer.valueOf((int) report.getSSRC()),
-                        report);
+            Integer ssrc = Integer.valueOf((int) report.getSSRC()); 
+            Object oldValue = sentReports.put(ssrc, report);
 
             if (report.equals(oldValue))
             {
@@ -705,6 +706,11 @@ public class RTCPReports
                 }
 
                 fire = true;
+                
+                if (report instanceof RTCPSenderReport)
+                {
+                	RTCPSenderReport senderReport = (RTCPSenderReport) report;                
+                }                
             }
         }
 
@@ -713,5 +719,29 @@ public class RTCPReports
             for (RTCPReportListener listener :listeners)
                 listener.rtcpReportSent(report);
         }
+    }
+    
+    /**
+     * @param ssrc  The SSRC for the transmit side
+     * @param value The value of the calculated RTT
+     */
+    public void setRTTViaSeq(int ssrc, 
+    		                 int value)
+    {
+    	mRTTViaSeq.put(ssrc, value);
+    }
+    
+    /**
+     * @param ssrc  The SSRC for the transmit side
+     * @return      The RTT calculated via sequence numbers for this SSRC
+     */
+    public int getRTTViaSeq(int ssrc)
+    {
+    	int rttViaSeq = 0;
+    	if (mRTTViaSeq.containsKey(ssrc))
+    	{
+    		rttViaSeq = mRTTViaSeq.get(ssrc);
+    	}
+    	return rttViaSeq;
     }
 }

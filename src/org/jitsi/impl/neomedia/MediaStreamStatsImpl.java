@@ -95,11 +95,6 @@ public class MediaStreamStatsImpl
      */
     private long nbDiscarded = 0;
     
-    /*
-     * The RRT calculatd via Seq Numbers.
-     */
-    private long mRttViaSeq = 0;
-
     /**
      * The number of packets for which FEC data was decoded. This is only
      */
@@ -1047,20 +1042,6 @@ public class MediaStreamStatsImpl
         return this.rttMs;
     }
     
- 
-    /* (non-Javadoc)
-     * @see org.jitsi.service.neomedia.MediaStreamStats#getRttViaSeqMs()
-     */
-    public long getRttViaSeqMs()
-    {
-        return mRttViaSeq;
-    }  
-    
-    public void updateRttViaSeqMs(long rttViaSeq)
-    {
-    	mRttViaSeq = rttViaSeq;
-    }
-
     /**
      * @return The average of the RTT computed from RTCP. Returns -1 if the RTT
      * has not been computed yet.

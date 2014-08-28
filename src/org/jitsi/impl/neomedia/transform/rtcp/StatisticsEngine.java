@@ -18,6 +18,7 @@ import net.sf.fmj.utility.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
@@ -229,12 +230,11 @@ public class StatisticsEngine
     private long numberOfRTCPReports = 0;
 
     /*
-     * Difference between the last error report seq num and
-     * our last sent seq number.  Used to calculate RTT.
+     * The last sent Seq Number, used to calculate RTT.
+     * Stored by SSRC since this class needs to handle all
+     * calls and you can have more than one call at a time.
      */
-    private int mLastSentSeqNum = 0;
-    private int mLastSentSize = 0;
-    private int mRTTViaSeq = 0;
+    private HashMap<Long, Integer> mLastSentSeqNum = new HashMap<Long, Integer>();
 
     /**
      * Creates Statistic engine.
@@ -666,14 +666,15 @@ public class StatisticsEngine
 
         // round trip delay
         int rttDelay = 0;
+        int rttViaSeq = mediaStream.getMediaStreamStats().getRTCPReports().getRTTViaSeq(senderSSRC);
+
         if (receiveStream instanceof RecvSSRCInfo)
         {
-        	rttDelay = ((RecvSSRCInfo) receiveStream).getRoundTripDelay(
-                    senderSSRC);
+        	rttDelay = ((RecvSSRCInfo) receiveStream).getRoundTripDelay(senderSSRC);
             voipMetrics.setRoundTripDelay(rttDelay);
 
             // End system delay.  If it's <0, put 0.
-            int esd = mRTTViaSeq - (rttDelay / 2) + 100;
+            int esd = rttViaSeq - (rttDelay / 2) + 100;
             if (esd < 0) esd = 0;
             voipMetrics.setEndSystemDelay(esd);
         }
@@ -882,8 +883,8 @@ public class StatisticsEngine
          * factor.
          */
         int mosCQ = getMosCQ(isSilk,
-        		                 rttDelay,
-                             mRTTViaSeq,
+        		             rttDelay,
+                             rttViaSeq,
                              jbNominalDelay,
                              jbDiscardedPacketCount,
                              processedPacketCount,
@@ -1180,9 +1181,9 @@ public class StatisticsEngine
         }
         else
         {
-            // Update last sent Seq number
-            mLastSentSeqNum = pkt.getSequenceNumber();
-            mLastSentSize = pkt.getLength();            
+            // Update last sent Seq number, store by SSRC
+        	long ssrc = pkt.getSSRC();
+            mLastSentSeqNum.put(ssrc, pkt.getSequenceNumber());            
         }
 
         return pkt;
@@ -1217,30 +1218,28 @@ public class StatisticsEngine
                 {
                     // First get the SSRC and their seq number.
                     RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(0);
+                    long ssrc = feedback.getSSRC();
+                    
+                    // Get the seqNum, and wipe out the top 32 bits.
                     long seqNum = feedback.getXtndSeqNum() << 32 >> 32;
-
-                    int seqNumDiff = mLastSentSeqNum - (int) seqNum;
-
-                    // So now we have the difference is seq numbers, now
-                    // find out what that means in ms.
-                    MediaFormat format = mediaStream.getFormat();
-                    String clockRate =
-                        (format == null) ? null : format.getRealUsedClockRateString();
-
-                    if (clockRate != null)
+                    
+                    int lastSentSeqNum = 0;
+                    if (mLastSentSeqNum.containsKey(ssrc))
                     {
-                    	try
-                    	{
-                    		int rate = Integer.parseInt(clockRate);                    		
-                    		int pTime = (mLastSentSize * 1000) / (rate);                    		
-                    		mRTTViaSeq = seqNumDiff * pTime;
-                    		mediaStream.getMediaStreamStats().updateRttViaSeqMs(mRTTViaSeq);
-                    	}
-                    	catch (NumberFormatException e)
-                    	{
-                    		logger.error("Expected clock rate " + clockRate);
-                    	}
+                    	lastSentSeqNum = mLastSentSeqNum.get(ssrc);
                     }
+
+                    int seqNumDiff = lastSentSeqNum - (int) seqNum;
+                    
+                    // We need to find the time a packet represents.  That is 
+                	//    samples * 1000 / rate
+                	// Unfortunately it doesn't seem possible to get hold of
+                	// the number of samples.  So put 20, as that is the default.
+                    int pTime = 20;
+                    
+                	RTCPReports rtcpReports
+                              = mediaStream.getMediaStreamStats().getRTCPReports();
+                    rtcpReports.setRTTViaSeq((int)ssrc, seqNumDiff * pTime);
                 }
             }
         }
