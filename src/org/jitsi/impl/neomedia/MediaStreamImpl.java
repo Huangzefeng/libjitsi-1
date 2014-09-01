@@ -3003,27 +3003,11 @@ public class MediaStreamImpl
         InetSocketAddress remoteDataAddress = target.getDataAddress();
         InetSocketAddress remoteControlAddress = target.getControlAddress();
 
-        // The packet data. This is just the UDP header as the data is 0 length.
-        ByteBuffer dataByteBuffer = ByteBuffer.allocate(16);
-        ByteBuffer controlByteBuffer = ByteBuffer.allocate(16);
-
-        // Construct the UDP header
-        // The source port
-        dataByteBuffer.putInt(getLocalDataAddress().getPort());
-        controlByteBuffer.putInt(getLocalControlAddress().getPort());
-        // The remote port
-        dataByteBuffer.putInt(remoteDataAddress.getPort());
-        controlByteBuffer.putInt(remoteControlAddress.getPort());
-        // The length of the header (always 16)
-        dataByteBuffer.putInt(16);
-        controlByteBuffer.putInt(16);
-        // The checksum. Not used so just use 0.
-        dataByteBuffer.putInt(0);
-        controlByteBuffer.putInt(0);
-
-        // Create a RawPacket from the byte array we just constructed
-        RawPacket dataPacket = new RawPacket(dataByteBuffer.array(), 0, 16);
-        RawPacket controlPacket = new RawPacket(controlByteBuffer.array(), 0, 16);
+        // Create the hole punch packets
+        RawPacket dataPacket = createHolePunchPacket(getLocalDataAddress().getPort(),
+                                                     remoteDataAddress.getPort());
+        RawPacket controlPacket = createHolePunchPacket(getLocalControlAddress().getPort(),
+                                                        remoteControlAddress.getPort());
 
         // If we are using SRTP then the packet must be encrypted for the SBC to
         // latch this media stream.
@@ -3053,5 +3037,32 @@ public class MediaStreamImpl
                 logger.error("Failed to send hole punch packets", ex);
             }
         }
+    }
+
+    /**
+     * Constructs a hole punch packet for the given local and remote port. The
+     * packet has no payload, but must have valid headers.
+     *
+     * @param localPort the local port for this stream
+     * @param remotePort the remote port for this stream
+     * @return a hole punch UDP packet
+     */
+    private RawPacket createHolePunchPacket(int localPort, int remotePort)
+    {
+        // The packet data. This is just the UDP header as the data is 0 length.
+        ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+
+        // Construct the UDP header
+        // The source port
+        byteBuffer.putInt(localPort);
+        // The remote port
+        byteBuffer.putInt(remotePort);
+        // The length of the header (always 16)
+        byteBuffer.putInt(16);
+        // The checksum. Not used so just use 0.
+        byteBuffer.putInt(0);
+
+        // Create a RawPacket from the byte array we just constructed
+        return new RawPacket(byteBuffer.array(), 0, 16);
     }
 }
