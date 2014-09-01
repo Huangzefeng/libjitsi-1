@@ -813,9 +813,16 @@ public class ConfigurationServiceImpl
      * Implements ConfigurationService#reloadConfiguration().
      */
     @Override
-    public void reloadConfiguration()
+    public synchronized void reloadConfiguration()
         throws IOException
     {
+        if (configWritePending)
+        {
+            logger.debug("Write pending config change prior to reload");
+            storeConfigurationInternal();
+            configWritePending = false;
+        }
+
         this.configurationFile = null;
 
         File file = getConfigurationFile();
@@ -885,8 +892,13 @@ public class ConfigurationServiceImpl
                             logger.debug("Config write timer popped");
                             synchronized (ConfigurationServiceImpl.this)
                             {
-                                storeConfigurationInternal();
-                                configWritePending = false;
+                                // Unlikely, but the config could have already
+                                // been written (e.g. in reloadConfiguration())
+                                if (configWritePending)
+                                {
+                                    storeConfigurationInternal();
+                                    configWritePending = false;
+                                }
                             }
                         };
                     },
