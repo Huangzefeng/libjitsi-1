@@ -162,11 +162,20 @@ public class ConfigurationServiceImpl
 
     public ConfigurationServiceImpl()
     {
+<<<<<<< HEAD
+        // retrieve a reference to the FileAccessService
+        this.faService = LibJitsi.getFileAccessService();
+        if (faService == null)
+        {
+            logger.error("Couldn't get access to FileAccessService");
+        }
+=======
         configDelayTimer = new Timer("Config writer delay timer");
         configWritePending = false;
         lastConfigWriteTime = 0;
 
         Runtime.getRuntime().addShutdownHook(shutdownHook);
+>>>>>>> master
 
         try
         {
@@ -813,7 +822,11 @@ public class ConfigurationServiceImpl
      * Implements ConfigurationService#reloadConfiguration().
      */
     @Override
+<<<<<<< HEAD
+    public void reloadConfiguration()
+=======
     public synchronized void reloadConfiguration()
+>>>>>>> master
         throws IOException
     {
         if (configWritePending)
@@ -926,7 +939,13 @@ public class ConfigurationServiceImpl
 
         try
         {
+<<<<<<< HEAD
+            if (transactionBasedFile != null)
+                transactionBasedFile.beginTransaction();
+
+=======
             transactionBasedFile.beginTransaction();
+>>>>>>> master
             OutputStream stream = transactionBasedFile.getOutputStream();
 
             try
@@ -938,6 +957,12 @@ public class ConfigurationServiceImpl
                 if (stream != null)
                     stream.close();
             }
+<<<<<<< HEAD
+
+            if (transactionBasedFile != null)
+                transactionBasedFile.commitTransaction();
+=======
+>>>>>>> master
         }
         catch (IllegalStateException isex)
         {
@@ -950,6 +975,21 @@ public class ConfigurationServiceImpl
 
         if (exception != null)
         {
+<<<<<<< HEAD
+            logger.error(
+                    "can't write data in the configuration file",
+                    exception);
+            if (transactionBasedFile != null)
+            {
+                try
+                {
+                    transactionBasedFile.abortTransaction();
+                }
+                catch (IllegalStateException isex)
+                {
+                    logger.error("Failed to roll back configuration file", isex);
+                }
+=======
             logger.error("Can't write data in the configuration file",
                          exception);
             try
@@ -959,6 +999,7 @@ public class ConfigurationServiceImpl
             catch (IllegalStateException isex)
             {
                 logger.error("Failed to roll back configuration file", isex);
+>>>>>>> master
             }
         }
         else
@@ -1019,7 +1060,12 @@ public class ConfigurationServiceImpl
             getScHomeDirName();
         }
 
+<<<<<<< HEAD
+        if ((transactionBasedFile == null) &&
+            (faService != null))
+=======
         if (transactionBasedFile == null)
+>>>>>>> master
         {
             transactionBasedFile = new TransactionBasedFile(configurationFile);
         }
