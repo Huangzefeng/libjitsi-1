@@ -369,6 +369,10 @@ public class AudioSystemClipImpl
                     }
 
                     int rendererProcess;
+                    
+                    // Work out how long it SHOULD take to render this buffer
+                    int bufferLengthMillis = 
+                                      (int)((bufferLength / sampleRate) * 1000);
 
                     // We're about to call in to the renderer to process this
                     // buffer.  We have seen hangs inside the renderer so put
@@ -380,16 +384,15 @@ public class AudioSystemClipImpl
                         rendererProcess = renderer.process(rendererBuffer);
                         if (rendererProcess == Renderer.BUFFER_PROCESSED_FAILED)
                         {
-                            String error = "Failed to render audio stream " +
-                                                                            uri;
-                            Object bufferData = rendererBuffer.getData();
-                            logger.error(error);
+                            logger.error("Failed to render audio stream " + uri);
 
                             return false;
                         }
 
-                        if (System.currentTimeMillis() -
-                                     rendererProcessStartTime > MAX_RENDER_TIME)
+                        long rendererTime = System.currentTimeMillis() - 
+                                                       rendererProcessStartTime;
+                        
+                        if (rendererTime > MAX_RENDER_TIME + bufferLengthMillis)
                         {
                             logger.error("Failed to complete rendering in " +
                                 MAX_RENDER_TIME + "ms");
