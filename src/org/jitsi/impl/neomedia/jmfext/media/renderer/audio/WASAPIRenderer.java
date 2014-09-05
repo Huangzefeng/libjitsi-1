@@ -43,7 +43,7 @@ public class WASAPIRenderer
      * The <tt>Logger</tt> used by the <tt>WASAPIRenderer</tt> class and its
      * instances to log debug information.
      */
-    private static final Logger logger = Logger.getLogger(WASAPIRenderer.class);
+    private static final Logger logger = Logger.getLogger(WASAPIRenderer.class); 
 
     /**
      * The human-readable name of the <tt>WASAPIRenderer</tt> <tt>PlugIn</tt>
@@ -51,6 +51,11 @@ public class WASAPIRenderer
      */
     private static final String PLUGIN_NAME
         = "Windows Audio Session API (WASAPI) Renderer";
+    
+    /**
+     * The interval logger to use for some logs that may be spammy
+     */
+    private final IntervalLogger intervalLogger = new IntervalLogger(logger);
 
     /**
      * The duration in milliseconds of the endpoint buffer.
@@ -1026,7 +1031,7 @@ public class WASAPIRenderer
         }
         return newArrayLength;
     }
-
+    
     /**
      * Processes the provided buffer of audio data into the remainder buffer to
      * be written to WASAPI on the EventHandleCmd thread.
@@ -1061,13 +1066,13 @@ public class WASAPIRenderer
                 int ret = locatorIsNull ? BUFFER_PROCESSED_OK : BUFFER_PROCESSED_FAILED;
                 
                 if (ret == BUFFER_PROCESSED_FAILED)
-                    logger.debug("Process failed, locator is not null");
+                    intervalLogger.debug("Process failed, locator is not null");
                 
                 return ret;
             }
             else if (!started)
             {
-                logger.debug("Process failed, not started");
+                intervalLogger.debug("Process failed, not started");
                 return BUFFER_PROCESSED_FAILED;
             }
             else
@@ -1138,7 +1143,7 @@ public class WASAPIRenderer
                 if (writeIsMalfunctioningDuration
                         > writeIsMalfunctioningTimeout)
                 {
-                    logger.debug("Process failed, device has malfunctioned");
+                    intervalLogger.debug("Process failed, device has malfunctioned");
                     ret = BUFFER_PROCESSED_FAILED;
                 }
             }
