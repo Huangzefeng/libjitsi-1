@@ -35,6 +35,10 @@ import org.jitsi.util.*;
  * @author Vincent Lucas
  * @author Boris Grozev
  */
+/**
+ * @author enh
+ *
+ */
 public class MediaStreamStatsImpl
     implements MediaStreamStats
 {
@@ -186,19 +190,19 @@ public class MediaStreamStatsImpl
     }    
      
     /* (non-Javadoc)
-     * @see org.jitsi.service.neomedia.MediaStreamStats#getReceivedExtendedReport(long)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getReceivedRTCPVoIPMetrics(long)
      */
-    public RTCPExtendedReport getReceivedExtendedReport(long ssrc)
+    public RTCPExtendedReport.VoIPMetricsReportBlock getReceivedRTCPVoIPMetrics(long ssrc)
     {
-        return mReports.getReceivedRTCPExtendedReport((int) ssrc);
+        return mReports.getReceivedRTCPVoIPMetrics((int)ssrc);
     }
 
     /* (non-Javadoc)
-     * @see org.jitsi.service.neomedia.MediaStreamStats#getSentExtendedReport(long)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getSentRTCPVoIPMetrics(long)
      */
-    public RTCPExtendedReport getSentExtendedReport(long ssrc)
+    public RTCPExtendedReport.VoIPMetricsReportBlock getSentRTCPVoIPMetrics(long ssrc)
     {   	
-        return mReports.getSentRTCPExtendedReport((int) ssrc);
+        return mReports.getSentRTCPVoIPMetrics((int) ssrc);
     }    
     
     /* (non-Javadoc)

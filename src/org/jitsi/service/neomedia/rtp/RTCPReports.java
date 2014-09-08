@@ -116,11 +116,11 @@ public class RTCPReports
     private final Map<Integer,RTCPExtendedReport.VoIPMetricsReportBlock>
         sentVoIPMetrics
             = new HashMap<Integer,RTCPExtendedReport.VoIPMetricsReportBlock>();
-    
+
     /*
      * The RTT calculated via sequence numbers, stored per SSRC.
      */
-    private HashMap<Integer, Integer> mRTTViaSeq = new HashMap<Integer, Integer>(); 
+    private HashMap<Integer, Integer> mRTTViaSeq = new HashMap<Integer, Integer>();
 
     /**
      * Adds a new <tt>RTCPReportListener</tt> to be notified by this instance
@@ -229,7 +229,7 @@ public class RTCPReports
         {
             return receivedReports.get(Integer.valueOf(senderSSRC));
         }
-    }   
+    }
 
     /**
      * Gets the RTCP sender reports (SR) and/or receiver reports (RR) received
@@ -619,7 +619,7 @@ public class RTCPReports
         synchronized (receivedReports)
         {
             logger.debug("Adding received report");
-            Integer ssrc = Integer.valueOf((int) report.getSSRC()); 
+            Integer ssrc = Integer.valueOf((int) report.getSSRC());
             Object oldValue = receivedReports.put(ssrc, report);
 
             if (report.equals(oldValue))
@@ -646,11 +646,11 @@ public class RTCPReports
                 }
 
                 fire = true;
-              
+
                 if (report instanceof RTCPSenderReport)
                 {
                 	RTCPSenderReport senderReport = (RTCPSenderReport) report;
-                }                
+                }
             }
         }
 
@@ -679,7 +679,7 @@ public class RTCPReports
 
         synchronized (sentReports)
         {
-            Integer ssrc = Integer.valueOf((int) report.getSSRC()); 
+            Integer ssrc = Integer.valueOf((int) report.getSSRC());
             Object oldValue = sentReports.put(ssrc, report);
 
             if (report.equals(oldValue))
@@ -706,11 +706,11 @@ public class RTCPReports
                 }
 
                 fire = true;
-                
+
                 if (report instanceof RTCPSenderReport)
                 {
-                	RTCPSenderReport senderReport = (RTCPSenderReport) report;                
-                }                
+                	RTCPSenderReport senderReport = (RTCPSenderReport) report;
+                }
             }
         }
 
@@ -720,17 +720,17 @@ public class RTCPReports
                 listener.rtcpReportSent(report);
         }
     }
-    
+
     /**
      * @param ssrc  The SSRC for the transmit side
      * @param value The value of the calculated RTT
      */
-    public void setRTTViaSeq(int ssrc, 
+    public void setRTTViaSeq(int ssrc,
     		                 int value)
     {
     	mRTTViaSeq.put(ssrc, value);
     }
-    
+
     /**
      * @param ssrc  The SSRC for the transmit side
      * @return      The RTT calculated via sequence numbers for this SSRC
