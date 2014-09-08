@@ -851,6 +851,7 @@ public class StatisticsEngine
             RTPStats rtpStats = (RTPStats) receptionStats;
             BurstMetrics burstMetrics = rtpStats.getBurstMetrics();
             long l = burstMetrics.getBurstMetrics();
+
             int gapDuration, burstDuration;
             short gapDensity, burstDensity;
 
@@ -865,6 +866,11 @@ public class StatisticsEngine
             discardRate = l & 0xFFL;
             l >>= 8;
             lossRate = l & 0xFFL;
+
+//            logger.error("Gap density=" + gapDensity);
+//            logger.error("Gap duration=" + gapDuration);
+//            logger.error("Burst density=" + burstDensity);
+//            logger.error("Burst duration=" + burstDuration);
 
             voipMetrics.setBurstDensity(burstDensity);
             voipMetrics.setGapDensity(gapDensity);
@@ -882,17 +888,24 @@ public class StatisticsEngine
          * using the equation specified in G.107. However, we do not have R
          * factor.
          */
-        int mosCQ = getMosCQ(isSilk,
-        		             rttDelay,
-                             rttViaSeq,
-                             jbNominalDelay,
-                             jbDiscardedPacketCount,
-                             processedPacketCount,
-                             lostPacketCount,
-                             invalidPacketCount,
-                             fecDecodedPacketCount);
+        if (outputMosCQ)
+        {
+            int mosCQ = getMosCQ(isSilk,
+        	        	             rttDelay,
+                                 rttViaSeq,
+                                 jbNominalDelay,
+                                 jbDiscardedPacketCount,
+                                 processedPacketCount,
+                                 lostPacketCount,
+                                 invalidPacketCount,
+                                 fecDecodedPacketCount);
 
-        voipMetrics.setMosCq((byte) mosCQ);
+            voipMetrics.setMosCq((byte) mosCQ);
+        }
+        else
+        {
+            logger.error("No MosCQ");
+        }
 
         return voipMetrics;
     }
@@ -1183,7 +1196,7 @@ public class StatisticsEngine
         {
             // Update last sent Seq number, store by SSRC
         	long ssrc = pkt.getSSRC();
-            mLastSentSeqNum.put(ssrc, pkt.getSequenceNumber());            
+            mLastSentSeqNum.put(ssrc, pkt.getSequenceNumber());
         }
 
         return pkt;
@@ -1219,10 +1232,10 @@ public class StatisticsEngine
                     // First get the SSRC and their seq number.
                     RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(0);
                     long ssrc = feedback.getSSRC();
-                    
+
                     // Get the seqNum, and wipe out the top 32 bits.
                     long seqNum = feedback.getXtndSeqNum() << 32 >> 32;
-                    
+
                     int lastSentSeqNum = 0;
                     if (mLastSentSeqNum.containsKey(ssrc))
                     {
@@ -1230,13 +1243,13 @@ public class StatisticsEngine
                     }
 
                     int seqNumDiff = lastSentSeqNum - (int) seqNum;
-                    
-                    // We need to find the time a packet represents.  That is 
+
+                    // We need to find the time a packet represents.  That is
                 	//    samples * 1000 / rate
                 	// Unfortunately it doesn't seem possible to get hold of
                 	// the number of samples.  So put 20, as that is the default.
                     int pTime = 20;
-                    
+
                 	RTCPReports rtcpReports
                               = mediaStream.getMediaStreamStats().getRTCPReports();
                     rtcpReports.setRTTViaSeq((int)ssrc, seqNumDiff * pTime);
@@ -1283,16 +1296,16 @@ public class StatisticsEngine
      * @param rxFECCorrected - number pkts forward error corrected
      * @return The MosCQ
      */
-    private int getMosCQ(boolean isSilk,
-                         int rttDelay,
-                         int rttViaSeq,
-                         int jbLatency,
-                         int jbDiscards,
-                         int rxPkt,
-                         int rxLoss,
-                         int rxDiscard,
-                         long rxFECCorrected)
-    {
+    private static int getMosCQ(boolean isSilk,
+                                int rttDelay,
+                                int rttViaSeq,
+                                int jbLatency,
+                                int jbDiscards,
+                                int rxPkt,
+                                int rxLoss,
+                                int rxDiscard,
+                                long rxFECCorrected)
+    {        	
         // Default to unknown.
         int mosCQ = 127;
 
@@ -1347,8 +1360,11 @@ public class StatisticsEngine
         double Ta     = rttDelay / 2 + jbLatency;
         double Ie     = 0;     // From ITU-T G.113 for G.711 PCM
 
-        double Ppl    = (rxPkt == 0) ?
-            ((rxLoss + rxDiscard + jbDiscards - rxFECCorrected) * 100) / (rxPkt + rxLoss)
+//        double Ppl    = (rxPkt != 0) ?
+//            ((rxLoss + rxDiscard + jbDiscards - rxFECCorrected) * 100) / (rxPkt + rxLoss)
+//            : 0;
+        double Ppl    = (rxPkt != 0) ?
+             ((rxLoss + rxDiscard + jbDiscards) * 100) / (rxPkt + rxLoss + rxFECCorrected)
             : 0;
 
         double BurstR = 1;
@@ -1508,36 +1524,76 @@ public class StatisticsEngine
           (R < 100) ? 10 * (1 + 0.035 * R + R * (R - 60) * (100 - R) * 7 * pow(10, -6)) :
           45);
 
-        //PJ_LOG(4,(rtcp_xr_session->name, "MOS %% loss is %g (l %d + d %d + jbd %d - fec %d / n %d + l %d)",        Ppl, rtcp_session->stat.rx.loss, rtcp_session->stat.rx.discard, jb_discards, rtcp_session->stat.rx.fec_corrected, rtcp_session->stat.rx.pkt, rtcp_session->stat.rx.loss));
-        //PJ_LOG(4,(rtcp_xr_session->name, "MOS RTT (seq) %d, RTT %d, JB %d", rtcp_session->stat.rtt_calculated_via_RR_lastseqno, rtcp_xr_session->stat.rx.voip_mtc.rnd_trip_delay, jb_latency));
-        //PJ_LOG(4,(rtcp_xr_session->name, "  T = %g, Tr = %g, Ta = %g", T, Tr, Ta));
-        //PJ_LOG(4,(rtcp_xr_session->name, "  Ro = %g, Is = %g, Id = %g, Ie-eff = %g, A = %g", Ro, Is, Id, Ie_minus_eff, A));
-        // PJ_LOG(4,(rtcp_xr_session->name, "Local CQ MOS is %d, R is %g",
-        // mos_cq, R));
         logger.info("MosCQ=" + mosCQ);
+/*
+        logger.error("MosSQ=" + mosCQ + "\n" +
+                "isSilk =" + isSilk + "\n" +
+                "rttDelay =" + rttDelay + "\n" +
+                "rttViaSeq =" + rttViaSeq + "\n" +
+                "jbLatency =" + jbLatency + "\n" +
+                "jbDiscards =" + jbDiscards + "\n" +
+                "rxPkt =" + rxPkt  + "\n" +
+                "rxLoss ="  + rxLoss + "\n" +
+                "rxDiscard =" + rxDiscard + "\n" +
+                "rxFECCorrected =" + rxFECCorrected);
+*/
 
         return mosCQ;
     }
 
     // Dull wrappers, so the code above matches the C equivalent, so
     // we can diff them against each other.
-    private double sqrt(double d)
+    private static double sqrt(double d)
     {
         return pow(d, 0.5);
     }
 
-    private double exp(double d)
+    private static double exp(double d)
     {
        return Math.exp(d);
     }
 
-    private double pow(double a, double b)
+    private static double pow(double a, double b)
     {
        return Math.pow(a, b);
     }
 
-    private double log10(double a)
+    private static double log10(double a)
     {
       return Math.log10(a);
+    }
+
+    public static void main(String[] args)
+    {
+        getMosCQ(true, // boolean isSilk,
+                 50, //int rttDelay,
+                 50, //int rttViaSeq,
+                 50, // int jbLatency,
+                 2, //int jbDiscards,
+                 1000, //int rxPkt,
+                 700, //int rxLoss,
+                 0, //int rxDiscard,
+                 200);//,long rxFECCorrected)System.out.println("Hello");
+        
+        int num  = 300*1024*1024;
+        byte[] bytes = new byte[300*1024*1024];
+        
+        int ran = num /1345;
+        int q = 0;
+        while (true)
+        {
+        try
+        {
+        	q += ran % num;
+        	bytes[q] = (byte) (q % 10);
+        	Thread.sleep(2);
+        	
+        	
+        }
+        catch (Exception e)
+        {
+        	
+        }
+        }
     }
 }

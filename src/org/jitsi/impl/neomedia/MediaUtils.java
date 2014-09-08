@@ -109,7 +109,7 @@ public class MediaUtils
      * Maximum H.264 profile level supported.
      */
     private static final byte H264_PROFILE_MAX_SUPPORTED = H264_PROFILE_IDC_3_1;
-    
+
     /**
      * The values of the level IDC byte in the H.264 profile that we support in
      * preference order.
