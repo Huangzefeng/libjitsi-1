@@ -6,11 +6,11 @@
  */
 package org.jitsi.service.neomedia;
 
-import java.awt.*;
-
-import javax.media.control.PacketQueueControl;
+import java.awt.Dimension;
 
 import net.sf.fmj.media.rtp.*;
+
+import org.jitsi.service.neomedia.rtp.*;
 
 /**
  * Class used to compute stats concerning a MediaStream.
@@ -19,6 +19,17 @@ import net.sf.fmj.media.rtp.*;
  */
 public interface MediaStreamStats
 {
+    /*
+     * Interfaces to get at the RCTP reports for this stream.
+     */
+     RTCPReports getRTCPReports();
+     RTCPReport getReceivedRTCPRR(long ssrc);
+     RTCPReport getSentRTCPRR(long src);          
+     RTCPExtendedReport.VoIPMetricsReportBlock getReceivedRTCPVoIPMetrics(long ssrc);
+     RTCPExtendedReport.VoIPMetricsReportBlock getSentRTCPVoIPMetrics(long ssrc);
+     RTCPFeedback getReceivedFeedback(long ssrc);
+     RTCPFeedback getSentFeedback(long ssrc);     
+
     /**
      * Computes and updates information for a specific stream.
      */
@@ -148,7 +159,7 @@ public interface MediaStreamStats
      * has not been computed yet. Otherwise the RTT in ms.
      */
     public long getRttMs();
-
+    
     /**
      * Returns the number of packets for which FEC data was decoded.
      */
@@ -243,17 +254,17 @@ public interface MediaStreamStats
      * @return the number of packets currently in the packet queue.
      */
     public int getPacketQueueCountPackets();
-    
+
     /**
      * @return the total number of packets downloaded
      */
     public long getDownloadTotalPackets();
-    
+
     /**
      * @return the total number of packets uploaded
      */
     public long getUploadTotalPackets();
-    
+
     /**
      * @return The average of the RTT computed from RTCP. Returns -1 if the RTT
      * has not been computed yet.
@@ -264,45 +275,40 @@ public interface MediaStreamStats
      * @return the percentage of lost packets in the upload direction.
      */
 	float getUploadTotalPercentLost();
-	
+
     /**
      * @return the percentage of lost packets in the download direction.
      */
 	float getDownloadTotalPercentLost();
-	
+
     /**
      * @return the min upload jitter.
      */
     double getUploadJitterMin();
-    
+
     /**
      * @return the max upload jitter.
      */
     double getUploadJitterMax();
-    
+
     /**
      * @return the mean upload jitter.
      */
     double getUploadJitterMean();
-    
+
     /**
      * @return the min download jitter.
      */
     double getDownloadJitterMin();
-    
+
     /**
      * @return the max download jitter.
      */
     double getDownloadJitterMax();
-    
+
     /**
      * @return the mean download jitter.
      */
     double getDownloadJitterMean();
-    
-    /**
-     * @return the PacketQueueControl object associated with this stream. This
-     * can be used for finding out detailed jitter buffer statistics.
-     */
-    PacketQueueControl getAPacketQueueControl();
+
 }
