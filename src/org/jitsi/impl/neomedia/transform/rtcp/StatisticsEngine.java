@@ -1574,26 +1574,5 @@ public class StatisticsEngine
                  700, //int rxLoss,
                  0, //int rxDiscard,
                  200);//,long rxFECCorrected)System.out.println("Hello");
-        
-        int num  = 300*1024*1024;
-        byte[] bytes = new byte[300*1024*1024];
-        
-        int ran = num /1345;
-        int q = 0;
-        while (true)
-        {
-        try
-        {
-        	q += ran % num;
-        	bytes[q] = (byte) (q % 10);
-        	Thread.sleep(2);
-        	
-        	
-        }
-        catch (Exception e)
-        {
-        	
-        }
-        }
     }
 }

@@ -35,13 +35,16 @@ public class AudioSystemClipImpl
     private static final int DEFAULT_BUFFER_DATA_LENGTH = 8 * 1024;
 
     /**
-     * The max time to wait to render a single buffer (in ms).  It normally
-     * takes up to around 20ms.  Note this has the possible side effect that an
-     * audio clip may stop being played if the device is swapped part-way
-     * through (and rebuilding the renderer takes a while) but that's
-     * acceptable.
+     * We have seen problems where it can take too long to render a single 
+     * buffer.  This is the margin to allow when rendering a buffer.  I.e.
+     * if a buffer should 250ms, we allow 250 + RENDER_TIME_SAFETY_MARGIN
+     * before tearing down the render process.
+     * 
+     * Note: this has the possible side effect that an audio clip may stop
+     * being played if the device is swapped part-way through (and rebuilding
+     * the renderer takes a while) but that's acceptable.
      */
-    private static final long MAX_RENDER_TIME = 500;
+    private static final long RENDER_TIME_SAFETY_MARGIN = 100;
 
     /**
      * The <tt>Logger</tt> used by the <tt>AudioSystemClipImpl</tt> class and
@@ -369,6 +372,10 @@ public class AudioSystemClipImpl
                     }
 
                     int rendererProcess;
+                    
+                    // Work out how long it SHOULD take to render this buffer
+                    int bufferLengthMillis = 
+                                     (int)((bufferLength * 1000L) / sampleRate);
 
                     // We're about to call in to the renderer to process this
                     // buffer.  We have seen hangs inside the renderer so put
@@ -380,19 +387,19 @@ public class AudioSystemClipImpl
                         rendererProcess = renderer.process(rendererBuffer);
                         if (rendererProcess == Renderer.BUFFER_PROCESSED_FAILED)
                         {
-                            String error = "Failed to render audio stream " +
-                                                                            uri;
-                            Object bufferData = rendererBuffer.getData();
-                            logger.error(error);
+                            logger.error("Failed to render audio stream " + uri);
 
                             return false;
                         }
 
-                        if (System.currentTimeMillis() -
-                                     rendererProcessStartTime > MAX_RENDER_TIME)
+                        long rendererTime = System.currentTimeMillis() - 
+                                                       rendererProcessStartTime;
+                        
+                        if (rendererTime > 
+                                 RENDER_TIME_SAFETY_MARGIN + bufferLengthMillis)
                         {
                             logger.error("Failed to complete rendering in " +
-                                MAX_RENDER_TIME + "ms");
+                                              RENDER_TIME_SAFETY_MARGIN + "ms");
                             renderTookTooLong = true;
                             break;
                         }

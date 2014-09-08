@@ -2084,10 +2084,12 @@ public class MediaStreamImpl
              * empty. As a workaround, use the receiveStreams of this instance.
              */
 <<<<<<< HEAD
-            synchronized (mReceiveStreams)
-            {        	
-                if (receiveStreams.isEmpty() && (this.mReceiveStreams != null))
-                    receiveStreams = this.mReceiveStreams;
+            if (receiveStreams.isEmpty() && this.mReceiveStreams != null)
+            {
+                synchronized (mReceiveStreams)
+                {        
+                    receiveStreams =
+                          new ArrayList<ReceiveStream>(this.mReceiveStreams);
 =======
             if (receiveStreams.isEmpty() && this.receiveStreams != null)
             {
@@ -2095,33 +2097,32 @@ public class MediaStreamImpl
                 {
                     receiveStreams =
                           new ArrayList<ReceiveStream>(this.receiveStreams);
+>>>>>>> master
                 }
             }
->>>>>>> master
 
-                for (ReceiveStream receiveStream : receiveStreams)
+            for (ReceiveStream receiveStream : receiveStreams)
+            {
+                try
                 {
-                    try
-                    {
-                        DataSource receiveStreamDataSource
-                            = receiveStream.getDataSource();
+                    DataSource receiveStreamDataSource
+                        = receiveStream.getDataSource();
 
-                        /*
-                         * For an unknown reason, the stream DataSource can be null
-                         * at the end of the Call after re-INVITEs have been
-                         * handled.
-                         */
-                        if (receiveStreamDataSource != null)
-                            receiveStreamDataSource.start();
-                    }
-                    catch (IOException ioex)
-                    {
-                       logger.warn(
-                            "Failed to start receive stream " + receiveStream,
-                            ioex);
-                    }
-                }    
-            }
+                    /*
+                     * For an unknown reason, the stream DataSource can be null
+                     * at the end of the Call after re-INVITEs have been
+                     * handled.
+                     */
+                    if (receiveStreamDataSource != null)
+                        receiveStreamDataSource.start();
+                }
+                catch (IOException ioex)
+                {
+                     logger.warn(
+                        "Failed to start receive stream " + receiveStream,
+                        ioex);
+                }
+            }                
         }
     }
 
