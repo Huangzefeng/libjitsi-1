@@ -234,7 +234,7 @@ public class StatisticsEngine
      * Stored by SSRC since this class needs to handle all
      * calls and you can have more than one call at a time.
      */
-    private HashMap<Long, Integer> mLastSentSeqNum = new HashMap<Long, Integer>();
+    private HashMap<Integer, Integer> mLastSentSeqNum = new HashMap<Integer, Integer>();
 
     /**
      * Creates Statistic engine.
@@ -1194,8 +1194,9 @@ public class StatisticsEngine
         }
         else
         {
-            // Update last sent Seq number, store by SSRC
-        	long ssrc = pkt.getSSRC();
+            // Update last sent Seq number, store by SSRC, wiping out last top
+            // 23 bits.
+        	  int ssrc = (int) pkt.getSSRC();
             mLastSentSeqNum.put(ssrc, pkt.getSequenceNumber());
         }
 
@@ -1231,7 +1232,7 @@ public class StatisticsEngine
                 {
                     // First get the SSRC and their seq number.
                     RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(0);
-                    long ssrc = feedback.getSSRC();
+                    int ssrc = (int) feedback.getSSRC();
 
                     // Get the seqNum, and wipe out the top 32 bits.
                     long seqNum = feedback.getXtndSeqNum() << 32 >> 32;
@@ -1239,20 +1240,21 @@ public class StatisticsEngine
                     int lastSentSeqNum = 0;
                     if (mLastSentSeqNum.containsKey(ssrc))
                     {
-                    	lastSentSeqNum = mLastSentSeqNum.get(ssrc);
+                    	  lastSentSeqNum = mLastSentSeqNum.get(ssrc);
+
+                        int seqNumDiff = lastSentSeqNum - (int) seqNum;
+
+                        // We need to find the time a packet represents.  That
+                        // is samples * 1000 / rate.
+                    	  // Unfortunately it doesn't seem possible to get hold of
+                     	  // the number of samples.  So put 20, as that is the
+                        // default.
+                        int pTime = 20;
+
+                	      RTCPReports rtcpReports
+                            = mediaStream.getMediaStreamStats().getRTCPReports();
+                        rtcpReports.setRTTViaSeq((int)ssrc, seqNumDiff * pTime);
                     }
-
-                    int seqNumDiff = lastSentSeqNum - (int) seqNum;
-
-                    // We need to find the time a packet represents.  That is
-                	//    samples * 1000 / rate
-                	// Unfortunately it doesn't seem possible to get hold of
-                	// the number of samples.  So put 20, as that is the default.
-                    int pTime = 20;
-
-                	RTCPReports rtcpReports
-                              = mediaStream.getMediaStreamStats().getRTCPReports();
-                    rtcpReports.setRTTViaSeq((int)ssrc, seqNumDiff * pTime);
                 }
             }
         }
