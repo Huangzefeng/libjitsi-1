@@ -147,4 +147,16 @@ public interface Version
      * Jitsi version.
      */
     public String toString();
+    
+    /**
+     * Returns a String representation of this Version instance in the generic
+     * form of major.minor[.release.build]. If you'd just like to obtain the
+     * version of Jitsi so that you could display it (e.g. in a Help->About
+     * dialog) then all you need is calling this method.
+     *
+     * @param whether to include the build ID.
+     * @return a major.minor[.release[.build]] String containing the complete
+     * Jitsi version.
+     */
+    public String toString(boolean includeNightlyBuildID);
 }
