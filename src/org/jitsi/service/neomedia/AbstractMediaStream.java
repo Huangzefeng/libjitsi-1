@@ -7,10 +7,6 @@
 package org.jitsi.service.neomedia;
 
 import java.beans.*;
-import java.util.*;
-
-import org.jitsi.service.neomedia.format.*;
-import org.jitsi.util.*;
 
 /**
  * Abstract base implementation of <tt>MediaStream</tt> to ease the
@@ -22,22 +18,10 @@ public abstract class AbstractMediaStream
     implements MediaStream
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>MediaStreamImpl</tt> class for
-     * logging.  Implementing classes need their own.
-     */
-    private static final Logger logger = Logger.getLogger(AbstractMediaStream.class);
-
-    /**
      * The name of this stream, that some protocols may use for diagnostic
      * purposes.
      */
     private String name;
-
-    /**
-     * The opaque properties of this <tt>MediaStream</tt>.
-     */
-    private final Map<String,Object> properties
-        = Collections.synchronizedMap(new HashMap<String,Object>());
 
     /**
      * The delegate of this instance which implements support for property
@@ -56,41 +40,9 @@ public abstract class AbstractMediaStream
      * <tt>PropertyChangeEvent</tt>s
      * @see MediaStream#addPropertyChangeListener(PropertyChangeListener)
      */
-    @Override
     public void addPropertyChangeListener(PropertyChangeListener listener)
     {
         propertyChangeSupport.addPropertyChangeListener(listener);
-    }
-
-    /**
-     * Asserts that the state of this instance will remain consistent if a
-     * specific <tt>MediaDirection</tt> (i.e. <tt>direction</tt>) and a
-     * <tt>MediaDevice</tt> with a specific <tt>MediaDirection</tt> (i.e.
-     * <tt>deviceDirection</tt>) are both set on this instance.
-     *
-     * @param direction the <tt>MediaDirection</tt> to validate against the
-     * specified <tt>deviceDirection</tt>
-     * @param deviceDirection the <tt>MediaDirection</tt> of a
-     * <tt>MediaDevice</tt> to validate against the specified <tt>direction</tt>
-     * @param illegalArgumentExceptionMessage the message of the
-     * <tt>IllegalArgumentException</tt> to be thrown if the state of this
-     * instance would've been compromised if <tt>direction</tt> and the
-     * <tt>MediaDevice</tt> associated with <tt>deviceDirection</tt> were both
-     * set on this instance
-     * @throws IllegalArgumentException if the state of this instance would've
-     * been compromised were both <tt>direction</tt> and the
-     * <tt>MediaDevice</tt> associated with <tt>deviceDirection</tt> set on this
-     * instance
-     */
-    protected void assertDirection(
-            MediaDirection direction,
-            MediaDirection deviceDirection,
-            String illegalArgumentExceptionMessage)
-        throws IllegalArgumentException
-    {
-        if ((direction != null)
-                && !direction.and(deviceDirection).equals(direction))
-            throw new IllegalArgumentException(illegalArgumentExceptionMessage);
     }
 
     /**
@@ -129,28 +81,6 @@ public abstract class AbstractMediaStream
     }
 
     /**
-     * {@inheritDoc}
-     */
-
-    public Object getProperty(String propertyName)
-    {
-        logger.debug("Getting " + propertyName + " as " + properties.get(propertyName) + " from " + properties);
-        return properties.get(propertyName);
-    }
-
-    /**
-     * Handles attributes contained in <tt>MediaFormat</tt>.
-     *
-     * @param format the <tt>MediaFormat</tt> to handle the attributes of
-     * @param attrs the attributes <tt>Map</tt> to handle
-     */
-    protected void handleAttributes(
-            MediaFormat format,
-            Map<String,String> attrs)
-    {
-    }
-
-    /**
      * Removes the specified <tt>PropertyChangeListener</tt> from this stream so
      * that it won't receive further property change events.
      *
@@ -170,22 +100,8 @@ public abstract class AbstractMediaStream
      * @param name the name of this stream or <tt>null</tt> if no name has been
      * set.
      */
-    @Override
     public void setName(String name)
     {
         this.name = name;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-
-    public void setProperty(String propertyName, Object value)
-    {
-        logger.debug("Setting " + propertyName + " to " + value + " on " + properties);
-        if (value == null)
-            properties.remove(propertyName);
-        else
-            properties.put(propertyName, value);
     }
 }
