@@ -1483,10 +1483,13 @@ public class WASAPISystem
          * Practically, we will perform the invocations where we have seen the
          * return value CO_E_NOTINITIALIZED.
          */
+      	logger.debug("      BBB 1");
         WASAPISystem.CoInitializeEx();
 
+        logger.debug("      BBB 2");
         String id = locator.getRemainder();
         long iMMDevice = getIMMDevice(id);
+        logger.debug("      BBB 3");
 
         if (iMMDevice == 0)
         {
@@ -1504,6 +1507,7 @@ public class WASAPISystem
              * locator supports the specified dataFlow.
              */
             int iMMDeviceDataFlow = getIMMDeviceDataFlow(iMMDevice);
+            logger.debug("      BBB 3");
 
             switch (dataFlow)
             {
@@ -1530,6 +1534,7 @@ public class WASAPISystem
                         IID_IAudioClient,
                         CLSCTX_ALL,
                         0);
+            logger.debug("      BBB 4");
 
             if (iAudioClient == 0)
             {
@@ -1548,6 +1553,7 @@ public class WASAPISystem
                     int shareMode = AUDCLNT_SHAREMODE_SHARED;
                     int waveformatexIsInitialized = Format.NOT_SPECIFIED;
 
+                    long startTime1 = System.currentTimeMillis();
                     for (int i = 0; i < formats.length; i++)
                     {
                         WAVEFORMATEX_fill(waveformatex, formats[i]);
@@ -1588,6 +1594,10 @@ public class WASAPISystem
                             }
                         }
                     }
+                    long endTime1 = System.currentTimeMillis();
+                    logger.error("Checking formats took " + (endTime1-startTime1));
+
+                    logger.debug("      BBB 5");
                     if ((waveformatexIsInitialized < 0)
                             || (waveformatexIsInitialized >= formats.length))
                     {
@@ -1595,6 +1605,7 @@ public class WASAPISystem
                         throw new IllegalArgumentException("formats");
                     }
                     Arrays.fill(formats, 0, waveformatexIsInitialized, null);
+                    logger.debug("      BBB 6");
 
                     streamFlags |= AUDCLNT_STREAMFLAGS_NOPERSIST;
                     if (eventHandle != 0)
@@ -1613,7 +1624,9 @@ public class WASAPISystem
                                 = WASAPISystem.DEFAULT_DEVICE_PERIOD;
                         }
                     }
+                    logger.debug("      BBB 7");
 
+                    long startTime = System.currentTimeMillis();
                     int hresult
                         = IAudioClient_Initialize(
                                 iAudioClient,
@@ -1623,6 +1636,9 @@ public class WASAPISystem
                                 /* hnsPeriodicity */ 0,
                                 waveformatex,
                                 audioSessionGuid);
+                    long endTime = System.currentTimeMillis();
+                    logger.error("IAudioClient_Initialize took " + (endTime-startTime));
+                    logger.debug("      BBB 8");
 
                     if (hresult != S_OK)
                     {
@@ -1639,6 +1655,7 @@ public class WASAPISystem
                     {
                         IAudioClient_SetEventHandle(iAudioClient, eventHandle);
                     }
+                    logger.debug("      BBB 9");
 
                     ret = iAudioClient;
                     iAudioClient = 0;
@@ -1658,6 +1675,7 @@ public class WASAPISystem
         }
         catch (HResultException e)
         {
+        	logger.debug("      BBB 10");        	
             if (e.getHResult() == AUDCLNT_E_SERVICE_NOT_RUNNING)
             {
                 String message = "Windows audio service isn't running!";
@@ -1682,6 +1700,7 @@ public class WASAPISystem
                 IMMDevice_Release(iMMDevice);
             }
         }
+        logger.debug("      BBB 11");
         return ret;
     }
 
