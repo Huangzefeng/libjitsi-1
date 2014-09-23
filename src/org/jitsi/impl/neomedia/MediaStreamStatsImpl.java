@@ -221,6 +221,22 @@ public class MediaStreamStatsImpl
         return mReports.getSentRTCPFeedback((int)ssrc);
     } 
     
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getFirstSentPacketTime(long)
+     */
+    public long getFirstSentPacketTime(long ssrc)
+    {
+    	return mReports.getFirstSentPacketTime((int) ssrc);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.jitsi.service.neomedia.MediaStreamStats#getFirstReceivedPacketTime(long)
+     */
+    public long getFirstReceivedPacketTime(long ssrc)
+    {
+    	return mReports.getFirstReceivedPacketTime((int) ssrc);
+    }    
+    
     /**
      * Computes and updates information for a specific stream.
      */
