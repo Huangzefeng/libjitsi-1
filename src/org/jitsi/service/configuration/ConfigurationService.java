@@ -415,8 +415,14 @@ public interface ConfigurationService
                          ConfigVetoableChangeListener listener);
 
     /**
-     * Store the current set of properties back to the configuration file after
-     * a scheduled delay. The name of the configuration file is queried from
+     * Store the current set of properties back to the configuration file, at
+     * most once per a preconfigured delay period. This method should be used
+     * normally in preference to <tt>storeConfigurationNow</tt> as it prevents
+     * us making hundreds of writes per second, for example when refreshing
+     * config. The <tt>storeConfigurationNow</tt> method should only be used if
+     * it is imperative that the write to file happens immediately.
+     * <p>
+     * The name of the configuration file is queried from
      * the system property net.java.sip.communicator.PROPERTIES_FILE_NAME, and
      * is set to sip-communicator.xml in case the property does not contain a
      * valid file name. The location might be one of three possibile, checked
@@ -436,21 +442,11 @@ public interface ConfigurationService
 
     /**
      * Store the current set of properties back to the configuration file
-     * immediately, rather than waiting for a scheduled delay.  The name of the
-     * configuration file is queried from the system property
-     * net.java.sip.communicator.PROPERTIES_FILE_NAME, and is set to
-     * sip-communicator.xml in case the property does not contain a valid file
-     * name. The location might be one of three possibile, checked in the
-     * following order: <br>
-     * 1. The current directory. <br>
-     * 2. The sip-communicator directory in the user.home
-     *    ($HOME/.sip-communicator)
-     * 3. A location in the classpath (such as the sip-communicator jar file).
-     * <p>
-     * In the last case the file is copied to the sip-communicator configuration
-     * directory right after being extracted from the classpath location.
-     *
-     * @throws IOException in case storing the configuration failed.
+     * immediately.  <b>This method should only be used if it is imperative that
+     * the write to file happens immediately.</b>  Ordinarly,
+     * <tt>storeConfiguration</tt> should be used instead, as it writes to file
+     * at most once per a preconfigured delay period, which prevents
+     * us making hundreds of writes per second.
      */
     public void storeConfigurationNow();
 
