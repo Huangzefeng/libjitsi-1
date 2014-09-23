@@ -415,8 +415,29 @@ public interface ConfigurationService
                          ConfigVetoableChangeListener listener);
 
     /**
-     * Store the current set of properties back to the configuration file. The
-     * name of the configuration file is queried from the system property
+     * Store the current set of properties back to the configuration file after
+     * a scheduled delay. The name of the configuration file is queried from
+     * the system property net.java.sip.communicator.PROPERTIES_FILE_NAME, and
+     * is set to sip-communicator.xml in case the property does not contain a
+     * valid file name. The location might be one of three possibile, checked
+     * in the following order: <br>
+     * 1. The current directory. <br>
+     * 2. The sip-communicator directory in the user.home
+     *    ($HOME/.sip-communicator)
+     * 3. A location in the classpath (such as the sip-communicator jar file).
+     * <p>
+     * In the last case the file is copied to the sip-communicator configuration
+     * directory right after being extracted from the classpath location.
+     *
+     * @throws IOException in case storing the configuration failed.
+     */
+    public void storeConfiguration()
+        throws IOException;
+
+    /**
+     * Store the current set of properties back to the configuration file
+     * immediately, rather than waiting for a scheduled delay.  The name of the
+     * configuration file is queried from the system property
      * net.java.sip.communicator.PROPERTIES_FILE_NAME, and is set to
      * sip-communicator.xml in case the property does not contain a valid file
      * name. The location might be one of three possibile, checked in the
@@ -431,8 +452,7 @@ public interface ConfigurationService
      *
      * @throws IOException in case storing the configuration failed.
      */
-    public void storeConfiguration()
-        throws IOException;
+    public void storeConfigurationNow();
 
     /**
      * Deletes the current configuration and reloads it from the configuration

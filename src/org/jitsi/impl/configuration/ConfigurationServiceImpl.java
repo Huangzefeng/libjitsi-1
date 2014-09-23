@@ -907,6 +907,17 @@ public class ConfigurationServiceImpl
         }
     }
 
+    @Override
+    public synchronized void storeConfigurationNow()
+    {
+        if (configWritePending)
+        {
+            logger.debug("Write pending config change immediately");
+            storeConfigurationInternal();
+            configWritePending = false;
+        }
+    }
+
     private synchronized void storeConfigurationInternal()
     {
         if (logger.isDebugEnabled())
