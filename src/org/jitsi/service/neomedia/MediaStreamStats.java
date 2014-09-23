@@ -28,7 +28,9 @@ public interface MediaStreamStats
      RTCPExtendedReport.VoIPMetricsReportBlock getReceivedRTCPVoIPMetrics(long ssrc);
      RTCPExtendedReport.VoIPMetricsReportBlock getSentRTCPVoIPMetrics(long ssrc);
      RTCPFeedback getReceivedFeedback(long ssrc);
-     RTCPFeedback getSentFeedback(long ssrc);     
+     RTCPFeedback getSentFeedback(long ssrc);  
+     long getFirstSentPacketTime(long ssrc);
+     long getFirstReceivedPacketTime(long ssrc);
 
     /**
      * Computes and updates information for a specific stream.

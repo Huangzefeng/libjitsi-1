@@ -1590,7 +1590,7 @@ public class WASAPISystem
                         }
                     }
                     long endTime1 = System.currentTimeMillis();
-                    logger.error("Checking formats took " + (endTime1-startTime1));
+                    logger.info("Checking formats took " + (endTime1-startTime1));
 
                     if ((waveformatexIsInitialized < 0)
                             || (waveformatexIsInitialized >= formats.length))
@@ -1629,7 +1629,7 @@ public class WASAPISystem
                                 waveformatex,
                                 audioSessionGuid);
                     long endTime = System.currentTimeMillis();
-                    logger.error("IAudioClient_Initialize took " + (endTime-startTime));
+                    logger.info("IAudioClient_Initialize took " + (endTime-startTime));
 
                     if (hresult != S_OK)
                     {

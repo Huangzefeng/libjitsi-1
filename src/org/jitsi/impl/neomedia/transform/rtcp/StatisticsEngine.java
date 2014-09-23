@@ -781,7 +781,7 @@ public class StatisticsEngine
             outputMosCQ = false;
         }
         else
-        {
+        {   			
             // discard rate
             if (expectedPacketCount > 0)
             {
@@ -1097,10 +1097,24 @@ public class StatisticsEngine
 
                 for (RTCPExtendedReport xr : xrs)
                     rtcpReports.rtcpExtendedReportReceived(xr);
-             }
-         }
+            }
+        }
+        else
+        {
+           	RTCPReports rtcpReports = mediaStream.getMediaStreamStats().getRTCPReports();
+            int ssrc = (int) pkt.getSSRC();
 
-         return pkt;
+            // If this is the first packet received, store the time.
+            if (rtcpReports.getFirstReceivedPacketTime(ssrc) == 0)
+            {
+            	logger.debug("Setting first packet received for " + ssrc);
+             	long time = System.currentTimeMillis();
+             	rtcpReports.setFirstReceivedPacketTime(ssrc, time);
+            }
+        }
+
+
+        return pkt;
      }
 
     /**
@@ -1196,8 +1210,19 @@ public class StatisticsEngine
         {
             // Update last sent Seq number, store by SSRC, wiping out last top
             // 23 bits.
-        	  int ssrc = (int) pkt.getSSRC();
+        	RTCPReports rtcpReports = mediaStream.getMediaStreamStats().getRTCPReports();
+        	int ssrc = (int) pkt.getSSRC();
+        	
             mLastSentSeqNum.put(ssrc, pkt.getSequenceNumber());
+
+            // If this is the first packet sent store the time.
+            if (rtcpReports.getFirstSentPacketTime(ssrc) == 0)
+            {
+            	logger.debug("Setting first packet sent for " + ssrc);
+            	
+            	long time = System.currentTimeMillis();
+            	rtcpReports.setFirstSentPacketTime(ssrc, time);
+            }
         }
 
         return pkt;
@@ -1240,7 +1265,7 @@ public class StatisticsEngine
                     int lastSentSeqNum = 0;
                     if (mLastSentSeqNum.containsKey(ssrc))
                     {
-                    	  lastSentSeqNum = mLastSentSeqNum.get(ssrc);
+                        lastSentSeqNum = mLastSentSeqNum.get(ssrc);
 
                         int seqNumDiff = lastSentSeqNum - (int) seqNum;
 
@@ -1251,7 +1276,7 @@ public class StatisticsEngine
                         // default.
                         int pTime = 20;
 
-                	      RTCPReports rtcpReports
+                        RTCPReports rtcpReports
                             = mediaStream.getMediaStreamStats().getRTCPReports();
                         rtcpReports.setRTTViaSeq((int)ssrc, seqNumDiff * pTime);
                     }

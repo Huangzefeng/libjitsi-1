@@ -917,7 +917,11 @@ public class WASAPIStream
 
         try
         {
+        	long startTime = System.currentTimeMillis();
             doConnect();
+            long endTime = System.currentTimeMillis();
+
+            logger.info("WASAPI connect took " + (endTime-startTime));
         }
         catch (Throwable t)
         {
@@ -1004,7 +1008,7 @@ public class WASAPIStream
 
         WASAPISystem audioSystem = dataSource.audioSystem;
         AudioFormat effectiveFormat = null;
-
+        		
         if (dataSource.aec)
         {
             aec = true;
@@ -1014,7 +1018,6 @@ public class WASAPIStream
                     = audioSystem.getDevice(
                             AudioSystem.DataFlow.CAPTURE,
                             locator);
-
                 /*
                  * If the information about the capture device cannot be found,
                  * acoustic echo cancellation (AEC) cannot be enabled. That
@@ -1557,6 +1560,7 @@ public class WASAPIStream
                             /* dwOutputStreamIndex */ 0,
                             aecOutFormat,
                             /* dwFlags */ 0);
+
                 if (FAILED(hresult))
                 {
                     throw new HResultException(
@@ -1808,10 +1812,14 @@ public class WASAPIStream
         throws Exception
     {
         WASAPISystem audioSystem = dataSource.audioSystem;
+
+        long startTime = System.currentTimeMillis();
         int captureDeviceIndex
             = audioSystem.getIMMDeviceIndex(
                     captureDevice.getLocator().getRemainder(),
                     eCapture);
+        long endTime = System.currentTimeMillis();
+        logger.info("getIMMDeviceIndex took " + (endTime-startTime));
 
         if (captureDeviceIndex == -1)
         {
@@ -2435,11 +2443,11 @@ public class WASAPIStream
                         }
                         catch (IOException ioe)
                         {
-                            // Often this indicates that the device being used 
+                            // Often this indicates that the device being used
                             // has been removed.  In which case we need to try
                             // to change the device
                             logger.error("Failed to reset WASAPIStream", ioe);
-                            
+
                             try
                             {
                                 propertyChange(PlaybackDevices.PROP_DEVICE);

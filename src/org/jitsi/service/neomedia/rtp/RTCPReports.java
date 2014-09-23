@@ -121,6 +121,12 @@ public class RTCPReports
      * The RTT calculated via sequence numbers, stored per SSRC.
      */
     private HashMap<Integer, Integer> mRTTViaSeq = new HashMap<Integer, Integer>();
+    
+    /*
+     * Times of the first sent and received packets, stored by SSRC
+     */
+    private HashMap<Integer, Long> mFirstReceivedTimes = new HashMap<Integer, Long>();
+    private HashMap<Integer, Long> mFirstSentTimes = new HashMap<Integer, Long>();    
 
     /**
      * Adds a new <tt>RTCPReportListener</tt> to be notified by this instance
@@ -646,11 +652,6 @@ public class RTCPReports
                 }
 
                 fire = true;
-
-                if (report instanceof RTCPSenderReport)
-                {
-                	RTCPSenderReport senderReport = (RTCPSenderReport) report;
-                }
             }
         }
 
@@ -706,11 +707,6 @@ public class RTCPReports
                 }
 
                 fire = true;
-
-                if (report instanceof RTCPSenderReport)
-                {
-                	RTCPSenderReport senderReport = (RTCPSenderReport) report;
-                }
             }
         }
 
@@ -744,4 +740,58 @@ public class RTCPReports
     	}
     	return rttViaSeq;
     }
+    
+    /**
+     * Gets the first received packet for the ssrc, or 0 if there was none.
+     * 
+     * @param ssrc  The ssrc to get the time for
+     * @return      The time of the first received packet.
+     */
+    public long getFirstReceivedPacketTime(int ssrc)
+    {
+       long receivedTime = 0;
+       if (mFirstReceivedTimes.containsKey(ssrc))
+       {
+    	   receivedTime = mFirstReceivedTimes.get(ssrc);
+       }
+       return receivedTime;
+    }
+    
+    /**
+     * Gets the first sent packet for the ssrc, or 0 if there was none.
+     * 
+     * @param ssrc  The ssrc to get the time for
+     * @return      The time of the first sent packet.
+     */
+    public long getFirstSentPacketTime(int ssrc)
+    {
+       long sentTime = 0;
+       if (mFirstSentTimes.containsKey(ssrc))
+       {
+    	   sentTime = mFirstSentTimes.get(ssrc);
+       }
+       return sentTime;
+    }    
+    
+    /**
+     * Sets the time of the first received packet
+     * 
+     * @param ssrc  The SSRC of the stream
+     * @param time  The time of the first packet
+     */
+    public void setFirstReceivedPacketTime(int ssrc, long time)
+    {
+    	mFirstReceivedTimes.put(ssrc, time);
+    }
+    
+    /**
+     * Sets the time of the first sent packet
+     * 
+     * @param ssrc  The SSRC of the stream
+     * @param time  The time of the sent packet
+     */
+    public void setFirstSentPacketTime(int ssrc, long time)
+    {
+    	mFirstSentTimes.put(ssrc, time);
+    }       
 }
