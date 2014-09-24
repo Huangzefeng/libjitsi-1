@@ -630,7 +630,7 @@ public class StatisticsEngine
                 			  	  + ": lost=" + lostPacketCount
                 				    + ", expected=" + expectedPacketCount);
                 	  }
-                	
+
                     /*
                      * RFC 3611 mentions that the total number of packets lost
                      * takes into account "the effects of applying any error
@@ -642,7 +642,7 @@ public class StatisticsEngine
                              + ": FEC=" + fecDecodedPacketCount
                              + ", lost=" + lostPacketCount);
                     }
-                    		
+
                     if ((fecDecodedPacketCount > 0)
                             && (fecDecodedPacketCount <= lostPacketCount))
                     {
@@ -1040,10 +1040,11 @@ public class StatisticsEngine
     @Override
     public RawPacket reverseTransform(RawPacket pkt)
     {
-        logger.debug("Reverse transform, RTCP=" + isRTCP(pkt));
         // SRTP may send non-RTCP packets.
         if (isRTCP(pkt))
         {
+            logger.debug("Reverse transform of RTCP packet");
+
             /*
              * Remove any RTP Control Protocol Extended Report (RTCP XR) packets
              * because neither FMJ, nor RTCPSenderReport/RTCPReceiverReport
@@ -1129,11 +1130,11 @@ public class StatisticsEngine
     @Override
     public RawPacket transform(RawPacket pkt)
     {
-        logger.debug("transform, RTCP=" + isRTCP(pkt));
-
         // SRTP may send non-RTCP packets.
         if (isRTCP(pkt))
         {
+            logger.debug("transform of RTCP packet");
+
             try
             {
                 updateSentMediaStreamStats(pkt);
@@ -1332,7 +1333,7 @@ public class StatisticsEngine
                                 int rxLoss,
                                 int rxDiscard,
                                 long rxFECCorrected)
-    {        	
+    {
         // Default to unknown.
         int mosCQ = 127;
 
