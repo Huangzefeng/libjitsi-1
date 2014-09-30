@@ -52,6 +52,8 @@ public class RTPConnectorUDPOutputStream
     protected void sendToTarget(RawPacket packet, InetSocketAddress target)
         throws IOException
     {
+//        System.out.println("XXX sending packet to target );
+//        new Exception("XXX sending packet " + Thread.currentThread().getId() + "," + target.getHostName() + ", " + target.getHostString() + ":" + target.getPort()).printStackTrace();
         socket.send(
                 new DatagramPacket(
                         packet.getBuffer(),

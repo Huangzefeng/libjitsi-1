@@ -37,6 +37,11 @@ import org.jitsi.util.*;
 public class WASAPIStream
     extends AbstractPushBufferStream<DataSource>
 {
+    private final DataStore mDataStore = new DataStore();
+    private static final List<byte[]> dataStore = new ArrayList<byte[]>();
+    private static int i = 0;
+    private boolean write = true;
+    
     /**
      * The zero-based index of the input stream of the <tt>IMediaObject</tt>
      * that represents the Voice Capture DSP implementing the acoustic echo
@@ -1363,7 +1368,44 @@ public class WASAPIStream
                         read = 0;
                     else
                     {
-                        System.arraycopy(processed, 0, data, length, toRead);
+                        System.arraycopy(mDataStore.next(), 0, data, length, toRead);
+//                        if (dataStore.size() < 2000)
+//                        {
+//                            byte[] newData = new byte[toRead];
+//                            System.arraycopy(processed, 0, newData, length, toRead);
+//                            dataStore.add(newData);
+//
+//                            System.arraycopy(processed, 0, data, length, toRead);
+//                        }
+//                        else
+//                        {
+//                            byte[] newData = dataStore.get(i);
+//                            i = (i + 1) % 2000;
+//                            
+//                            System.arraycopy(newData, 0, data, length, toRead);
+//                            
+//                            if (write)
+//                            {
+//                                PrintWriter wrote = new PrintWriter("file.txt", "UTF-8");
+//                                for (byte[] bas : dataStore)
+//                                {
+//                                    wrote.append("{");
+//                                    for (byte ba : bas)
+//                                    {
+//                                        wrote.append(Byte.toString(ba));
+//                                        wrote.append(",");
+//                                    }
+//                                    wrote.append("},\n");
+//                                }
+//                                wrote.close();
+//                                
+//                                write = false;
+//                            }
+//                        }
+                        
+                        
+//                        System.out.println("XXX read, " + length + ", " + toRead);
+//                        System.out.println("XXX write, " + Arrays.toString(data));
                         popFromProcessed(toRead);
                         read = toRead;
                     }
