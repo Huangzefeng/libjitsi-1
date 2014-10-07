@@ -38,9 +38,6 @@ public class WASAPIStream
     extends AbstractPushBufferStream<DataSource>
 {
     private final DataStore mDataStore = new DataStore();
-    private static final List<byte[]> dataStore = new ArrayList<byte[]>();
-    private static int i = 0;
-    private boolean write = true;
     
     /**
      * The zero-based index of the input stream of the <tt>IMediaObject</tt>

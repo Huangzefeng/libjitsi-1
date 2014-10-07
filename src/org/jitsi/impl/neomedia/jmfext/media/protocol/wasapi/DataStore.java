@@ -24,7 +24,7 @@ public class DataStore
         
         try
         {
-            FileReader fr = new FileReader("resources/sounds/file.txt");
+            FileReader fr = new FileReader("resources/sounds/recorded.wav");
             br = new BufferedReader(fr);
             
             String line = null;
