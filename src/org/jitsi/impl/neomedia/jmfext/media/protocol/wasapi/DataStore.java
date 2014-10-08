@@ -6,7 +6,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.resources.ResourceManagementService;
+import org.jitsi.util.Logger;
 
 /**
  * A very hacky class which contains some media chunks to be inserted into the 
@@ -14,6 +16,8 @@ import org.jitsi.service.resources.ResourceManagementService;
  */
 public class DataStore
 {
+    private static final Logger sLog = Logger.getLogger(DataStore.class);
+    
     private final ArrayList<byte[]> bytes;
     private int i = 0; 
 
@@ -24,7 +28,11 @@ public class DataStore
         
         try
         {
-            FileReader fr = new FileReader("resources/sounds/recorded.wav");
+            ResourceManagementService res = 
+                                        LibJitsi.getResourceManagementService();
+            String path = res.getSoundPath("RECORDED_WAV");
+            sLog.error("Getting record from " + path);
+            FileReader fr = new FileReader(path);
             br = new BufferedReader(fr);
             
             String line = null;
@@ -40,10 +48,12 @@ public class DataStore
                 
                 bytes.add(linebytes);
             }
+            
+            sLog.info("Got some packets of data " + bytes.size());
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            sLog.error("IOException opening! ", e);
         }
         finally
         {
@@ -55,8 +65,7 @@ public class DataStore
                 }
                 catch (IOException e)
                 {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    sLog.error("IOException closing! ", e);
                 }
             }
         }
