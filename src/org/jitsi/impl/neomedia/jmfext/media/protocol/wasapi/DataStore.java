@@ -4,6 +4,9 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.ArrayList;
 
 import org.jitsi.service.libjitsi.LibJitsi;
@@ -32,8 +35,11 @@ public class DataStore
                                         LibJitsi.getResourceManagementService();
             String path = res.getSoundPath("RECORDED_WAV");
             sLog.error("Getting record from " + path);
-            FileReader fr = new FileReader(path);
-            br = new BufferedReader(fr);
+            URL url = res.getSoundURLForPath(path);
+            sLog.error("Sounds URL is " + url);
+            InputStream is = url.openStream();
+            InputStreamReader in = new InputStreamReader(is);
+            br = new BufferedReader(in);
             
             String line = null;
             while ((line = br.readLine()) != null)
