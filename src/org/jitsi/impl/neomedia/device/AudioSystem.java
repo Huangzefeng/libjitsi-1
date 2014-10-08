@@ -912,7 +912,7 @@ public abstract class AudioSystem
             ConfigurationService cfg = LibJitsi.getConfigurationService();
             if (!cfg.getBoolean(PNAME_AUDIO_CONFIG_DISABLED, false))
             {
-                showWarningPopup(message);
+//                showWarningPopup(message);
             }
 
             logger.dumpThreads();
