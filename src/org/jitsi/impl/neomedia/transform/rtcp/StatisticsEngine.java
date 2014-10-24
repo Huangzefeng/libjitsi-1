@@ -891,7 +891,7 @@ public class StatisticsEngine
         if (outputMosCQ)
         {
             int mosCQ = getMosCQ(isSilk,
-        	        	             rttDelay,
+        	        	         rttDelay,
                                  rttViaSeq,
                                  jbNominalDelay,
                                  jbDiscardedPacketCount,
@@ -1260,15 +1260,22 @@ public class StatisticsEngine
                     RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(0);
                     int ssrc = (int) feedback.getSSRC();
 
-                    // Get the seqNum, and wipe out the top 32 bits.
-                    long seqNum = feedback.getXtndSeqNum() << 32 >> 32;
+                    // Get the seqNum, and wipe out the top 48 bits.
+                    long seqNum = feedback.getXtndSeqNum() << 48 >> 48;
 
                     int lastSentSeqNum = 0;
                     if (mLastSentSeqNum.containsKey(ssrc))
                     {
-                        lastSentSeqNum = mLastSentSeqNum.get(ssrc);
+                        // We are interested in the lowest 16 bits only.
+                        lastSentSeqNum = mLastSentSeqNum.get(ssrc) << 16 >> 16;
 
                         int seqNumDiff = lastSentSeqNum - (int) seqNum;
+
+                        if (seqNumDiff < 0)
+                        {
+                            logger.error("RTT diff is -ve, round to 0");
+                            seqNumDiff = 0;
+                        }
 
                         // We need to find the time a packet represents.  That
                         // is samples * 1000 / rate.
@@ -1297,7 +1304,7 @@ public class StatisticsEngine
     {
         logger.debug("Update stats");
 
-        RTCPReport r = parseRTCPReport(pkt);
+        RTCPReport r = parseRTCPReport(pkt);    
 
         if (r != null)
         {
@@ -1552,19 +1559,18 @@ public class StatisticsEngine
           (R < 100) ? 10 * (1 + 0.035 * R + R * (R - 60) * (100 - R) * 7 * pow(10, -6)) :
           45);
 
-        logger.info("MosCQ=" + mosCQ);
-/*
-        logger.error("MosSQ=" + mosCQ + "\n" +
-                "isSilk =" + isSilk + "\n" +
-                "rttDelay =" + rttDelay + "\n" +
-                "rttViaSeq =" + rttViaSeq + "\n" +
-                "jbLatency =" + jbLatency + "\n" +
-                "jbDiscards =" + jbDiscards + "\n" +
-                "rxPkt =" + rxPkt  + "\n" +
-                "rxLoss ="  + rxLoss + "\n" +
-                "rxDiscard =" + rxDiscard + "\n" +
-                "rxFECCorrected =" + rxFECCorrected);
-*/
+        //logger.info("MosCQ=" + mosCQ);
+
+        logger.info("MosSQ=" + mosCQ + "\n" +
+                    "isSilk =" + isSilk + "\n" +
+                    "rttDelay =" + rttDelay + "\n" +
+                    "rttViaSeq =" + rttViaSeq + "\n" +
+                    "jbLatency =" + jbLatency + "\n" +
+                    "jbDiscards =" + jbDiscards + "\n" +
+                    "rxPkt =" + rxPkt  + "\n" +
+                    "rxLoss ="  + rxLoss + "\n" +
+                    "rxDiscard =" + rxDiscard + "\n" +
+                    "rxFECCorrected =" + rxFECCorrected);
 
         return mosCQ;
     }
@@ -1593,14 +1599,14 @@ public class StatisticsEngine
 
     public static void main(String[] args)
     {
-        getMosCQ(true, // boolean isSilk,
-                 50, //int rttDelay,
-                 50, //int rttViaSeq,
-                 50, // int jbLatency,
+        getMosCQ(false, // boolean isSilk,
+                 0, //int rttDelay,
+                 0, //int rttViaSeq,
+                 500, // int jbLatency,
                  2, //int jbDiscards,
                  1000, //int rxPkt,
-                 700, //int rxLoss,
+                 100, //int rxLoss,
                  0, //int rxDiscard,
-                 200);//,long rxFECCorrected)System.out.println("Hello");
+                 300);//,long rxFECCorrected,
     }
 }
