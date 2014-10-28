@@ -1260,17 +1260,19 @@ public class StatisticsEngine
                     RTCPFeedback feedback = (RTCPFeedback) feedbacks.get(0);
                     int ssrc = (int) feedback.getSSRC();
 
-                    // Get the seqNum, and wipe out the top 48 bits.
-                    long seqNum = feedback.getXtndSeqNum() << 48 >> 48;
+                    // Get the seqNum, and wipe out the top 48 bits,
+                    // and keep the bottom 16 bits.
+                    long seqNum = feedback.getXtndSeqNum() & 0xFFFFL;
 
                     int lastSentSeqNum = 0;
                     if (mLastSentSeqNum.containsKey(ssrc))
                     {
                         // We are interested in the lowest 16 bits only.
-                        lastSentSeqNum = mLastSentSeqNum.get(ssrc) << 16 >> 16;
+                        lastSentSeqNum = mLastSentSeqNum.get(ssrc) & 0xFFFF;
 
                         int seqNumDiff = lastSentSeqNum - (int) seqNum;
 
+                        // This can be -ve on a wrap, so bound it.
                         if (seqNumDiff < 0)
                         {
                             logger.error("RTT diff is -ve, round to 0");
@@ -1561,15 +1563,15 @@ public class StatisticsEngine
 
         //logger.info("MosCQ=" + mosCQ);
 
-        logger.info("MosSQ=" + mosCQ + "\n" +
-                    "isSilk =" + isSilk + "\n" +
-                    "rttDelay =" + rttDelay + "\n" +
-                    "rttViaSeq =" + rttViaSeq + "\n" +
-                    "jbLatency =" + jbLatency + "\n" +
-                    "jbDiscards =" + jbDiscards + "\n" +
-                    "rxPkt =" + rxPkt  + "\n" +
-                    "rxLoss ="  + rxLoss + "\n" +
-                    "rxDiscard =" + rxDiscard + "\n" +
+        logger.info("MosSQ=" + mosCQ + ", " +
+                    "isSilk =" + isSilk + ", " +
+                    "rttDelay =" + rttDelay + ", " +
+                    "rttViaSeq =" + rttViaSeq + ", " +
+                    "jbLatency =" + jbLatency + ", " +
+                    "jbDiscards =" + jbDiscards + ", " +
+                    "rxPkt =" + rxPkt  + ", " +
+                    "rxLoss ="  + rxLoss + ", " +
+                    "rxDiscard =" + rxDiscard + ", " +
                     "rxFECCorrected =" + rxFECCorrected);
 
         return mosCQ;
