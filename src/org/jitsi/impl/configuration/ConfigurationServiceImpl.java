@@ -978,6 +978,7 @@ public class ConfigurationServiceImpl
             // retry sooner.
             transactionBasedFile.commitTransaction();
             lastConfigWriteTime = System.currentTimeMillis();
+            logger.debug("Finished storing configuration.");
         }
     }
 
@@ -1832,6 +1833,11 @@ public class ConfigurationServiceImpl
     {
       List<String> propertyNames = getAllPropertyNames();
       int size = propertyNames.size();
+
+      if (size == 0)
+      {
+          configLogger.info("No pre-existing config found");
+      }
 
       for (String propertyName : propertyNames)
       {
