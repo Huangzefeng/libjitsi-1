@@ -13,8 +13,6 @@ import java.net.*;
 
 import javax.media.protocol.*;
 
-import net.java.sip.communicator.impl.gui.GuiActivator;
-import net.java.sip.communicator.service.analytics.AnalyticsEventType;
 import net.sf.fmj.media.Log;
 
 import org.ice4j.socket.*;
@@ -82,7 +80,7 @@ public abstract class RTPConnectorInputStream
      * <tt>RawPacket</tt>s.
      */
     private DatagramPacketFilter[] datagramPacketFilters;
-    
+
     private PacketMonkey packetMonkey = new DoNothingPacketMonkey();
 
     /**
@@ -121,7 +119,7 @@ public abstract class RTPConnectorInputStream
                         return true;
                     }
                 });
-        
+
         /*
         LibJitsi.getConfigurationService().addPropertyChangeListener(new PropertyChangeListener()
         {
@@ -285,7 +283,7 @@ public abstract class RTPConnectorInputStream
 
         boolean loop = true;
         while (loop)
-        { 
+        {
         	System.arraycopy(
         			pkt.getBuffer(), pkt.getOffset(),
         			buffer, offset,
