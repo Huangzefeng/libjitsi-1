@@ -26,6 +26,8 @@ public class RTPConnectorUDPInputStream
      */
     private final DatagramSocket socket;
 
+    private PacketMonkey packetMonkey = new PacketLossMonkey(0.1f, 0.05f, 0.02f, 0.02f);
+
     /**
      * Receive size configured flag.
      */
@@ -47,6 +49,17 @@ public class RTPConnectorUDPInputStream
             receiverThread = new Thread(this, "RTPConnectorUDPInputStreamThread");
             receiverThread.start();
         }
+
+        /*
+        LibJitsi.getConfigurationService().addPropertyChangeListener(new PropertyChangeListener()
+        {
+            public void propertyChange(PropertyChangeEvent e)
+            {
+                // TODO - add some plumbing here so we can turn on and off the monkey on the fly.
+                // (confused zoological metaphors notwithstanding).
+            }
+        });
+        */
     }
 
     /**
@@ -129,6 +142,10 @@ public class RTPConnectorUDPInputStream
             {
             }
         }
-        socket.receive(p);
+
+        do
+        {
+            socket.receive(p);
+        } while (packetMonkey.shouldDropPacket());
     }
 }

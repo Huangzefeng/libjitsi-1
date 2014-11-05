@@ -81,8 +81,6 @@ public abstract class RTPConnectorInputStream
      */
     private DatagramPacketFilter[] datagramPacketFilters;
 
-    private PacketMonkey packetMonkey = new DoNothingPacketMonkey();
-
     /**
      * Initializes a new <tt>RTPConnectorInputStream</tt> which is to receive
      * packet data from a specific UDP socket.
@@ -119,18 +117,6 @@ public abstract class RTPConnectorInputStream
                         return true;
                     }
                 });
-
-        /*
-        LibJitsi.getConfigurationService().addPropertyChangeListener(new PropertyChangeListener()
-        {
-            public void propertyChange(PropertyChangeEvent e)
-            {
-            	// TODO - add some plumbing here so we can turn on and off the monkey on the fly.
-            	// (confused zoological metaphors notwithstanding).
-            }
-        });
-        */
-
     }
 
     /**
@@ -281,15 +267,10 @@ public abstract class RTPConnectorInputStream
                     "Input buffer not big enough for " + pktLength);
         }
 
-        boolean loop = true;
-        while (loop)
-        {
-        	System.arraycopy(
-        			pkt.getBuffer(), pkt.getOffset(),
-        			buffer, offset,
-        			pktLength);
-        	loop = packetMonkey.shouldDropPacket();
-        }
+    	System.arraycopy(
+    			pkt.getBuffer(), pkt.getOffset(),
+    			buffer, offset,
+    			pktLength);
 
         return pktLength;
     }
