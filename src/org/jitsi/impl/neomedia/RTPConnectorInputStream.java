@@ -6,14 +6,19 @@
  */
 package org.jitsi.impl.neomedia;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.net.*;
 
 import javax.media.protocol.*;
 
+import net.java.sip.communicator.impl.gui.GuiActivator;
+import net.java.sip.communicator.service.analytics.AnalyticsEventType;
 import net.sf.fmj.media.Log;
 
 import org.ice4j.socket.*;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
@@ -77,6 +82,8 @@ public abstract class RTPConnectorInputStream
      * <tt>RawPacket</tt>s.
      */
     private DatagramPacketFilter[] datagramPacketFilters;
+    
+    private PacketMonkey packetMonkey = new DoNothingPacketMonkey();
 
     /**
      * Initializes a new <tt>RTPConnectorInputStream</tt> which is to receive
@@ -114,6 +121,18 @@ public abstract class RTPConnectorInputStream
                         return true;
                     }
                 });
+        
+        /*
+        LibJitsi.getConfigurationService().addPropertyChangeListener(new PropertyChangeListener()
+        {
+            public void propertyChange(PropertyChangeEvent e)
+            {
+            	// TODO - add some plumbing here so we can turn on and off the monkey on the fly.
+            	// (confused zoological metaphors notwithstanding).
+            }
+        });
+        */
+
     }
 
     /**
@@ -264,10 +283,15 @@ public abstract class RTPConnectorInputStream
                     "Input buffer not big enough for " + pktLength);
         }
 
-        System.arraycopy(
-                pkt.getBuffer(), pkt.getOffset(),
-                buffer, offset,
-                pktLength);
+        boolean loop = true;
+        while (loop)
+        { 
+        	System.arraycopy(
+        			pkt.getBuffer(), pkt.getOffset(),
+        			buffer, offset,
+        			pktLength);
+        	loop = packetMonkey.shouldDropPacket();
+        }
 
         return pktLength;
     }
