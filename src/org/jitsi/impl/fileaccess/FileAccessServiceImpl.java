@@ -128,10 +128,12 @@ public class FileAccessServiceImpl implements FileAccessService
      * @param fileName
      *            The name of the private file you wish to access
      * @return The file
-     * @throws Exception if we faile to create the file.
+     * @throws SecurityException if we fail to create the file due to permissions
+     * @throws IOException if the application home directory did not exist,
+     * and needed to be created, but creation failed.
      */
     public File getPrivatePersistentFile(String fileName)
-        throws Exception
+        throws SecurityException, IOException
     {
         logger.logEntry(fileName);
 

@@ -67,11 +67,12 @@ public interface FileAccessService {
      * @param fileName
      *            The name of the private file you wish to access
      * @return The file
-     * @throws Exception
-     *             Thrown if there is no suitable location for the persistent
-     *             file
+     * @throws SecurityException if we fail to create the file due to a permissions issue
+     * @throws IOException if the application home directory did not exist,
+     * and needed to be created, but creation failed.
      */
-    File getPrivatePersistentFile(String fileName) throws Exception;
+    File getPrivatePersistentFile(String fileName)
+            throws IOException, SecurityException;
 
     /**
      * This method creates a directory specific to the current user.
