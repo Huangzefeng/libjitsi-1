@@ -110,14 +110,7 @@ public class ConfigurationServiceImpl
         @Override
         public void run()
         {
-            // This should be synchronized - without synchronization there's a
-            // window where we may end up writing twice in quick succession.
-            // That's not the end of the world, and better than risking a
-            // deadlock.
-            if (configWritePending)
-            {
-                storeConfigurationInternal();
-            }
+            storeConfigurationNow();
         }
     };
 
@@ -824,6 +817,7 @@ public class ConfigurationServiceImpl
         }
 
         this.configurationFile = null;
+        this.transactionBasedFile = null;
 
         File file = getConfigurationFile();
 
@@ -892,13 +886,7 @@ public class ConfigurationServiceImpl
                             logger.debug("Config write timer popped");
                             synchronized (ConfigurationServiceImpl.this)
                             {
-                                // Unlikely, but the config could have already
-                                // been written (e.g. in reloadConfiguration())
-                                if (configWritePending)
-                                {
-                                    storeConfigurationInternal();
-                                    configWritePending = false;
-                                }
+                                storeConfigurationNow();
                             }
                         };
                     },
@@ -913,12 +901,19 @@ public class ConfigurationServiceImpl
         if (configWritePending)
         {
             logger.debug("Write pending config change immediately");
-            storeConfigurationInternal();
-            configWritePending = false;
+            try
+            {
+                storeConfigurationInternal();
+                configWritePending = false;
+            }
+            catch (IOException e)
+            {
+                logger.error("Failed to store configuration", e);
+            }
         }
     }
 
-    private synchronized void storeConfigurationInternal()
+    private synchronized void storeConfigurationInternal() throws IOException
     {
         if (logger.isDebugEnabled())
             logger.debug("Storing configuration to: " + configurationFile);
@@ -934,6 +929,8 @@ public class ConfigurationServiceImpl
             return;
 
         Throwable exception = null;
+
+        getConfigurationFile();
 
         try
         {
@@ -1711,6 +1708,7 @@ public class ConfigurationServiceImpl
         {
             configurationFile.delete();
             configurationFile = null;
+            transactionBasedFile = null;
         }
         if (store != null)
             for (String name : store.getPropertyNames())
