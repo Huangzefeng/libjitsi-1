@@ -109,7 +109,7 @@ public abstract class RTPConnectorInputStream
                                                     .RTP))
                                 doLogPacket(p);
                         }
-                        Log.logReadBytes(this, p.getLength());
+                        Log.logReceivedBytes(this, p.getLength());
 
                         return true;
                     }

@@ -107,7 +107,7 @@ public class JavaDecoder
     {
         byte[] input = (byte[]) inputBuffer.getData();
         int inputLength = inputBuffer.getLength();
-        Log.logReadBytes(this, inputLength);
+        Log.logReceivedBytes(this, inputLength);
 
         if(offsets.size() == 0 &&
             ((inputLength > ilbc_constants.NO_OF_BYTES_20MS &&

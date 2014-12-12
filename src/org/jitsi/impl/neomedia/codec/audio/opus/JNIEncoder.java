@@ -337,7 +337,7 @@ public class JNIEncoder
 
         byte[] in = (byte[]) inBuffer.getData();
         int inLength = inBuffer.getLength();
-        Log.logReadBytes(this, inLength);
+        Log.logReceivedBytes(this, inLength);
         int inOffset = inBuffer.getOffset();
 
         if ((prevIn != null) && (prevInLength > 0))

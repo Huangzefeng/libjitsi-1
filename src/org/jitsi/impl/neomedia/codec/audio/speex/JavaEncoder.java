@@ -144,7 +144,7 @@ public class JavaEncoder
             initConverter((AudioFormat) newFormat);
 
         int inputLength = inputBuffer.getLength();
-        Log.logReadBytes(this, inputLength);
+        Log.logReceivedBytes(this, inputLength);
 
         if (inputLength == 0)
             return OUTPUT_BUFFER_NOT_FILLED;

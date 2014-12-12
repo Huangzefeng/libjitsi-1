@@ -487,7 +487,7 @@ public class CachingPushBufferStream
             {
                 int inputOffset = input.getOffset();
                 int inputLength = input.getLength();
-                Log.logReadBytes(this, inputLength);
+                Log.logReceivedBytes(this, inputLength);
                 byte[] outputBytes = (byte[]) outputData;
                 int outputLength
                     = outputBytes.length - outputOffset;

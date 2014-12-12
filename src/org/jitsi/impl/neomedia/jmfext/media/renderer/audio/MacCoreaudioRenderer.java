@@ -472,7 +472,7 @@ public class MacCoreaudioRenderer
                             nbBufferData,
                             length);
                     nbBufferData += length;
-                    Log.logReadBytes(this, length);
+                    Log.logReceivedBytes(this, length);
                 }
             }
         }
@@ -640,7 +640,7 @@ public class MacCoreaudioRenderer
                         length = bufferLength;
 
                     System.arraycopy(this.buffer, 0, buffer, 0, length);
-                    Log.logReadBytes(nativeRenderer, length);
+                    Log.logReceivedBytes(nativeRenderer, length);
 
                     // Fills the end of the buffer with silence.
                     if(length < bufferLength)

@@ -193,7 +193,7 @@ public class JavaEncoder
     protected int doProcess(Buffer inputBuffer, Buffer outputBuffer)
     {
         int inputLength = inputBuffer.getLength();
-        Log.logReadBytes(this, inputLength);
+        Log.logReceivedBytes(this, inputLength);
         byte[] input = (byte[]) inputBuffer.getData();
         int inputOffset = inputBuffer.getOffset();
 

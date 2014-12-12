@@ -321,7 +321,7 @@ public class DirectShowStream
             {
                 if (AVFrame.read(buffer, bufferFormat, data) < 0)
                     data.free();
-                Log.logRead(this);
+                Log.logReceived(this);
                 /*
                  * XXX For the sake of safety, make sure that this instance does
                  * not reference the data instance as soon as it is set on the
@@ -334,7 +334,7 @@ public class DirectShowStream
                 Object o = buffer.getData();
                 byte[] bytes;
                 int length = data.getLength();
-                Log.logReadBytes(this, length);
+                Log.logReceivedBytes(this, length);
 
                 if(o instanceof byte[])
                 {
@@ -530,7 +530,7 @@ public class DirectShowStream
     private void SampleCB(long source, long ptr, int length)
     {
         boolean transferData = false;
-        Log.logReadBytes(this.delegate, length);
+        Log.logReceivedBytes(this.delegate, length);
 
         synchronized (dataSyncRoot)
         {

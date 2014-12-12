@@ -2312,7 +2312,7 @@ public class WASAPIStream
                             readFromAec = true;
                         }
 
-                        Log.logReadBytes(this, read);
+                        Log.logReceivedBytes(this, read);
                     }
                     else
                     {

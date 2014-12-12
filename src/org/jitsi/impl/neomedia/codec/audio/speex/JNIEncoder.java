@@ -253,7 +253,7 @@ public class JNIEncoder
          */
         byte[] input = (byte[]) inputBuffer.getData();
         int inputLength = inputBuffer.getLength();
-        Log.logReadBytes(this, inputLength);
+        Log.logReceivedBytes(this, inputLength);
         int inputOffset = inputBuffer.getOffset();
 
         if ((previousInput != null) && (previousInputLength > 0))

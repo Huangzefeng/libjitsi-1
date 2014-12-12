@@ -214,7 +214,7 @@ public class JNIDecoder
         int outOffset = 0;
         int outLength = 0;
         int totalFrameSizeInSamplesPerChannel = 0;
-        Log.logReadBytes(this, inLength);
+        Log.logReceivedBytes(this, inLength);
 
         if (decodeFEC)
         {

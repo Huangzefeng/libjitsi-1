@@ -309,7 +309,7 @@ public class MacCoreaudioStream
         buffer.setOffset(0);
         buffer.setSequenceNumber(sequenceNumber++);
         buffer.setTimeStamp(bufferTimeStamp);
-        Log.logReadBytes(this, length);
+        Log.logReceivedBytes(this, length);
     }
 
     /**

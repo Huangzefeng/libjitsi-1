@@ -226,7 +226,7 @@ public class JavaEncoder
         if (inputLength > encControl.packetSize)
             inputLength = encControl.packetSize;
 
-        Log.logReadBytes(this, inputLength);
+        Log.logReceivedBytes(this, inputLength);
 
         byte[] outputData
             = validateByteArraySize(outputBuffer, MAX_BYTES_PER_FRAME, false);

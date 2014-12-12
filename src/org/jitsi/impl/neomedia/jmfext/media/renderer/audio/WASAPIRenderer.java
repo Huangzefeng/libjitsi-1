@@ -12,7 +12,6 @@ import java.beans.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 
 import javax.media.*;
 import javax.media.format.*;
@@ -1425,7 +1424,7 @@ public class WASAPIRenderer
                                 = maybeIAudioRenderClientWrite(
                                         remainder, 0, toWrite,
                                         srcSampleSize, srcChannels);
-                            Log.logReadBytes(this, written);
+                            Log.logReceivedBytes(this, written);
                         }
                         else
                         {
@@ -1454,7 +1453,7 @@ public class WASAPIRenderer
                                 // knowing the number of effectively-consumed
                                 // bytes.
                                 written = (written > 0) ? toWrite : 0;
-                                Log.logReadBytes(this, written);
+                                Log.logReceivedBytes(this, written);
                             }
                             else
                             {
@@ -1592,8 +1591,11 @@ public class WASAPIRenderer
         }
         else
         {
+            logger.debug("About to wait while busy");
             waitWhileBusy();
+            logger.debug("Finished wait while busy");
             waitWhileEventHandleCmd();
+            logger.debug("Finished wait while event handle cmd");
 
             /*
              * Introduce latency in order to decrease the likelihood of
@@ -1634,7 +1636,9 @@ public class WASAPIRenderer
 
             try
             {
+                logger.debug("About to start audio client");
                 IAudioClient_Start(iAudioClient);
+                logger.debug("Started audio client");
                 started = true;
 
                 if ((eventHandle != 0) && (this.eventHandleCmd == null))
@@ -1856,6 +1860,8 @@ public class WASAPIRenderer
     @Override
     protected void finalize() throws Throwable
     {
+        long ms = System.currentTimeMillis();
+        
         // We should have closed this renderer by now but try to do so here
         // just in case.
         logger.debug("Called dispose on WASAPI renderer " + this.hashCode());
