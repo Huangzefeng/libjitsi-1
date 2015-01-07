@@ -180,6 +180,7 @@ public class DefaultStreamConnector
     public DefaultStreamConnector(InetAddress bindAddr)
     {
         this.bindAddr = bindAddr;
+        logger.debug("Creating DSC " + hashCode());
     }
 
     /**
@@ -198,6 +199,8 @@ public class DefaultStreamConnector
         this.controlSocket = controlSocket;
         this.dataSocket = dataSocket;
         this.bindAddr = null;
+
+        logger.debug("Creating DSC " + hashCode());
     }
 
     /**
@@ -208,6 +211,7 @@ public class DefaultStreamConnector
      */
     public void close()
     {
+        logger.debug("Closing DSC " + hashCode());
         if (controlSocket != null)
             controlSocket.close();
         if (dataSocket != null)
