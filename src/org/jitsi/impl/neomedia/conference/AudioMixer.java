@@ -1028,10 +1028,12 @@ public class AudioMixer
 
             while (inDataSourceIter.hasNext())
             {
-                if (dataSourceFilter.accept(
-                        inDataSourceIter.next().inDataSource))
+                InDataSourceDesc next = inDataSourceIter.next();
+                
+                if (dataSourceFilter.accept(next.inDataSource))
                 {
                     inDataSourceIter.remove();
+                    next.disconnect();
                     removed = true;
                 }
             }
