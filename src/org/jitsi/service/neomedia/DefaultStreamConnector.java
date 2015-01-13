@@ -8,6 +8,8 @@ package org.jitsi.service.neomedia;
 
 import java.net.*;
 
+import net.sf.fmj.media.*;
+
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
@@ -180,7 +182,7 @@ public class DefaultStreamConnector
     public DefaultStreamConnector(InetAddress bindAddr)
     {
         this.bindAddr = bindAddr;
-        logger.debug("Creating DSC " + hashCode());
+        Log.logMediaStackObjectStarted(this);
     }
 
     /**
@@ -200,7 +202,7 @@ public class DefaultStreamConnector
         this.dataSocket = dataSocket;
         this.bindAddr = null;
 
-        logger.debug("Creating DSC " + hashCode());
+        Log.logMediaStackObjectStarted(this);
     }
 
     /**
@@ -211,7 +213,7 @@ public class DefaultStreamConnector
      */
     public void close()
     {
-        logger.debug("Closing DSC " + hashCode());
+        Log.logMediaStackObjectStopped(this);
         if (controlSocket != null)
             controlSocket.close();
         if (dataSocket != null)
