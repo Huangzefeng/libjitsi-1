@@ -414,4 +414,11 @@ public interface MediaStream
      * specified by <tt>propertyName</tt> to be set
      */
     public void setProperty(String propertyName, Object value);
+
+    /**
+     * Update the SRTP control of the media stream without having to recreate it
+     * 
+     * @param srtpControl the new SRTP control object
+     */
+    public void setSrtpControl(SrtpControl srtpControl);
 }

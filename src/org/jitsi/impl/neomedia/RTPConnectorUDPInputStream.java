@@ -12,6 +12,7 @@ import java.net.*;
 import org.ice4j.socket.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.packetlogging.*;
+import org.jitsi.util.Logger;
 
 /**
  * RTPConnectorInputStream implementation for UDP protocol.
@@ -21,6 +22,8 @@ import org.jitsi.service.packetlogging.*;
 public class RTPConnectorUDPInputStream
     extends RTPConnectorInputStream
 {
+    private static final Logger logger = Logger.getLogger(RTPConnectorUDPInputStream.class);
+    
     /**
      * UDP socket used to receive data.
      */
@@ -39,6 +42,7 @@ public class RTPConnectorUDPInputStream
      */
     public RTPConnectorUDPInputStream(DatagramSocket socket)
     {
+        logger.debug("Created RTP UDP input stream " + hashCode());
         this.socket = socket;
 
         if(socket != null)
@@ -55,6 +59,7 @@ public class RTPConnectorUDPInputStream
     @Override
     public synchronized void close()
     {
+        logger.debug("Closing RTP UDP input stream " + hashCode());
         closed = true;
         if(socket != null)
         {

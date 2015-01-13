@@ -220,7 +220,7 @@ public class MediaStreamImpl
      * The <tt>SrtpControl</tt> which controls the SRTP functionality of this
      * <tt>MediaStream</tt>.
      */
-    private final SrtpControl srtpControl;
+    private SrtpControl srtpControl;
 
     /**
      * Number of received sender reports. Used for logging and debugging only.
@@ -3151,5 +3151,12 @@ public class MediaStreamImpl
 
         // Create a RawPacket from the byte array we just constructed
         return new RawPacket(byteBuffer.array(), 0, 16);
+    }
+
+    @Override
+    public void setSrtpControl(SrtpControl srtpControl)
+    {
+        this.srtpControl = srtpControl;
+        rtpConnectorChanged(null, rtpConnector);
     }
 }
