@@ -148,7 +148,7 @@ public class PLC
                 scale_Q14 = ( tmp / Math.max( LTP_Gain_Q14, 1 ) );
 
                 for( i = 0; i < Define.LTP_ORDER; i++ ) {
-                    psPLC.LTPCoef_Q14[ i ] = (short) ( Macros.SKP_SMULBB( psPLC.LTPCoef_Q14[ i ], scale_Q14 ) << 14 );
+                    psPLC.LTPCoef_Q14[ i ] = (short) ( Macros.SKP_SMULBB( psPLC.LTPCoef_Q14[ i ], scale_Q14 ) >> 14 );
                 }
             }
         } else {
@@ -239,6 +239,10 @@ public class PLC
         energy2 = energy2_ptr[0];
         shift2  = shift2_ptr[0];
 
+        // @@@ ENH Jan 2015
+        // This next piece of code is hilarious, but oddly exactly as Skype 
+        // posted on the internet.  Worth exploring what happens when we fix it,
+        // but for now leave it as is.
         if( ( energy1 >> shift2 ) < ( energy1 >> shift2 ) ) {
             /* First sub-frame has lowest energy */
             rand_ptr = psDec.exc_Q10;
@@ -371,7 +375,7 @@ public class PLC
                     LPC_pred_Q10 = Macros.SKP_SMLAWB( LPC_pred_Q10, psDec.sLPC_Q14[ Define.MAX_LPC_ORDER + i - j - 1 ], A_Q12_tmp[ j ] );
                 }
                 /* Add prediction to LPC residual */
-                sig_Q10_ptr[ sig_Q10_ptr_offset = i ] = ( sig_Q10_ptr[ sig_Q10_ptr_offset +i ] + LPC_pred_Q10 );
+                sig_Q10_ptr[ sig_Q10_ptr_offset + i ] = ( sig_Q10_ptr[ sig_Q10_ptr_offset +i ] + LPC_pred_Q10 );
 
                 /* Update states */
                 psDec.sLPC_Q14[ Define.MAX_LPC_ORDER + i ] = ( sig_Q10_ptr[sig_Q10_ptr_offset+ i ] << 4 );
@@ -457,7 +461,7 @@ public class PLC
                     frac_Q24 = ( psPLC.conc_energy / Math.max( energy, 1 ) );
 
                     gain_Q12 = Inlines.SKP_Silk_SQRT_APPROX( frac_Q24 );
-                    slope_Q12 = ( ( 1 << 12 ) - gain_Q12 / length );
+                    slope_Q12 = ( (( 1 << 12 ) - gain_Q12) / length );
 
                     for( i = 0; i < length; i++ ) {
                         signal[signal_offset + i ] = (short) ( ( gain_Q12 * signal[ signal_offset + i ] ) >> 12 );
