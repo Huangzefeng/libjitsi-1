@@ -1377,6 +1377,7 @@ MMNotificationClient_invoke
             {
                 jstring c_;
 
+                printf("Device change, calling back");
                 if (c)
                 {
                     c_ = (*env)->NewString(env, c, wcslen(c));
@@ -1393,6 +1394,7 @@ MMNotificationClient_invoke
                             || (MMNotificationClient_onDeviceRemovedMethodID
                                     == methodID))
                     {
+                        printf("Added/removed");
                         (*env)->CallStaticVoidMethod(
                                 env, clazz, methodID,
                                 c_);
@@ -1400,15 +1402,25 @@ MMNotificationClient_invoke
                     else if (MMNotificationClient_onDeviceStateChangedMethodID
                             == methodID)
                     {
+                        printf("Changed");
                         (*env)->CallStaticVoidMethod(
                                 env, clazz, methodID,
                                 c_, d);
                     }
                     else
+                    {
+                        printf("Not implemented");
                         hr = E_NOTIMPL;
+                    }
+
                     if (SUCCEEDED(hr)
                             && (JNI_TRUE == (*env)->ExceptionCheck(env)))
+                    {
+                        printf("Hit exception");
                         hr = E_FAIL;
+                    }
+
+                    (*env)->DeleteLocalRef(c_);
                 }
                 (*env)->ExceptionClear(env);
             }
