@@ -1420,7 +1420,7 @@ MMNotificationClient_invoke
                         hr = E_FAIL;
                     }
 
-                    (*env)->DeleteLocalRef(c_);
+                    (*env)->DeleteLocalRef(env, c_);
                 }
                 (*env)->ExceptionClear(env);
             }
