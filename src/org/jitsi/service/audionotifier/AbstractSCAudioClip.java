@@ -65,6 +65,11 @@ public abstract class AbstractSCAudioClip
      * started.
      */
     private boolean started;
+    
+    /**
+     * If true, play the audio clip even if it is supposed to be muted
+     */
+    private boolean playWhenMuted = false;
 
     /**
      * The <tt>Object</tt> used for internal synchronization purposes which
@@ -110,7 +115,7 @@ public abstract class AbstractSCAudioClip
     protected void enterRunInPlayThread()
     {
     }
-
+    
     /**
      * Notifies this instance that its execution in its background/separate
      * thread dedicated to the playback of this audio is about the start playing
@@ -376,10 +381,11 @@ public abstract class AbstractSCAudioClip
 
             while (isStarted())
             {
-                if (audioNotifier.isMute())
+                if (audioNotifier.isMute() && !playWhenMuted)
                 {
                     /*
-                     * If the AudioNotifierService has muted the sounds, we will
+                     * If the AudioNotifierService has muted the sounds and we 
+                     * haven't been told to play anyway, we will
                      * have to really wait a bit in order to not fall into a
                      * busy wait.
                      */
@@ -637,5 +643,14 @@ public abstract class AbstractSCAudioClip
                 }
             }
         }.start();
+    }
+    
+    /**
+     * Force the audio clip to play even if the AudioNotificationService is
+     * muted. This is useful for changing the ringtone for example.
+     */
+    public void playWhenMuted()
+    {
+    	playWhenMuted = true;
     }
 }

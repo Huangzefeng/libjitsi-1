@@ -73,4 +73,10 @@ public interface SCAudioClip
      * @param listener The listener to unregister.
      */
     public void removeAudioListener(AudioListener listener);
+
+    /**
+     * Force the audio clip to play even if the AudioNotificationService is
+     * muted. This is useful for changing the ringtone for example.
+     */
+	public void playWhenMuted();
 }
