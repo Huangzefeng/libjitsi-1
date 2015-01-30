@@ -66,16 +66,6 @@ public class RTPConnectorTCPInputStream
     public synchronized void close()
     {
         closed = true;
-        if(socket != null)
-        {
-            try
-            {
-                socket.close();
-            }
-            catch(IOException e)
-            {
-            }
-        }
     }
 
     /**
