@@ -134,10 +134,13 @@ public abstract class AbstractSCAudioClip
      * this audio once. Regardless of whether this instance is to be played once
      * or multiple times in a loop, the method is called once in order to allow
      * extenders/implementers to perform one-time cleanup after this audio stops
-     * playing. The <tt>AbstractSCAudioClip</tt> implementation does nothing.
+     * playing. 
+     * 
+     * The <tt>AbstractSCAudioClip</tt> simply resets the playWhenMuted flag.
      */
     protected void exitRunInPlayThread()
     {
+    	playWhenMuted = false;
     }
 
     /**
@@ -253,6 +256,19 @@ public abstract class AbstractSCAudioClip
         {
             return started;
         }
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void playEvenIfMuted()
+    {
+    	// Force the clip to be played even if the notification service is muted
+    	sLog.debug("Playing audio notification even if currently muted");
+    	playWhenMuted = true;
+    	
+    	// Play the clip. This will reset playWhenMuted once complete.
+    	play();
     }
 
     /**
@@ -643,14 +659,5 @@ public abstract class AbstractSCAudioClip
                 }
             }
         }.start();
-    }
-    
-    /**
-     * Force the audio clip to play even if the AudioNotificationService is
-     * muted. This is useful for changing the ringtone for example.
-     */
-    public void playWhenMuted()
-    {
-    	playWhenMuted = true;
     }
 }
