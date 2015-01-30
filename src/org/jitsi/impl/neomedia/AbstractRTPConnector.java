@@ -94,7 +94,8 @@ public abstract class AbstractRTPConnector
     }
 
     /**
-     * Closes all sockets and streams that this <tt>RTPConnector</tt> is using.
+     * Closes all sockets, stream, and the <tt>StreamConnector</tt> that this
+     * <tt>RTPConnector</tt> is using.
      */
     public void close()
     {
@@ -118,6 +119,8 @@ public abstract class AbstractRTPConnector
             controlInputStream.close();
             controlInputStream = null;
         }
+
+        connector.close();
     }
 
     /**

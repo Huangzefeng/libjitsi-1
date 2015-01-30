@@ -61,6 +61,10 @@ public class RTPConnectorUDPInputStream
     {
         logger.debug("Closing RTP UDP input stream " + hashCode());
         closed = true;
+        if(socket != null)
+        {
+            socket.close();
+        }
     }
 
     /**
