@@ -344,6 +344,12 @@ public class AudioNotifierServiceImpl
                         {
                             finalAudio.removeAudioListener(l);
                         }
+
+						@Override
+						public void playEvenIfMuted() 
+						{
+							finalAudio.playEvenIfMuted();
+						}
                     };
             }
         }
