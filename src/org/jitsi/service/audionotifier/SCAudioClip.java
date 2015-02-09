@@ -37,14 +37,6 @@ public interface SCAudioClip
      * once only.
      */
     public void play(int loopInterval, Callable<Boolean> loopCondition);
-    
-    /**
-     * Force the audio clip to play even if the AudioNotificationService is
-     * muted. This is useful for changing the ringtone for example.
-     */
-	public void playEvenIfMuted();
-	
-	public void playEvenIfMuted(int loopInterval, Callable<Boolean> loopCondition);
 
     /**
      * Stops playing this audio.

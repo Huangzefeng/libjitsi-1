@@ -308,11 +308,8 @@ public class AudioNotifierServiceImpl
                                                     finalLoopCondition);
                                     }
                                 };
-                            
-                            if (playback)
-                            	finalAudio.playEvenIfMuted(loopInterval, loopCondition);
-                            else
-                            	finalAudio.play(loopInterval, loopCondition);
+                                
+                            finalAudio.play(loopInterval, loopCondition);
                         }
 
                         public void stop()
@@ -347,22 +344,6 @@ public class AudioNotifierServiceImpl
                         {
                             finalAudio.removeAudioListener(l);
                         }
-
-						@Override
-						public void playEvenIfMuted() 
-						{
-							finalAudio.playEvenIfMuted();
-						}
-						
-						@Override
-						public void playEvenIfMuted(
-								int loopInterval,
-                                final Callable<Boolean> finalLoopCondition) 
-						{
-							finalAudio.playEvenIfMuted(
-									loopInterval,
-									finalLoopCondition);
-						}
                     };
             }
         }
