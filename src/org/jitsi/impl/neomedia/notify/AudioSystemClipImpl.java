@@ -84,7 +84,7 @@ public class AudioSystemClipImpl
         this.audioSystem = audioSystem;
         this.playback = playback;
     }
-
+    
     /**
      * {@inheritDoc}
      */

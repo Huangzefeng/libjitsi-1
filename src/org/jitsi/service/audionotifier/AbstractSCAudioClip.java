@@ -65,11 +65,6 @@ public abstract class AbstractSCAudioClip
      * started.
      */
     private boolean started;
-    
-    /**
-     * If true, play the audio clip even if it is supposed to be muted
-     */
-    private boolean playWhenMuted = false;
 
     /**
      * The <tt>Object</tt> used for internal synchronization purposes which
@@ -397,7 +392,7 @@ public abstract class AbstractSCAudioClip
 
             while (isStarted())
             {
-                if (audioNotifier.isMute() && !playWhenMuted)
+                if (audioNotifier.isMute())
                 {
                     /*
                      * If the AudioNotifierService has muted the sounds and we 

@@ -115,7 +115,7 @@ public class AudioNotifierServiceImpl
      * @param playback use or not the playback device.
      * @return a newly created <tt>SCAudioClip</tt> from <tt>uri</tt>
      */
-    public SCAudioClip createAudio(String uri, boolean playback)
+    public SCAudioClip createAudio(String uri, final boolean playback)
     {
         logger.debug("Create audio: " + uri +
                      ". Use playpack device? " + playback);
@@ -308,7 +308,7 @@ public class AudioNotifierServiceImpl
                                                     finalLoopCondition);
                                     }
                                 };
-
+                                
                             finalAudio.play(loopInterval, loopCondition);
                         }
 
@@ -344,12 +344,6 @@ public class AudioNotifierServiceImpl
                         {
                             finalAudio.removeAudioListener(l);
                         }
-
-						@Override
-						public void playEvenIfMuted() 
-						{
-							finalAudio.playEvenIfMuted();
-						}
                     };
             }
         }
