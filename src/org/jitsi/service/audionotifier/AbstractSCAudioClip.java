@@ -129,9 +129,7 @@ public abstract class AbstractSCAudioClip
      * this audio once. Regardless of whether this instance is to be played once
      * or multiple times in a loop, the method is called once in order to allow
      * extenders/implementers to perform one-time cleanup after this audio stops
-     * playing. 
-     * 
-     * The <tt>AbstractSCAudioClip</tt> simply resets the playWhenMuted flag.
+     * playing. The <tt>AbstractSCAudioClip</tt> implementation does nothing.
      */
     protected void exitRunInPlayThread()
     {
