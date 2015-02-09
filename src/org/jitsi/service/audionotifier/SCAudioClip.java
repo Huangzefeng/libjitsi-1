@@ -43,6 +43,8 @@ public interface SCAudioClip
      * muted. This is useful for changing the ringtone for example.
      */
 	public void playEvenIfMuted();
+	
+	public void playEvenIfMuted(int loopInterval, Callable<Boolean> loopCondition);
 
     /**
      * Stops playing this audio.

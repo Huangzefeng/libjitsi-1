@@ -69,7 +69,7 @@ public abstract class AbstractSCAudioClip
     /**
      * If true, play the audio clip even if it is supposed to be muted
      */
-    private boolean playWhenMuted = false;
+    protected boolean playWhenMuted = false;
 
     /**
      * The <tt>Object</tt> used for internal synchronization purposes which
@@ -256,6 +256,19 @@ public abstract class AbstractSCAudioClip
         {
             return started;
         }
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void playEvenIfMuted(int loopInterval, final Callable<Boolean> loopCondition)
+    {
+    	// Force the clip to be played even if the notification service is muted
+    	sLog.debug("Playing audio notification even if currently muted");
+    	playWhenMuted = true;
+    	
+    	// Play the clip. This will reset playWhenMuted once complete.
+    	play(loopInterval, loopCondition);
     }
     
     /**
