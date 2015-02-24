@@ -6,6 +6,11 @@
  */
 package org.jitsi.impl.neomedia.codec.audio.silk;
 
+import java.math.*;
+
+import org.jitsi.impl.neomedia.transform.rtcp.*;
+import org.jitsi.util.*;
+
 /**
  * compute number of bits to right shift the sum of squares of a vector
  * of int16s to make it fit in an int32
@@ -32,69 +37,24 @@ public class SumSqrShift
             int       len                 /* I    Length of input vector                              */
         )
     {
-        int   i, shft;
-        int in32, nrg_tmp, nrg;
-//TODO:
-//        if( (int)( (SKP_int_ptr_size)x & 2 ) != 0 ) {
-        if( false ) {
-            /* Input is not 4-byte aligned */
-            nrg = Macros.SKP_SMULBB( x[ x_offset + 0 ], x[x_offset + 0 ] );
-            i = 1;
-        } else {
-            nrg = 0;
-            i   = 0;
-        }
-        shft = 0;
-        len--;
-        while( i < len ) {
-            /* Load two values at once */
-            in32 = x[ x_offset + i];
-
-            nrg = SigProcFIX.SKP_SMLABB_ovflw( nrg, in32, in32 );
-            nrg = SigProcFIX.SKP_SMLATT_ovflw( nrg, in32, in32 );
-            i += 2;
-            if( nrg < 0 ) {
-                /* Scale down */
-//                nrg = (int)SKP_RSHIFT_uint( (SKP_uint32)nrg, 2 );
-//TODO:
-//                nrg = (int)( ((long)nrg)&0xFFFFFFFFL >>> 2 );
-                nrg = (int)( ((nrg)&0xFFFFFFFFL) >>> 2 );
-                shft = 2;
-                break;
-            }
-        }
-        for( ; i < len; i += 2 ) {
-            /* Load two values at once */
-            in32 =  x[x_offset + i];
-            nrg_tmp = Macros.SKP_SMULBB( in32, in32 );
-            nrg_tmp = SigProcFIX.SKP_SMLATT_ovflw( nrg_tmp, in32, in32 );
-// TODO: ???
-//            nrg = (int)SKP_ADD_RSHIFT_uint( nrg, (SKP_uint32)nrg_tmp, shft );
-            nrg = nrg + (nrg_tmp>>>shft);
-//or            nrg = (int)( nrg + (((long)nrg_tmp)&0xFFFFFFFFL) >>>  shft );
-
-            if( nrg < 0 ) {
-                /* Scale down */
-                nrg = ( nrg >>> 2 );
-                shft += 2;
-            }
-        }
-        if( i == len ) {
-            /* One sample left to process */
-            nrg_tmp = Macros.SKP_SMULBB( x[ x_offset + i ], x[ x_offset + i ] );
-//TODO:
-//            nrg = (int)SKP_ADD_RSHIFT_uint( nrg, nrg_tmp, shft );
-            nrg = ( nrg + (nrg_tmp >>> shft) );
-        }
-
-        /* Make sure to have at least one extra leading zero (two leading zeros in total) */
-        if( (nrg & 0xC0000000) != 0 ) {
-            nrg = (  nrg >>> 2 );
-            shft += 2;
-        }
-
-        /* Output arguments */
-        shift[0]  = shft;
-        energy[0] = nrg;
+    	BigInteger myBigInt = BigInteger.ZERO;
+    	
+    	for (int ii=0; ii<len; ii++)
+    	{
+    		short nextShort = x[x_offset + ii];
+    		BigInteger nextValue = new BigInteger("" + nextShort);
+    		myBigInt = myBigInt.add(nextValue.multiply(nextValue));
+    	}
+    	
+    	int numberOfBits = myBigInt.bitLength();
+    	int shift2 = 0;
+    	if (numberOfBits > 30)
+    	{
+    		shift2 = ((numberOfBits - 29) / 2 ) * 2;
+    	}
+    	int energy2 = (myBigInt.shiftRight(shift2)).intValue();
+    	
+    	energy[0] = energy2;
+    	shift[0] = shift2;
     }
 }
