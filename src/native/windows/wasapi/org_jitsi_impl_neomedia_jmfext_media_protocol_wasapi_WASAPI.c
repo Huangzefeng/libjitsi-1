@@ -64,7 +64,6 @@ static jmethodID MMNotificationClient_onDeviceAddedMethodID = 0;
 static jmethodID MMNotificationClient_onDeviceRemovedMethodID = 0;
 static jmethodID MMNotificationClient_onDeviceStateChangedMethodID = 0;
 static jmethodID MMNotificationClient_onPropertyValueChangedMethodID = 0;
-static FILE* traceFile;
 
 /**
  * The single IMMNotificationClient instance/implementation which is to be
@@ -1306,11 +1305,6 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 
     /*
-     * Open a file.
-     */
-    traceFile = fopen("WASAPI_trace.log", "rw");
-
-    /*
      * Eventually, grant the whole WASAPI module/library access to the JavaVM
      * instance.
      */
@@ -1385,8 +1379,6 @@ MMNotificationClient_invoke
             {
                 jstring c_;
 
-                if (traceFile != NULL)
-                    fprintf(traceFile, "Device change, calling back");
                 if (c)
                 {
                     c_ = (*env)->NewString(env, c, wcslen(c));
@@ -1403,9 +1395,6 @@ MMNotificationClient_invoke
                             || (MMNotificationClient_onDeviceRemovedMethodID
                                     == methodID))
                     {
-                        if (traceFile != NULL)
-                          fprintf(traceFile, "Added/removed");
-
                         (*env)->CallStaticVoidMethod(
                                 env, clazz, methodID,
                                 c_);
@@ -1413,24 +1402,18 @@ MMNotificationClient_invoke
                     else if (MMNotificationClient_onDeviceStateChangedMethodID
                             == methodID)
                     {
-                        if (traceFile != NULL)
-                            fprintf(traceFile, "Changed");
                         (*env)->CallStaticVoidMethod(
                                 env, clazz, methodID,
                                 c_, d);
                     }
                     else
                     {
-                        if (traceFile != NULL)
-                            fprintf(traceFile, "Not implemented");
                         hr = E_NOTIMPL;
                     }
 
                     if (SUCCEEDED(hr)
                             && (JNI_TRUE == (*env)->ExceptionCheck(env)))
                     {
-                        if (traceFile != NULL)
-                            fprintf(traceFile, "Hit exception");
                         hr = E_FAIL;
                     }
 
