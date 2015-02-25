@@ -1,5 +1,4 @@
 /*
- * Jitsi, the OpenSource Java VoIP and Instant Messaging client.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -8,6 +7,7 @@ package org.jitsi.impl.configuration;
 
 import java.beans.*;
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 import org.jitsi.impl.configuration.xml.*;
@@ -230,11 +230,11 @@ public class ConfigurationServiceImpl
                 propertyName, oldValue, property);
 
         //no exception was thrown - lets change the property and fire a
-        //change event
-        StringBuilder sb = new StringBuilder(propertyName);
-        sb = sb.append(": oldValue=").append(oldValue).append(
-            ", newValue=").append(property);
-        String configLogMsg = sb.toString();
+        //change event    
+        String configLogMsg = propertyName + "->" + property + 
+        		              ": oldValue=" + oldValue + 
+                              ", newValue=" + property +
+                              ", size=" + store.numProperties();
         logger.info(configLogMsg);
         configLogger.info(configLogMsg);
 
@@ -398,9 +398,8 @@ public class ConfigurationServiceImpl
 
         //no exception was thrown - lets change the property and fire a
         //change event
-        StringBuilder sb = new StringBuilder("Will remove prop: ");
-        sb = sb.append(propertyName);
-        String configLogMsg = sb.toString();
+        String configLogMsg = "Will remove prop: " + propertyName + 
+        		              ", size=" + store.numProperties();
         logger.info(configLogMsg);
         configLogger.info(configLogMsg);
 
@@ -973,6 +972,7 @@ public class ConfigurationServiceImpl
         {
             // Only set this if the write was successful - otherwise we should
             // retry sooner.
+        	logger.debug("Committing transaction");
             transactionBasedFile.commitTransaction();
             lastConfigWriteTime = System.currentTimeMillis();
             logger.debug("Finished storing configuration.");
@@ -1096,7 +1096,6 @@ public class ConfigurationServiceImpl
             }
             else
             {
-
                 /*
                  * But if we're told that the configuration file name is with
                  * the .xml extension, we may also have a .properties file or
@@ -1377,14 +1376,30 @@ public class ConfigurationServiceImpl
                         + getScHomeDirName());
         File configFileInUserHomeDir = new File(configDir, pFileName);
 
+        // We've seen files mysteriously go missing, particularly on laptops 
+        // not shutting down cleanly.  In at least some of those cases the
+        // unclean shutdown shows the last shutdown attempting to commit the 
+        // transaction, but never returning.
+        //
+        // So let's take a look to see if this file actually exists.  If it 
+        // doesn't that is very interesting, and we should take a closer look. 
+        if (!configFileInUserHomeDir.exists() ||
+        	 configFileInUserHomeDir.length() == 0)
+        {
+        	logger.debug("No config file, attempting recovery");
+        	configFileInUserHomeDir = 
+        			TransactionBasedFile.attemptRecovery(configFileInUserHomeDir);        
+        }       
+        
         if (configFileInUserHomeDir.exists())
         {
             if (logger.isDebugEnabled())
                 logger.debug(
                 "Using config file in $HOME/.sip-communicator: "
-                    + configFileInUserHomeDir.getAbsolutePath());
+                    + configFileInUserHomeDir.getAbsolutePath() +
+                    ", size=" + configFileInUserHomeDir.length());
             return configFileInUserHomeDir;
-        }
+        }        
 
         // If we are in a jar - copy config file from jar to user home.
         InputStream in

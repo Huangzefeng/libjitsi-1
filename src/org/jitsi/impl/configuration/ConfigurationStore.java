@@ -46,6 +46,11 @@ public interface ConfigurationStore
      * property values
      */
     public String[] getPropertyNames();
+    
+    /*
+     * Number of properties
+     */
+    public int numProperties();
 
     /**
      * Determines whether a specific name stands for a system property.

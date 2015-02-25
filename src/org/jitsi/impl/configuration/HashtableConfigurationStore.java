@@ -79,6 +79,15 @@ public abstract class HashtableConfigurationStore<T extends Hashtable>
             return propertyNames.toArray(new String[propertyNames.size()]);
         }
     }
+    
+    /*
+     * (non-Javadoc)
+     * @see org.jitsi.impl.configuration.ConfigurationStore#numProperties()
+     */
+    public int numProperties()
+    {
+    	return properties.size();
+    }
 
     /**
      * Implements {@link ConfigurationStore#isSystemProperty(String)}. Considers

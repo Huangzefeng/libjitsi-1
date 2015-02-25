@@ -149,6 +149,15 @@ public class XMLConfigurationStore
         Set<String> propertyNames = properties.keySet();
         return propertyNames.toArray(new String[propertyNames.size()]);
     }
+    
+    /*
+     * (non-Javadoc)
+     * @see org.jitsi.impl.configuration.ConfigurationStore#numProperties()
+     */
+    public int numProperties()
+    {
+    	return properties.size();
+    }
 
     /**
      * Implements {ConfigurationStore#isSystemProperty(String)}. Determines
