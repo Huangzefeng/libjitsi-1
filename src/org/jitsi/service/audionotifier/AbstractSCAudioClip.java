@@ -228,7 +228,7 @@ public abstract class AbstractSCAudioClip
      * @return <tt>true</tt> if this instance is invalid; otherwise,
      * <tt>false</tt>
      */
-    public boolean isValid()
+    public boolean testRender()
     {
         return invalid;
     }
@@ -543,7 +543,7 @@ public abstract class AbstractSCAudioClip
      * Sets the indicator which determines whether this instance is invalid.
      * <tt>AbstractSCAudioClip</tt> does not use the <tt>invalid</tt>
      * property/state of this instance and merely remembers the value which was
-     * set on it so that it can be retrieved by {@link #isValid()}. The
+     * set on it so that it can be retrieved by {@link #testRender()}. The
      * default value is <tt>false</tt> i.e. this instance is valid by default.
      *
      * @param invalid <tt>true</tt> to mark this instance invalid or

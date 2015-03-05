@@ -330,9 +330,9 @@ public class AudioNotifierServiceImpl
                             return finalAudio.isStarted();
                         }
 
-                        public boolean isValid()
+                        public boolean testRender()
                         {
-                            return finalAudio.isValid();
+                            return finalAudio.testRender();
                         }
 
                         public void registerAudioListener(AudioListener l)

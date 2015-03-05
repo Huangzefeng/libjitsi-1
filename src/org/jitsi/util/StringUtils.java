@@ -236,6 +236,50 @@ public final class StringUtils
     }
 
     /**
+     * Concatenate the string representations of the contents of a given array,
+     * with items separated by the given separator, which can be empty.
+     * @param values The values to concatenate
+     * @param sep The separating string
+     * @return The concatenated string
+     */
+    public static String join(Object[] values, String sep)
+    {
+        StringBuilder buff = new StringBuilder();
+
+        for (int idx = 0; idx < values.length - 1; idx++)
+        {
+            buff.append(values[idx]);
+            buff.append(sep);
+        }
+
+        buff.append(values[values.length - 1]);
+
+        return buff.toString();
+    }
+
+    /**
+     * Concatenate the string representations of the contents of a given int
+     * array, with items separated by the given separator, which can be empty.
+     * @param values The ints to concatenate
+     * @param sep The separating string
+     * @return The concatenated string
+     */
+    public static String join(int[] values, String sep)
+    {
+        StringBuilder buff = new StringBuilder();
+
+        for (int idx = 0; idx < values.length - 1; idx++)
+        {
+            buff.append(values[idx]);
+            buff.append(sep);
+        }
+
+        buff.append(values[values.length - 1]);
+
+        return buff.toString();
+    }
+
+    /**
      * Initializes a new <tt>String</tt> instance by decoding a specified array
      * of bytes (mostly used by JNI).
      *

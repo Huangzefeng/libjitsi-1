@@ -132,7 +132,7 @@ public class AudioSystemClipImpl
     }
 
     @Override
-    public boolean isValid()
+    public boolean testRender()
     {
         buffer = new Buffer();
         bufferData = new byte[DEFAULT_BUFFER_DATA_LENGTH];

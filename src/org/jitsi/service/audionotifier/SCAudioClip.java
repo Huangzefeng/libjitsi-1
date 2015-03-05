@@ -37,7 +37,7 @@ public interface SCAudioClip
      * once only.
      */
     public void play(int loopInterval, Callable<Boolean> loopCondition);
-    
+
     /**
      * Force the audio clip to play even if the AudioNotificationService is
      * muted. This is useful for changing the ringtone for example.
@@ -58,12 +58,13 @@ public interface SCAudioClip
     public boolean isStarted();
 
     /**
-     * Determines whether this audio file is valid.
+     * Determines whether this audio file is valid by attempting to render it.
+     * No audio is actually played.
      *
-     * @return <tt>true</tt> if this audio file is in an acceptable format;
+     * @return <tt>true</tt> if this audio file can be rendered without error;
      * <tt>false</tt> otherwise.
      */
-    public boolean isValid();
+    public boolean testRender();
 
     /**
      * Registers the given listener with this SCAudioClip, so that we notify it
